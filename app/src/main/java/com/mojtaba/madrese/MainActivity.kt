@@ -43,9 +43,7 @@ class MainActivity : Activity() {
                 try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (e: Exception) {}
                 return true
             }
-        }
-
-        webView.webChromeClient = object : WebChromeClient() {
+        }webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(wv: WebView?, cb: ValueCallback<Array<Uri>>?, p: FileChooserParams?): Boolean {
                 fileCallback?.onReceiveValue(null)
                 fileCallback = cb
@@ -93,7 +91,8 @@ class MainActivity : Activity() {
             fileCallback = null
         }
     }
-override fun onBackPressed() {
+
+    override fun onBackPressed() {
         if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
 }
