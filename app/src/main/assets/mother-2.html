@@ -6,195 +6,195 @@
 <title>پنل مادر | سامانه مدارس</title>
 <style>
 :root {
---primary: #1a237e;
---primary-light: #283593;
---accent: #00bcd4;
---success: #2e7d32;
---warning: #f9a825;
---danger: #c62828;
---bg: #f0f2f5;
---card: #ffffff;
---text: #212121;
---muted: #757575;
---border: #e0e0e0;
---radius: 12px;
---shadow: 0 2px 12px rgba(0,0,0,.08);
+  --primary: #1a237e;
+  --primary-light: #283593;
+  --accent: #00bcd4;
+  --success: #2e7d32;
+  --warning: #f9a825;
+  --danger: #c62828;
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --text: #212121;
+  --muted: #757575;
+  --border: #e0e0e0;
+  --radius: 12px;
+  --shadow: 0 2px 12px rgba(0,0,0,.08);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
-background: var(--bg);
-color: var(--text);
-min-height: 100vh;
-line-height: 1.6;
+  font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
 }
 /* Login */
 #login-screen {
-min-height: 100vh;
-display: flex;
-align-items: center;
-justify-content: center;
-background: linear-gradient(145deg, #1a237e, #0d47a1);
-padding: 24px;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #1a237e, #0d47a1);
+  padding: 24px;
 }
 .login-box {
-background: #fff;
-border-radius: 16px;
-padding: 32px 28px;
-width: 100%;
-max-width: 380px;
-box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
 }
 .login-box h1 { font-size: 1.35rem; color: var(--primary); margin-bottom: 6px; text-align: center; }
 .login-box p { text-align: center; color: var(--muted); font-size: .9rem; margin-bottom: 22px; }
 /* App shell */
 #app { display: none; min-height: 100vh; }
 .topbar {
-background: var(--primary);
-color: #fff;
-padding: 14px 18px;
-display: flex;
-align-items: center;
-justify-content: space-between;
-position: sticky;
-top: 0;
-z-index: 50;
-box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  background: var(--primary);
+  color: #fff;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
 .topbar h1 { font-size: 1.05rem; font-weight: 600; }
 .topbar .actions { display: flex; gap: 8px; align-items: center; }
 .layout { display: flex; min-height: calc(100vh - 52px); }
 .sidebar {
-width: 220px;
-background: #fff;
-border-left: 1px solid var(--border);
-padding: 12px 0;
-flex-shrink: 0;
+  width: 220px;
+  background: #fff;
+  border-left: 1px solid var(--border);
+  padding: 12px 0;
+  flex-shrink: 0;
 }
 .sidebar button {
-display: block;
-width: 100%;
-text-align: right;
-background: none;
-border: none;
-padding: 12px 18px;
-font-size: .92rem;
-color: var(--text);
-cursor: pointer;
-font-family: inherit;
+  display: block;
+  width: 100%;
+  text-align: right;
+  background: none;
+  border: none;
+  padding: 12px 18px;
+  font-size: .92rem;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
 }
 .sidebar button:hover, .sidebar button.active {
-background: #e8eaf6;
-color: var(--primary);
-font-weight: 600;
+  background: #e8eaf6;
+  color: var(--primary);
+  font-weight: 600;
 }
 .main { flex: 1; padding: 18px; max-width: 1100px; }
 @media (max-width: 768px) {
-.sidebar { display: none; }
-.main { padding: 12px; }
-.mobile-nav { display: flex !important; }
+  .sidebar { display: none; }
+  .main { padding: 12px; }
+  .mobile-nav { display: flex !important; }
 }
 .mobile-nav {
-display: none;
-position: fixed;
-bottom: 0;
-left: 0;
-right: 0;
-background: #fff;
-border-top: 1px solid var(--border);
-z-index: 50;
-justify-content: space-around;
-padding: 6px 0;
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  z-index: 50;
+  justify-content: space-around;
+  padding: 6px 0;
 }
 .mobile-nav button {
-background: none;
-border: none;
-font-size: .72rem;
-color: var(--muted);
-padding: 6px 8px;
-cursor: pointer;
-font-family: inherit;
+  background: none;
+  border: none;
+  font-size: .72rem;
+  color: var(--muted);
+  padding: 6px 8px;
+  cursor: pointer;
+  font-family: inherit;
 }
 .mobile-nav button.active { color: var(--primary); font-weight: 700; }
 .page { display: none; }
 .page.active { display: block; padding-bottom: 70px; }
 /* UI */
 .card {
-background: var(--card);
-border-radius: var(--radius);
-box-shadow: var(--shadow);
-padding: 16px;
-margin-bottom: 14px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 14px;
 }
 .card-title { font-weight: 700; font-size: 1rem; margin-bottom: 10px; color: var(--primary); }
 .stats {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-gap: 10px;
-margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
 }
 .stat {
-background: var(--card);
-border-radius: var(--radius);
-padding: 14px;
-text-align: center;
-box-shadow: var(--shadow);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: center;
+  box-shadow: var(--shadow);
 }
 .stat .n { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
 .stat .l { font-size: .78rem; color: var(--muted); margin-top: 2px; }
 .btn {
-display: inline-flex;
-align-items: center;
-justify-content: center;
-gap: 6px;
-border: none;
-border-radius: 10px;
-padding: 10px 16px;
-font-size: .9rem;
-font-family: inherit;
-cursor: pointer;
-font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: .9rem;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 600;
 }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-success { background: var(--success); color: #fff; }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-warning { background: var(--warning); color: #222; }
 .btn-outline {
-background: #fff;
-color: var(--primary);
-border: 1.5px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
 }
 .btn-sm { padding: 6px 10px; font-size: .8rem; }
 .btn-block { width: 100%; }
 .form-group { margin-bottom: 12px; }
 .form-group label {
-display: block;
-font-size: .85rem;
-font-weight: 600;
-margin-bottom: 4px;
-color: #444;
+  display: block;
+  font-size: .85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #444;
 }
 .form-control {
-width: 100%;
-padding: 10px 12px;
-border: 1.5px solid var(--border);
-border-radius: 10px;
-font-size: .95rem;
-font-family: inherit;
-background: #fff;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: .95rem;
+  font-family: inherit;
+  background: #fff;
 }
 .form-control:focus {
-outline: none;
-border-color: var(--primary);
-box-shadow: 0 0 0 3px rgba(26,35,126,.12);
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(26,35,126,.12);
 }
 textarea.form-control { min-height: 80px; resize: vertical; }
 .checkbox-row {
-display: flex;
-align-items: center;
-gap: 8px;
-margin-bottom: 8px;
-font-size: .9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: .9rem;
 }
 .checkbox-row input { width: 18px; height: 18px; }
 .table-wrap { overflow-x: auto; }
@@ -202,838 +202,959 @@ table { width: 100%; border-collapse: collapse; font-size: .88rem; }
 th, td { padding: 10px 8px; text-align: right; border-bottom: 1px solid var(--border); }
 th { background: #f5f5f5; font-weight: 700; color: #444; }
 .badge {
-display: inline-block;
-padding: 2px 8px;
-border-radius: 20px;
-font-size: .75rem;
-font-weight: 600;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 600;
 }
 .badge-ok { background: #e8f5e9; color: var(--success); }
 .badge-off { background: #ffebee; color: var(--danger); }
 .badge-warn { background: #fff8e1; color: #f57f17; }
 .modal-overlay {
-display: none;
-position: fixed;
-inset: 0;
-background: rgba(0,0,0,.45);
-z-index: 100;
-align-items: flex-end;
-justify-content: center;
-padding: 0;
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
 }
 .modal-overlay.show { display: flex; }
 .modal {
-background: #fff;
-width: 100%;
-max-width: 520px;
-max-height: 92vh;
-overflow-y: auto;
-border-radius: 16px 16px 0 0;
-padding: 20px;
+  background: #fff;
+  width: 100%;
+  max-width: 520px;
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
 }
 @media (min-width: 600px) {
-.modal-overlay { align-items: center; }
-.modal { border-radius: 16px; max-height: 85vh; }
+  .modal-overlay { align-items: center; }
+  .modal { border-radius: 16px; max-height: 85vh; }
 }
 .modal-header {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
 }
 .modal-header h2 { font-size: 1.1rem; color: var(--primary); }
 .modal-close {
-background: none;
-border: none;
-font-size: 1.5rem;
-cursor: pointer;
-color: var(--muted);
-line-height: 1;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 1;
 }
 .toast {
-position: fixed;
-bottom: 80px;
-left: 50%;
-transform: translateX(-50%);
-background: #333;
-color: #fff;
-padding: 12px 20px;
-border-radius: 10px;
-font-size: .9rem;
-z-index: 200;
-opacity: 0;
-transition: opacity .3s;
-pointer-events: none;
-max-width: 90%;
-text-align: center;
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: .9rem;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+  max-width: 90%;
+  text-align: center;
 }
 .toast.show { opacity: 1; }
 .search-bar {
-display: flex;
-gap: 8px;
-margin-bottom: 12px;
-flex-wrap: wrap;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 .hint { font-size: .8rem; color: var(--muted); margin-top: 4px; }
 .code-box {
-background: #e8eaf6;
-border: 1px dashed var(--primary);
-border-radius: 10px;
-padding: 12px;
-font-family: monospace;
-font-size: 1.1rem;
-text-align: center;
-letter-spacing: 1px;
-margin: 8px 0;
+  background: #e8eaf6;
+  border: 1px dashed var(--primary);
+  border-radius: 10px;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 1.1rem;
+  text-align: center;
+  letter-spacing: 1px;
+  margin: 8px 0;
 }
 .footer-note {
-text-align: center;
-font-size: .75rem;
-color: var(--muted);
-margin-top: 20px;
-padding-bottom: 20px;
+  text-align: center;
+  font-size: .75rem;
+  color: var(--muted);
+  margin-top: 20px;
+  padding-bottom: 20px;
 }
+.vpn-hint{background:#fff3cd;color:#856404;padding:8px 12px;font-size:.8rem;text-align:center;border-bottom:1px solid #ffc107}
+.vpn-hint strong{color:#c62828}
 </style>
 </head>
 <body>
+
 <!-- LOGIN -->
 <div id="login-screen">
-<div class="login-box">
-<h1>پنل مادر سیستم</h1>
-<p>سامانه مدیریت مدارس — پشتیبانی</p>
-<div class="form-group">
-<label>نام کاربری</label>
-<input type="text" class="form-control" id="login-user" placeholder="admin" autocomplete="username" />
+  <div class="login-box">
+    <h1>پنل مادر سیستم</h1>
+    <p>سامانه مدیریت مدارس — پشتیبانی</p>
+    <div class="form-group">
+      <label>نام کاربری</label>
+      <input type="text" class="form-control" id="login-user" placeholder="admin" autocomplete="username" />
+    </div>
+    <div class="form-group">
+      <label>رمز عبور</label>
+      <input type="password" class="form-control" id="login-pass" placeholder="رمز" autocomplete="current-password" />
+    </div>
+    <p class="hint" id="login-hint">اولین ورود: نام کاربری admin و یک رمز حداقل ۶ کاراکتری وارد کنید تا ذخیره شود.</p>
+    <button class="btn btn-primary btn-block" onclick="doLogin()">ورود</button>
+    <p id="login-error" style="color:var(--danger);margin-top:10px;font-size:.85rem;display:none;text-align:center"></p>
+  </div>
 </div>
-<div class="form-group">
-<label>رمز عبور</label>
-<input type="password" class="form-control" id="login-pass" placeholder="رمز" autocomplete="current-password" />
-</div>
-<p class="hint" id="login-hint">اولین ورود: نام کاربری admin و یک رمز حداقل ۶ کاراکتری وارد کنید تا ذخیره شود.</p>
-<button class="btn btn-primary btn-block" onclick="doLogin()">ورود</button>
-<p id="login-error" style="color:var(--danger);margin-top:10px;font-size:.85rem;display:none;text-align:center"></p>
-</div>
-</div>
+
 <!-- APP -->
 <div id="app">
-<div class="topbar">
-<h1 id="topbar-title">پنل مادر سیستم</h1>
-<div class="actions">
-<button class="btn btn-sm btn-outline" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.5)" onclick="logout()">خروج</button>
+  <div class="topbar">
+    <h1 id="topbar-title">پنل مادر سیستم</h1>
+    <div class="actions">
+      <button class="btn btn-sm btn-outline" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.5)" onclick="logout()">خروج</button>
+    </div>
+  </div>
+  <div class="layout">
+    <nav class="sidebar">
+      <button class="active" data-page="dashboard" onclick="showPage('dashboard')">داشبورد</button>
+      <button data-page="schools" onclick="showPage('schools')">مدارس</button>
+      <button data-page="settings" onclick="showPage('settings')">تنظیمات پنل</button>
+    </nav>
+    <div class="main">
+<div class="vpn-hint">برای کار با <strong>سرور آنلاین</strong> حتماً فیلترشکن را روشن کنید.</div>
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <div class="stats" id="dash-stats"></div>
+        <div class="card">
+          <div class="card-title">مدارس نزدیک به انقضا</div>
+          <div id="dash-expiring"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">آخرین مدارس اضافه‌شده</div>
+          <div id="dash-recent"></div>
+        </div>
+      </div>
+
+      <!-- SCHOOLS -->
+      <div id="page-schools" class="page">
+        <div class="search-bar">
+          <input type="text" class="form-control" id="school-search" placeholder="جستجو نام یا کد..." oninput="renderSchools()" style="flex:1;min-width:140px" />
+          <select class="form-control" id="school-filter" onchange="renderSchools()" style="width:auto">
+            <option value="all">همه</option>
+            <option value="active">فعال</option>
+            <option value="inactive">غیرفعال</option>
+            <option value="expired">منقضی</option>
+          </select>
+          <button class="btn btn-primary" onclick="openSchoolModal()">+ مدرسه جدید</button>
+        </div>
+        <div class="card table-wrap">
+          <div id="schools-list"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="page-settings" class="page">
+        <div class="card">
+          <div class="card-title">حساب ورود پنل مادر</div>
+          <p class="hint">نام کاربری و رمز خودت برای ورود به پنل مادر (جدا از مدیر مدرسه)</p>
+          <div class="form-group"><label>نام کاربری فعلی پنل مادر</label>
+            <input class="form-control" id="mother-user-display" value="" readonly /></div>
+          <div class="form-group"><label>نام کاربری جدید</label>
+            <input class="form-control" id="mother-user-new" placeholder="خالی = بدون تغییر" autocomplete="off" /></div>
+          <div class="form-group"><label>رمز فعلی</label><input type="password" class="form-control" id="cur-pass" /></div>
+          <div class="form-group"><label>رمز جدید (اختیاری)</label><input type="password" class="form-control" id="new-pass" placeholder="خالی = فقط تغییر نام کاربری" /></div>
+          <div class="form-group"><label>تکرار رمز جدید</label><input type="password" class="form-control" id="new-pass2" /></div>
+          <button class="btn btn-primary" onclick="changeMotherAccount()">ذخیره تغییرات حساب</button>
+        </div>
+        <div class="card">
+          <div class="card-title">پشتیبان‌گیری داده پنل</div>
+          <p class="hint" style="margin-bottom:10px">از لیست مدارس و تنظیمات پنل مادر نسخه پشتیبان بگیرید.</p>
+          <button class="btn btn-primary btn-block" style="margin-bottom:8px" onclick="exportMotherData()">دانلود پشتیبان JSON</button>
+          <button class="btn btn-outline btn-block" onclick="document.getElementById('import-mother').click()">بازیابی از فایل</button>
+          <input type="file" id="import-mother" accept=".json" style="display:none" onchange="importMotherData(event)" />
+        </div>
+        <div class="card">
+          <div class="card-title">درباره</div>
+          <p style="font-size:.9rem;color:var(--muted)">پنل مادر سامانه مدارس<br>فاز ۱ — مدیریت مدارس، لایسنس، ماژول‌ها و پیامک<br>طراحی: سید مجتبی موسوی</p>
+        </div>
+      </div>
+
+      <p class="footer-note">ذخیره محلی روی این دستگاه · اینترنت برای همگام‌سازی بعدی</p>
+    </div>
+  </div>
+  <nav class="mobile-nav">
+    <button class="active" data-page="dashboard" onclick="showPage('dashboard')">داشبورد</button>
+    <button data-page="schools" onclick="showPage('schools')">مدارس</button>
+    <button data-page="settings" onclick="showPage('settings')">تنظیمات</button>
+  </nav>
 </div>
-</div>
-<div class="layout">
-<nav class="sidebar">
-<button class="active" data-page="dashboard" onclick="showPage('dashboard')">داشبورد</button>
-<button data-page="schools" onclick="showPage('schools')">مدارس</button>
-<button data-page="settings" onclick="showPage('settings')">تنظیمات پنل</button>
-</nav>
-<div class="main">
-<!-- DASHBOARD -->
-<div id="page-dashboard" class="page active">
-<div class="stats" id="dash-stats"></div>
-<div class="card">
-<div class="card-title">مدارس نزدیک به انقضا</div>
-<div id="dash-expiring"></div>
-</div>
-<div class="card">
-<div class="card-title">آخرین مدارس اضافه‌شده</div>
-<div id="dash-recent"></div>
-</div>
-</div>
-<!-- SCHOOLS -->
-<div id="page-schools" class="page">
-<div class="search-bar">
-<input type="text" class="form-control" id="school-search" placeholder="جستجو نام یا کد..." oninput="renderSchools()" style="flex:1;min-width:140px" />
-<select class="form-control" id="school-filter" onchange="renderSchools()" style="width:auto">
-<option value="all">همه</option>
-<option value="active">فعال</option>
-<option value="inactive">غیرفعال</option>
-<option value="expired">منقضی</option>
-</select>
-<button class="btn btn-primary" onclick="openSchoolModal()">+ مدرسه جدید</button>
-</div>
-<div class="card table-wrap">
-<div id="schools-list"></div>
-</div>
-</div>
-<!-- SETTINGS -->
-<div id="page-settings" class="page">
-<div class="card">
-<div class="card-title">تغییر رمز پنل مادر</div>
-<div class="form-group"><label>رمز فعلی</label><input type="password" class="form-control" id="cur-pass" /></div>
-<div class="form-group"><label>رمز جدید</label><input type="password" class="form-control" id="new-pass" /></div>
-<div class="form-group"><label>تکرار رمز جدید</label><input type="password" class="form-control" id="new-pass2" /></div>
-<button class="btn btn-primary" onclick="changeMotherPassword()">ذخیره رمز</button>
-</div>
-<div class="card">
-<div class="card-title">پشتیبان‌گیری داده پنل</div>
-<p class="hint" style="margin-bottom:10px">از لیست مدارس و تنظیمات پنل مادر نسخه پشتیبان بگیرید.</p>
-<button class="btn btn-primary btn-block" style="margin-bottom:8px" onclick="exportMotherData()">دانلود پشتیبان JSON</button>
-<button class="btn btn-outline btn-block" onclick="document.getElementById('import-mother').click()">بازیابی از فایل</button>
-<input type="file" id="import-mother" accept=".json" style="display:none" onchange="importMotherData(event)" />
-</div>
-<div class="card">
-<div class="card-title">درباره</div>
-<p style="font-size:.9rem;color:var(--muted)">پنل مادر سامانه مدارس<br>فاز ۱ — مدیریت مدارس، لایسنس، ماژول‌ها و پیامک<br>طراحی: سید مجتبی موسوی</p>
-</div>
-</div>
-<p class="footer-note">ذخیره محلی روی این دستگاه · اینترنت برای همگام‌سازی بعدی</p>
-</div>
-</div>
-<nav class="mobile-nav">
-<button class="active" data-page="dashboard" onclick="showPage('dashboard')">داشبورد</button>
-<button data-page="schools" onclick="showPage('schools')">مدارس</button>
-<button data-page="settings" onclick="showPage('settings')">تنظیمات</button>
-</nav>
-</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modal">
-<div class="modal">
-<div class="modal-header">
-<h2 id="modal-title">عنوان</h2>
-<button class="modal-close" onclick="closeModal()">×</button>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">عنوان</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
 </div>
-<div id="modal-body"></div>
-</div>
-</div>
-<div class="toast" id="toast"></div><script>
+<div class="toast" id="toast"></div>
+
+<script>
 const STORAGE_KEY = 'mother_panel_v1';
+
 const DEFAULT_MODULES = [
-{ id: 'sms', label: 'پیامک' },
-{ id: 'teacher_attendance', label: 'حضور و غیاب دبیر' },
-{ id: 'manager_approve', label: 'تأیید مدیر قبل از پیامک' },
-{ id: 'discipline', label: 'موارد انضباطی و نمره' },
-{ id: 'advanced_reports', label: 'گزارش پیشرفته' },
-{ id: 'dual_shift', label: 'دو شیفت' }
+  { id: 'sms', label: 'پیامک' },
+  { id: 'teacher_attendance', label: 'حضور و غیاب دبیر' },
+  { id: 'manager_approve', label: 'تأیید مدیر قبل از پیامک' },
+  { id: 'discipline', label: 'موارد انضباطی و نمره' },
+  { id: 'advanced_reports', label: 'گزارش پیشرفته' },
+  { id: 'dual_shift', label: 'دو شیفت' }
 ];
+
 let state = {
-motherUser: 'admin',
-motherPass: null,
-schools: []
+  motherUser: 'admin',
+  motherPass: null,
+  schools: []
 };
+
 function uid() {
-return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
+
 function todayStr() {
-return new Date().toISOString().slice(0, 10);
+  return new Date().toISOString().slice(0, 10);
 }
+
 function addMonths(iso, n) {
-const d = new Date(iso + 'T12:00:00');
-d.setMonth(d.getMonth() + n);
-return d.toISOString().slice(0, 10);
+  const d = new Date(iso + 'T12:00:00');
+  d.setMonth(d.getMonth() + n);
+  return d.toISOString().slice(0, 10);
 }
+
 function load() {
-try {
-const raw = localStorage.getItem(STORAGE_KEY);
-if (raw) state = { ...state, ...JSON.parse(raw) };
-} catch (e) { console.error(e); }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = { ...state, ...JSON.parse(raw) };
+  } catch (e) { console.error(e); }
 }
+
 function save() {
-localStorage.setItem(STORAGE_KEY, JSON.stringify({
-motherUser: state.motherUser,
-motherPass: state.motherPass,
-schools: state.schools
-}));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    motherUser: state.motherUser,
+    motherPass: state.motherPass,
+    schools: state.schools
+  }));
 }
+
 /* —— سرور همگام‌سازی (Cloudflare Worker) — بدون گوگل/Firebase —— */
+// بعد از ساخت Worker، آدرس را اینجا بگذار — مثال: https://school-sync.xxx.workers.dev
 const DEFAULT_SYNC_API = 'https://school-sync.abcd-mojtaba.workers.dev';
 const SYNC_API = (localStorage.getItem('school_sync_api') || DEFAULT_SYNC_API).replace(/\/$/, '');
+
 function setSyncApi(url) {
-url = String(url || '').trim().replace(/\/$/, '');
-localStorage.setItem('school_sync_api', url);
-toast(url ? 'آدرس سرور ذخیره شد' : 'سرور پاک شد');
+  url = String(url || '').trim().replace(/\/$/, '');
+  localStorage.setItem('school_sync_api', url);
+  toast(url ? 'آدرس سرور ذخیره شد' : 'سرور پاک شد');
 }
+
 async function apiFetch(path, options) {
-if (!SYNC_API) throw new Error('آدرس سرور تنظیم نشده');
-const opts = options || {};
-const res = await fetch(SYNC_API + path, {
-method: opts.method || 'GET',
-headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-body: opts.body ? JSON.stringify(opts.body) : undefined
-});
-let data = null;
-try { data = await res.json(); } catch (e) { data = null; }
-if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
-return data;
+  if (!SYNC_API) throw new Error('آدرس سرور تنظیم نشده');
+  const opts = options || {};
+  const maxTry = opts.retries != null ? opts.retries : 3;
+  let lastErr = null;
+  for (let i = 1; i <= maxTry; i++) {
+    try {
+      const res = await fetch(SYNC_API + path, {
+        method: opts.method || 'GET',
+        headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+      let data = null;
+      try { data = await res.json(); } catch (e) { data = null; }
+      if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+      return data;
+    } catch (e) {
+      lastErr = e;
+      if (i < maxTry) await new Promise(r => setTimeout(r, 700 * i));
+    }
+  }
+  throw lastErr || new Error('خطای سرور');
 }
+
 function cleanSchoolForCloud(s) {
-return {
-id: String(s.id || ''),
-name: String(s.name || ''),
-code: String(s.code || ''),
-managerName: String(s.managerName || ''),
-managerPhone: String(s.managerPhone || ''),
-managerUsername: String(s.managerUsername || ''),
-managerPassword: String(s.managerPassword || ''),
-city: String(s.city || ''),
-notes: String(s.notes || ''),
-startDate: String(s.startDate || ''),
-expireDate: String(s.expireDate || ''),
-maxUsers: parseInt(s.maxUsers, 10) || 20,
-shifts: parseInt(s.shifts, 10) || 1,
-modules: Array.isArray(s.modules) ? s.modules.filter(function (x) { return typeof x === 'string'; }) : [],
-smsMode: String(s.smsMode || 'sim'),
-smsApiUrl: String(s.smsApiUrl || ''),
-smsApiUser: String(s.smsApiUser || ''),
-smsApiKey: String(s.smsApiKey || ''),
-smsSender: String(s.smsSender || ''),
-active: s.active !== false,
-activationCode: String(s.activationCode || ''),
-activationUsed: !!s.activationUsed,
-plan: String(s.plan || 'paid'),
-source: String(s.source || 'mother'),
-updatedAtMs: Date.now()
-};
+  return {
+    id: String(s.id || ''),
+    name: String(s.name || ''),
+    code: String(s.code || ''),
+    managerName: String(s.managerName || ''),
+    managerPhone: String(s.managerPhone || ''),
+    managerUsername: String(s.managerUsername || ''),
+    managerPassword: String(s.managerPassword || ''),
+    city: String(s.city || ''),
+    notes: String(s.notes || ''),
+    startDate: String(s.startDate || ''),
+    expireDate: String(s.expireDate || ''),
+    maxUsers: parseInt(s.maxUsers, 10) || 20,
+    shifts: parseInt(s.shifts, 10) || 1,
+    modules: Array.isArray(s.modules) ? s.modules.filter(function (x) { return typeof x === 'string'; }) : [],
+    smsMode: String(s.smsMode || 'sim'),
+    smsApiUrl: String(s.smsApiUrl || ''),
+    smsApiUser: String(s.smsApiUser || ''),
+    smsApiKey: String(s.smsApiKey || ''),
+    smsSender: String(s.smsSender || ''),
+    active: s.active !== false,
+    activationCode: String(s.activationCode || ''),
+    activationUsed: !!s.activationUsed,
+    plan: String(s.plan || 'paid'),
+    source: String(s.source || 'mother'),
+    updatedAtMs: Date.now()
+  };
 }
+
 async function cloudSyncSchools() {
-if (!SYNC_API) {
-toast('اول آدرس سرور Cloudflare را در تنظیمات وارد کن');
-return false;
+  if (!SYNC_API) {
+    toast('اول آدرس سرور Cloudflare را در تنظیمات وارد کن');
+    return false;
+  }
+  try {
+    const list = state.schools || [];
+    if (!list.length) {
+      toast('مدرسه‌ای برای ارسال نیست');
+      return false;
+    }
+    let okCount = 0;
+    for (const s of list) {
+      const payload = cleanSchoolForCloud(s);
+      if (!payload.id) continue;
+      await apiFetch('/api/schools', { method: 'POST', body: payload });
+      okCount++;
+    }
+    toast('همگام با سرور شد ✓ (' + okCount + ' مدرسه)');
+    return true;
+  } catch (e) {
+    console.error('cloudSyncSchools', e);
+    toast('خطای سرور: ' + (e.message || e));
+    return false;
+  }
 }
-try {
-const list = state.schools || [];
-if (!list.length) {
-toast('مدرسه‌ای برای ارسال نیست');
-return false;
-}
-let okCount = 0;
-for (const s of list) {
-const payload = cleanSchoolForCloud(s);
-if (!payload.id) continue;
-await apiFetch('/api/schools', { method: 'POST', body: payload });
-okCount++;
-s._pushed = true;
-}
-save();
-toast('همگام با سرور شد ✓ (' + okCount + ' مدرسه)');
-return true;
-} catch (e) {
-console.error('cloudSyncSchools', e);
-toast('خطای سرور: ' + (e.message || e));
-return false;
-}
-}
+
 async function cloudPullSchools() {
-if (!SYNC_API) return;
-try {
-const data = await apiFetch('/api/schools');
-const remote = (data && data.schools) || [];
-if (!remote.length) return;
-const fulls = await Promise.all(remote.map(function (r) {
-if (!r || !r.id) return Promise.resolve(null);
-return apiFetch('/api/schools/' + encodeURIComponent(r.id)).then(function (f) { return (f && f.school) ? f.school : r; }).catch(function () { return r; });
-}));
-const map = {};
-remote.forEach(function (r, i) { if (r && r.id) map[r.id] = Object.assign({}, r, fulls[i] || {}, { _synced: true }); });
-(state.schools || []).forEach(function (s) { if (s && s.id && !map[s.id] && s._pushed !== true && s._synced !== true) map[s.id] = s; });
-state.schools = Object.values(map);
-save();
-} catch (e) {
-console.warn('cloudPullSchools', e);
+  if (!SYNC_API) return false;
+  try {
+    const data = await apiFetch('/api/schools', { retries: 2 });
+    const remote = (data && data.schools) || [];
+    const fulls = await Promise.all(remote.map(function (r) {
+      if (!r || !r.id) return Promise.resolve(null);
+      return apiFetch('/api/schools/' + encodeURIComponent(r.id), { retries: 2 })
+        .then(function (f) { return (f && f.school) ? f.school : r; })
+        .catch(function () { return r; });
+    }));
+    // سرور مرجع است: هر مدرسه‌ای که روی سرور نیست حذف شده
+    // فقط مدارس محلی که هنوز هرگز به سرور نرفته‌اند نگه داشته می‌شوند
+    const localOnly = (state.schools || []).filter(function (s) {
+      return s && s.id && s._neverSynced === true;
+    });
+    const map = {};
+    remote.forEach(function (r, i) {
+      if (!r || !r.id) return;
+      map[r.id] = Object.assign({}, r, fulls[i] || {}, { _synced: true, _pushed: true, _neverSynced: false });
+    });
+    localOnly.forEach(function (s) {
+      if (!map[s.id]) map[s.id] = s;
+    });
+    state.schools = Object.values(map);
+    save();
+    return true;
+  } catch (e) {
+    console.warn('cloudPullSchools', e);
+    return false;
+  }
 }
-}
+
 function toast(msg) {
-const el = document.getElementById('toast');
-el.textContent = msg;
-el.classList.add('show');
-setTimeout(() => el.classList.remove('show'), 2500);
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
 }
+
 function genSchoolCode() {
-const n = 1000 + Math.floor(Math.random() * 9000);
-return 'SCH-' + n;
+  const n = 1000 + Math.floor(Math.random() * 9000);
+  return 'SCH-' + n;
 }
+
 function genActivationCode() {
-const a = Math.random().toString(36).slice(2, 6).toUpperCase();
-const b = Math.random().toString(36).slice(2, 6).toUpperCase();
-return a + '-' + b;
+  const a = Math.random().toString(36).slice(2, 6).toUpperCase();
+  const b = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return a + '-' + b;
 }
+
 function isExpired(school) {
-if (!school.expireDate) return false;
-return school.expireDate < todayStr();
+  if (!school.expireDate) return false;
+  return school.expireDate < todayStr();
 }
+
 function daysToExpire(school) {
-if (!school.expireDate) return 999;
-const a = new Date(todayStr() + 'T12:00:00');
-const b = new Date(school.expireDate + 'T12:00:00');
-return Math.ceil((b - a) / 86400000);
+  if (!school.expireDate) return 999;
+  const a = new Date(todayStr() + 'T12:00:00');
+  const b = new Date(school.expireDate + 'T12:00:00');
+  return Math.ceil((b - a) / 86400000);
 }
+
 function gregorianToJalali(gy, gm, gd) {
-var g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
-var gy2 = (gm > 2) ? (gy + 1) : gy;
-var days = 355666 + (365 * gy) + ~~((gy2 + 3) / 4) - ~~((gy2 + 99) / 100) + ~~((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
-var jy = -1595 + 33 * ~~(days / 12053); days %= 12053; jy += 4 * ~~(days / 1461); days %= 1461;
-if (days > 365) { jy += ~~((days - 1) / 365); days = (days - 1) % 365; }
-var jm, jd; if (days < 186) { jm = 1 + ~~(days / 31); jd = 1 + (days % 31); } else { jm = 7 + ~~((days - 186) / 30); jd = 1 + ((days - 186) % 30); }
-return [jy, jm, jd];
+  var g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  var gy2 = (gm > 2) ? (gy + 1) : gy;
+  var days = 355666 + (365 * gy) + ~~((gy2 + 3) / 4) - ~~((gy2 + 99) / 100) + ~~((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+  var jy = -1595 + 33 * ~~(days / 12053); days %= 12053; jy += 4 * ~~(days / 1461); days %= 1461;
+  if (days > 365) { jy += ~~((days - 1) / 365); days = (days - 1) % 365; }
+  var jm, jd; if (days < 186) { jm = 1 + ~~(days / 31); jd = 1 + (days % 31); } else { jm = 7 + ~~((days - 186) / 30); jd = 1 + ((days - 186) % 30); }
+  return [jy, jm, jd];
 }
 function toFaDigits(s) {
-return String(s).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; });
+  return String(s).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; });
 }
 function formatDateFa(iso) {
-if (!iso) return '—';
-try {
-var p = String(iso).slice(0, 10).split('-');
-var j = gregorianToJalali(+p[0], +p[1], +p[2]);
-var m = ('0' + j[1]).slice(-2), d = ('0' + j[2]).slice(-2);
-return toFaDigits(j[0] + '/' + m + '/' + d);
-} catch { return String(iso); }
+  if (!iso) return '—';
+  try {
+    var p = String(iso).slice(0, 10).split('-');
+    var j = gregorianToJalali(+p[0], +p[1], +p[2]);
+    var m = ('0' + j[1]).slice(-2), d = ('0' + j[2]).slice(-2);
+    return toFaDigits(j[0] + '/' + m + '/' + d);
+  } catch { return String(iso); }
 }
 function jalaliToGregorian(jy, jm, jd) {
-var jy2 = jy + 1595;
-var days = -355668 + (365 * jy2) + ~~(jy2 / 33) * 8 + ~~(((jy2 % 33) + 3) / 4) + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30 + 186));
-var gy = 400 * ~~(days / 146097); days %= 146097;
-if (days > 36524) { gy += 100 * ~~(--days / 36524); days %= 36524; if (days >= 365) days++; }
-gy += 4 * ~~(days / 1461); days %= 1461;
-if (days > 365) { gy += ~~((days - 1) / 365); days = (days - 1) % 365; }
-var gd = days + 1;
-var sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-var gm = 0; for (gm = 1; gm <= 12 && gd > sal_a[gm]; gm++) gd -= sal_a[gm];
-return [gy, gm, gd];
+  var jy2 = jy + 1595;
+  var days = -355668 + (365 * jy2) + ~~(jy2 / 33) * 8 + ~~(((jy2 % 33) + 3) / 4) + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30 + 186));
+  var gy = 400 * ~~(days / 146097); days %= 146097;
+  if (days > 36524) { gy += 100 * ~~(--days / 36524); days %= 36524; if (days >= 365) days++; }
+  gy += 4 * ~~(days / 1461); days %= 1461;
+  if (days > 365) { gy += ~~((days - 1) / 365); days = (days - 1) % 365; }
+  var gd = days + 1;
+  var sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  var gm = 0; for (gm = 1; gm <= 12 && gd > sal_a[gm]; gm++) gd -= sal_a[gm];
+  return [gy, gm, gd];
 }
 function isoFromJalaliSelects(prefix) {
-var jy = parseInt(document.getElementById(prefix + '-jy').value, 10);
-var jm = parseInt(document.getElementById(prefix + '-jm').value, 10);
-var jd = parseInt(document.getElementById(prefix + '-jd').value, 10);
-var g = jalaliToGregorian(jy, jm, jd);
-return g[0] + '-' + ('0' + g[1]).slice(-2) + '-' + ('0' + g[2]).slice(-2);
+  var jy = parseInt(document.getElementById(prefix + '-jy').value, 10);
+  var jm = parseInt(document.getElementById(prefix + '-jm').value, 10);
+  var jd = parseInt(document.getElementById(prefix + '-jd').value, 10);
+  var g = jalaliToGregorian(jy, jm, jd);
+  return g[0] + '-' + ('0' + g[1]).slice(-2) + '-' + ('0' + g[2]).slice(-2);
 }
 function jalaliSelectHtml(prefix, iso) {
-var j;
-try {
-var p = String(iso || todayStr()).slice(0, 10).split('-');
-j = gregorianToJalali(+p[0], +p[1], +p[2]);
-} catch (e) { j = gregorianToJalali(2026, 8, 25); }
-var years = '';
-for (var y = 1400; y <= 1415; y++) years += '<option value="' + y + '"' + (y === j[0] ? ' selected' : '') + '>' + toFaDigits(y) + '</option>';
-var months = '';
-var monthNames = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
-for (var m = 1; m <= 12; m++) months += '<option value="' + m + '"' + (m === j[1] ? ' selected' : '') + '>' + monthNames[m - 1] + '</option>';
-var days = '';
-for (var d = 1; d <= 31; d++) days += '<option value="' + d + '"' + (d === j[2] ? ' selected' : '') + '>' + toFaDigits(d) + '</option>';
-return '<div style="display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:8px">' +
-'<select class="form-control" id="' + prefix + '-jy">' + years + '</select>' +
-'<select class="form-control" id="' + prefix + '-jm">' + months + '</select>' +
-'<select class="form-control" id="' + prefix + '-jd">' + days + '</select></div>' +
-'<p class="hint">سال / ماه / روز — شمسی</p>';
-}/* Auth */
+  var j;
+  try {
+    var p = String(iso || todayStr()).slice(0, 10).split('-');
+    j = gregorianToJalali(+p[0], +p[1], +p[2]);
+  } catch (e) { j = gregorianToJalali(2026, 8, 25); }
+  var years = '';
+  for (var y = 1400; y <= 1415; y++) years += '<option value="' + y + '"' + (y === j[0] ? ' selected' : '') + '>' + toFaDigits(y) + '</option>';
+  var months = '';
+  var monthNames = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+  for (var m = 1; m <= 12; m++) months += '<option value="' + m + '"' + (m === j[1] ? ' selected' : '') + '>' + monthNames[m - 1] + '</option>';
+  var days = '';
+  for (var d = 1; d <= 31; d++) days += '<option value="' + d + '"' + (d === j[2] ? ' selected' : '') + '>' + toFaDigits(d) + '</option>';
+  return '<div style="display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:8px">' +
+    '<select class="form-control" id="' + prefix + '-jy">' + years + '</select>' +
+    '<select class="form-control" id="' + prefix + '-jm">' + months + '</select>' +
+    '<select class="form-control" id="' + prefix + '-jd">' + days + '</select></div>' +
+    '<p class="hint">سال / ماه / روز — شمسی</p>';
+}
+
+/* Auth */
 function doLogin() {
-const user = document.getElementById('login-user').value.trim();
-const pass = document.getElementById('login-pass').value;
-const err = document.getElementById('login-error');
-err.style.display = 'none';
-if (!user || !pass) {
-err.textContent = 'نام کاربری و رمز را وارد کنید';
-err.style.display = 'block';
-return;
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+
+  if (!user || !pass) {
+    err.textContent = 'نام کاربری و رمز را وارد کنید';
+    err.style.display = 'block';
+    return;
+  }
+
+  if (!state.motherPass) {
+    if (pass.length < 6) {
+      err.textContent = 'رمز اولیه حداقل ۶ کاراکتر باشد';
+      err.style.display = 'block';
+      return;
+    }
+    state.motherUser = user;
+    state.motherPass = pass;
+    save();
+    enterApp();
+    toast('رمز پنل مادر ذخیره شد');
+    return;
+  }
+
+  if (user === state.motherUser && pass === state.motherPass) {
+    enterApp();
+    toast('خوش آمدید');
+  } else {
+    err.textContent = 'نام کاربری یا رمز اشتباه است';
+    err.style.display = 'block';
+  }
 }
-if (!state.motherPass) {
-if (pass.length < 6) {
-err.textContent = 'رمز اولیه حداقل ۶ کاراکتر باشد';
-err.style.display = 'block';
-return;
-}
-state.motherUser = user;
-state.motherPass = pass;
-save();
-enterApp();
-toast('رمز پنل مادر ذخیره شد');
-return;
-}
-if (user === state.motherUser && pass === state.motherPass) {
-enterApp();
-toast('خوش آمدید');
-} else {
-err.textContent = 'نام کاربری یا رمز اشتباه است';
-err.style.display = 'block';
-}
-}
+
 function enterApp() {
-document.getElementById('login-screen').style.display = 'none';
-document.getElementById('app').style.display = 'block';
-showPage('dashboard');
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  showPage('dashboard');
 }
+
 function logout() {
-document.getElementById('app').style.display = 'none';
-document.getElementById('login-screen').style.display = 'flex';
-document.getElementById('login-pass').value = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-pass').value = '';
 }
+
 document.getElementById('login-pass').addEventListener('keydown', e => {
-if (e.key === 'Enter') doLogin();
+  if (e.key === 'Enter') doLogin();
 });
+
 /* Navigation */
 function showPage(name) {
-document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-document.querySelectorAll('.sidebar button, .mobile-nav button').forEach(b => {
-b.classList.toggle('active', b.getAttribute('data-page') === name);
-});
-const page = document.getElementById('page-' + name);
-if (page) page.classList.add('active');
-if (name === 'dashboard') renderDashboard();
-if (name === 'schools') renderSchools();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar button, .mobile-nav button').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-page') === name);
+  });
+  const page = document.getElementById('page-' + name);
+  if (page) page.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'schools') renderSchools();
+  if (name === 'settings') fillMotherAccountForm();
 }
+
 /* Dashboard */
 function renderDashboard() {
-const schools = state.schools || [];
-const active = schools.filter(s => s.active && !isExpired(s)).length;
-const expired = schools.filter(s => isExpired(s)).length;
-const inactive = schools.filter(s => !s.active).length;
-const expiring = schools.filter(s => s.active && !isExpired(s) && daysToExpire(s) <= 30).length;
-const users = schools.reduce((a, s) => a + (parseInt(s.maxUsers) || 0), 0);
-const apiSet = !!SYNC_API;
-document.getElementById('dash-stats').innerHTML = `
-<div class="stat"><div class="n">${schools.length}</div><div class="l">کل مدارس</div></div>
-<div class="stat"><div class="n" style="color:var(--success)">${active}</div><div class="l">فعال</div></div>
-<div class="stat"><div class="n" style="color:var(--danger)">${expired}</div><div class="l">منقضی</div></div>
-<div class="stat"><div class="n" style="color:var(--warning)">${expiring}</div><div class="l">نزدیک انقضا</div></div>
-<div class="stat"><div class="n">${inactive}</div><div class="l">خاموش</div></div>
-<div class="stat"><div class="n">${users}</div><div class="l">سقف کل کاربر</div></div>
-`;
-let syncBox = document.getElementById('dash-sync-box');
-if (!syncBox) {
-const host = document.getElementById('dash-stats');
-if (host && host.parentNode) {
-syncBox = document.createElement('div');
-syncBox.id = 'dash-sync-box';
-syncBox.className = 'card';
-syncBox.style.marginTop = '12px';
-host.parentNode.insertBefore(syncBox, host.nextSibling);
+  const schools = state.schools || [];
+  const active = schools.filter(s => s.active && !isExpired(s)).length;
+  const expired = schools.filter(s => isExpired(s)).length;
+  const inactive = schools.filter(s => !s.active).length;
+  const expiring = schools.filter(s => s.active && !isExpired(s) && daysToExpire(s) <= 30).length;
+  const users = schools.reduce((a, s) => a + (parseInt(s.maxUsers) || 0), 0);
+
+  const apiSet = !!SYNC_API;
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat"><div class="n">${schools.length}</div><div class="l">کل مدارس</div></div>
+    <div class="stat"><div class="n" style="color:var(--success)">${active}</div><div class="l">فعال</div></div>
+    <div class="stat"><div class="n" style="color:var(--danger)">${expired}</div><div class="l">منقضی</div></div>
+    <div class="stat"><div class="n" style="color:var(--warning)">${expiring}</div><div class="l">نزدیک انقضا</div></div>
+    <div class="stat"><div class="n">${inactive}</div><div class="l">خاموش</div></div>
+    <div class="stat"><div class="n">${users}</div><div class="l">سقف کل کاربر</div></div>
+  `;
+  let syncBox = document.getElementById('dash-sync-box');
+  if (!syncBox) {
+    const host = document.getElementById('dash-stats');
+    if (host && host.parentNode) {
+      syncBox = document.createElement('div');
+      syncBox.id = 'dash-sync-box';
+      syncBox.className = 'card';
+      syncBox.style.marginTop = '12px';
+      host.parentNode.insertBefore(syncBox, host.nextSibling);
+    }
+  }
+  if (syncBox) {
+    syncBox.innerHTML = `
+      <div class="card-title">سرور همگام‌سازی (Cloudflare)</div>
+      <p class="hint">وضعیت: <strong style="color:var(--success)">متصل (خودکار)</strong></p>
+      <p class="hint" style="word-break:break-all">${SYNC_API}</p>
+      <p class="hint">برای ارسال/دریافت از سرور فیلترشکن را روشن کنید. با ذخیره مدرسه خودش به سرور می‌رود. با باز کردن پنل خودش از سرور می‌آید.</p>
+      <button type="button" class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="cloudPullSchools().then(function(){renderDashboard();renderSchools();toast('به‌روز شد')})">تازه‌سازی از سرور</button>
+      <button type="button" class="btn btn-primary btn-block" onclick="cloudSyncSchools()">ارسال همه مدارس</button>
+    `;
+  }
+
+  const near = schools.filter(s => s.active && daysToExpire(s) <= 30).sort((a, b) => daysToExpire(a) - daysToExpire(b));
+  document.getElementById('dash-expiring').innerHTML = near.length
+    ? near.map(s => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span>${s.name} <small style="color:var(--muted)">(${s.code})</small></span>
+        <span class="badge ${daysToExpire(s) < 0 ? 'badge-off' : 'badge-warn'}">${daysToExpire(s) < 0 ? 'منقضی' : daysToExpire(s) + ' روز'}</span>
+      </div>`).join('')
+    : '<p class="hint">مدرسه‌ای در ۳۰ روز آینده منقضی نمی‌شود.</p>';
+
+  const recent = [...schools].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 5);
+  document.getElementById('dash-recent').innerHTML = recent.length
+    ? recent.map(s => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span>${s.name}</span>
+        <small style="color:var(--muted)">${formatDateFa(s.createdAt)}</small>
+      </div>`).join('')
+    : '<p class="hint">هنوز مدرسه‌ای ثبت نشده.</p>';
 }
-}
-if (syncBox) {
-syncBox.innerHTML = `
-<div class="card-title">سرور همگام‌سازی (Cloudflare)</div>
-<p class="hint">وضعیت: <strong style="color:var(--success)">متصل (خودکار)</strong></p>
-<p class="hint" style="word-break:break-all">${SYNC_API}</p>
-<p class="hint">با ذخیره مدرسه خودش به سرور می‌رود. با باز کردن پنل خودش از سرور می‌آید.</p>
-<button type="button" class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="cloudPullSchools().then(function(){renderDashboard();renderSchools();toast('به‌روز شد')})">تازه‌سازی از سرور</button>
-<button type="button" class="btn btn-primary btn-block" onclick="cloudSyncSchools()">ارسال همه مدارس</button>
-`;
-}
-const near = schools.filter(s => s.active && daysToExpire(s) <= 30).sort((a, b) => daysToExpire(a) - daysToExpire(b));
-document.getElementById('dash-expiring').innerHTML = near.length
-? near.map(s => `
-<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-<span>${s.name} <small style="color:var(--muted)">(${s.code})</small></span>
-<span class="badge ${daysToExpire(s) < 0 ? 'badge-off' : 'badge-warn'}">${daysToExpire(s) < 0 ? 'منقضی' : daysToExpire(s) + ' روز'}</span>
-</div>`).join('')
-: '<p class="hint">مدرسه‌ای در ۳۰ روز آینده منقضی نمی‌شود.</p>';
-const recent = [...schools].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 5);
-document.getElementById('dash-recent').innerHTML = recent.length
-? recent.map(s => `
-<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-<span>${s.name}</span>
-<small style="color:var(--muted)">${formatDateFa(s.createdAt)}</small>
-</div>`).join('')
-: '<p class="hint">هنوز مدرسه‌ای ثبت نشده.</p>';
-}/* Schools list */
+
+/* Schools list */
 function renderSchools() {
-const q = (document.getElementById('school-search')?.value || '').trim();
-const f = document.getElementById('school-filter')?.value || 'all';
-let list = [...(state.schools || [])];
-if (q) list = list.filter(s => (s.name + s.code + (s.city || '')).includes(q));
-if (f === 'active') list = list.filter(s => s.active && !isExpired(s));
-if (f === 'inactive') list = list.filter(s => !s.active);
-if (f === 'expired') list = list.filter(s => isExpired(s));
-list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'));
-const el = document.getElementById('schools-list');
-if (!list.length) {
-el.innerHTML = '<p class="hint">مدرسه‌ای یافت نشد. با «مدرسه جدید» شروع کنید.</p>';
-return;
+  const q = (document.getElementById('school-search')?.value || '').trim();
+  const f = document.getElementById('school-filter')?.value || 'all';
+  let list = [...(state.schools || [])];
+
+  if (q) list = list.filter(s => (s.name + s.code + (s.city || '')).includes(q));
+  if (f === 'active') list = list.filter(s => s.active && !isExpired(s));
+  if (f === 'inactive') list = list.filter(s => !s.active);
+  if (f === 'expired') list = list.filter(s => isExpired(s));
+
+  list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'));
+
+  const el = document.getElementById('schools-list');
+  if (!list.length) {
+    el.innerHTML = '<p class="hint">مدرسه‌ای یافت نشد. با «مدرسه جدید» شروع کنید.</p>';
+    return;
+  }
+
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th>نام</th><th>کد</th><th>انقضا (شمسی)</th><th>وضعیت</th><th>پیامک</th><th></th>
+    </tr></thead>
+    <tbody>
+    ${list.map(s => {
+      const exp = isExpired(s);
+      const statusBadge = !s.active
+        ? '<span class="badge badge-off">خاموش</span>'
+        : exp
+          ? '<span class="badge badge-off">منقضی</span>'
+          : '<span class="badge badge-ok">فعال</span>';
+      const smsLabel = { sim: 'سیم‌کارت', panel: 'پنل', both: 'هر دو' }[s.smsMode] || s.smsMode;
+      return `<tr>
+        <td><strong>${s.name}</strong><br><small style="color:var(--muted)">${s.city || ''}</small></td>
+        <td>${s.code}</td>
+        <td>${formatDateFa(s.expireDate)}</td>
+        <td>${statusBadge}</td>
+        <td>${smsLabel}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-sm btn-outline" onclick="openSchoolModal('${s.id}')">ویرایش</button>
+          <button class="btn btn-sm ${s.active ? 'btn-warning' : 'btn-success'}" onclick="toggleSchool('${s.id}')">${s.active ? 'خاموش' : 'روشن'}</button>
+          <button class="btn btn-sm btn-primary" onclick="showActivation('${s.id}')">کد فعال‌سازی</button>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
 }
-el.innerHTML = `<table>
-<thead><tr>
-<th>نام</th><th>کد</th><th>انقضا (شمسی)</th><th>وضعیت</th><th>پیامک</th><th></th>
-</tr></thead>
-<tbody>
-${list.map(s => {
-const exp = isExpired(s);
-const statusBadge = !s.active
-? '<span class="badge badge-off">خاموش</span>'
-: exp
-? '<span class="badge badge-off">منقضی</span>'
-: '<span class="badge badge-ok">فعال</span>';
-const smsLabel = { sim: 'سیم‌کارت', panel: 'پنل', both: 'هر دو' }[s.smsMode] || s.smsMode;
-return `<tr>
-<td><strong>${s.name}</strong><br><small style="color:var(--muted)">${s.city || ''}</small></td>
-<td>${s.code}</td>
-<td>${formatDateFa(s.expireDate)}</td>
-<td>${statusBadge}</td>
-<td>${smsLabel}</td>
-<td style="white-space:nowrap">
-<button class="btn btn-sm btn-outline" onclick="openSchoolModal('${s.id}')">ویرایش</button>
-<button class="btn btn-sm ${s.active ? 'btn-warning' : 'btn-success'}" onclick="toggleSchool('${s.id}')">${s.active ? 'خاموش' : 'روشن'}</button>
-<button class="btn btn-sm btn-primary" onclick="showActivation('${s.id}')">کد فعال‌سازی</button>
-</td>
-</tr>`;
-}).join('')}
-</tbody></table>`;
-}
+
 function toggleSchool(id) {
-const s = state.schools.find(x => x.id === id);
-if (!s) return;
-s.active = !s.active;
-save();
-renderSchools();
-renderDashboard();
-toast(s.active ? 'مدرسه روشن شد' : 'مدرسه خاموش شد');
+  const s = state.schools.find(x => x.id === id);
+  if (!s) return;
+  s.active = !s.active;
+  save();
+  renderSchools();
+  renderDashboard();
+  toast(s.active ? 'مدرسه روشن شد' : 'مدرسه خاموش شد');
+  cloudSyncSchools().catch(function(){});
 }
+
 function showActivation(id) {
-const s = state.schools.find(x => x.id === id);
-if (!s) return;
-document.getElementById('modal-title').textContent = 'اطلاعات ورود — ' + s.name;
-document.getElementById('modal-body').innerHTML = `
-<p class="hint">این اطلاعات را برای مدیر مدرسه بفرستید.</p>
-<label>کد مدرسه</label>
-<div class="code-box">${s.code}</div>
-<label>کد فعال‌سازی</label>
-<div class="code-box">${s.activationCode}</div>
-<label>نام کاربری مدیر</label>
-<div class="code-box">${s.managerUsername || '—'}</div>
-<label>رمز عبور مدیر</label>
-<div class="code-box">${s.managerPassword || '—'}</div>
-<button class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="regenerateActivation('${s.id}')">صدور مجدد کد فعال‌سازی</button>
-<button class="btn btn-primary btn-block" onclick="copyActivation('${s.id}')">کپی همه</button>
-`;
-document.getElementById('modal').classList.add('show');
+  const s = state.schools.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('modal-title').textContent = 'اطلاعات ورود — ' + s.name;
+  document.getElementById('modal-body').innerHTML = `
+    <p class="hint">این اطلاعات را برای مدیر مدرسه بفرستید.</p>
+    <label>کد مدرسه</label>
+    <div class="code-box">${s.code}</div>
+    <label>کد فعال‌سازی</label>
+    <div class="code-box">${s.activationCode}</div>
+    <label>نام کاربری مدیر</label>
+    <div class="code-box">${s.managerUsername || '—'}</div>
+    <label>رمز عبور مدیر</label>
+    <div class="code-box">${s.managerPassword || '—'}</div>
+    <button class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="regenerateActivation('${s.id}')">صدور مجدد کد فعال‌سازی</button>
+    <button class="btn btn-primary btn-block" onclick="copyActivation('${s.id}')">کپی همه</button>
+  `;
+  document.getElementById('modal').classList.add('show');
 }
+
 function regenerateActivation(id) {
-const s = state.schools.find(x => x.id === id);
-if (!s) return;
-if (!confirm('کد قبلی باطل می‌شود. ادامه؟')) return;
-s.activationCode = genActivationCode();
-s.activationUsed = false;
-save();
-showActivation(id);
-toast('کد جدید صادر شد');
+  const s = state.schools.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm('کد قبلی باطل می‌شود. ادامه؟')) return;
+  s.activationCode = genActivationCode();
+  s.activationUsed = false;
+  save();
+  showActivation(id);
+  toast('کد جدید صادر شد');
 }
+
 function copyActivation(id) {
-const s = state.schools.find(x => x.id === id);
-if (!s) return;
-const t = `مدرسه: ${s.name}
-کد مدرسه: ${s.code}
-کد فعال‌سازی: ${s.activationCode}
-نام کاربری مدیر: ${s.managerUsername || ''}
-رمز عبور مدیر: ${s.managerPassword || ''}`;
-navigator.clipboard.writeText(t).then(() => toast('کپی شد')).catch(() => toast('کپی دستی کنید'));
+  const s = state.schools.find(x => x.id === id);
+  if (!s) return;
+  const t = `مدرسه: ${s.name}\nکد مدرسه: ${s.code}\nکد فعال‌سازی: ${s.activationCode}\nنام کاربری مدیر: ${s.managerUsername || ''}\nرمز عبور مدیر: ${s.managerPassword || ''}`;
+  navigator.clipboard.writeText(t).then(() => toast('کپی شد')).catch(() => toast('کپی دستی کنید'));
 }
+
 /* School modal */
 function openSchoolModal(id) {
-const s = id ? state.schools.find(x => x.id === id) : null;
-const isNew = !s;
-document.getElementById('modal-title').textContent = isNew ? 'مدرسه جدید' : 'ویرایش مدرسه';
-const modules = s?.modules || DEFAULT_MODULES.map(m => m.id).filter(id => id !== 'dual_shift');
-const modHtml = DEFAULT_MODULES.map(m => `
-<label class="checkbox-row">
-<input type="checkbox" class="mod-check" value="${m.id}" ${modules.includes(m.id) ? 'checked' : ''} />
-${m.label}
-</label>`).join('');
-document.getElementById('modal-body').innerHTML = `
-<div class="form-group"><label>نام مدرسه *</label>
-<input class="form-control" id="f-name" value="${s?.name || ''}" /></div>
-<div class="form-group"><label>کد مدرسه *</label>
-<input class="form-control" id="f-code" value="${s?.code || genSchoolCode()}" ${isNew ? '' : 'readonly'} /></div>
-<div class="form-group"><label>نام مدیر *</label>
-<input class="form-control" id="f-manager" value="${s?.managerName || ''}" /></div>
-<div class="form-group"><label>شماره تماس مدیر *</label>
-<input class="form-control" id="f-phone" value="${s?.managerPhone || ''}" type="tel" /></div>
-<div class="form-group"><label>نام کاربری ورود مدیر * (قابل تغییر)</label>
-<input class="form-control" id="f-muser" value="${s?.managerUsername || ''}" placeholder="مثلاً admin یا موبایل" autocomplete="off" /></div>
-<div class="form-group"><label>رمز عبور ورود مدیر *</label>
-<input class="form-control" id="f-mpass" type="text" value="${s?.managerPassword || ''}" placeholder="حداقل ۶ کاراکتر" autocomplete="off" /></div>
-<p class="hint">همین نام کاربری و رمز را مدیر در صفحه «ورود به سامانه» با نقش مدیر وارد می‌کند.</p>
-<div class="form-group"><label>شهر</label>
-<input class="form-control" id="f-city" value="${s?.city || ''}" /></div>
-<div class="form-group"><label>توضیحات</label>
-<textarea class="form-control" id="f-notes">${s?.notes || ''}</textarea></div>
-<div class="card-title" style="margin-top:12px">لایسنس (تاریخ کاملاً شمسی)</div>
-<div class="form-group"><label>تاریخ شروع</label>
-${jalaliSelectHtml('f-start', s?.startDate || todayStr())}</div>
-<div class="form-group"><label>تاریخ انقضا</label>
-${jalaliSelectHtml('f-expire', s?.expireDate || addMonths(todayStr(), 12))}</div>
-<div class="form-group"><label>سقف تعداد کاربر</label>
-<input type="number" class="form-control" id="f-maxusers" value="${s?.maxUsers || 20}" min="1" /></div>
-<div class="form-group"><label>تعداد شیفت</label>
-<select class="form-control" id="f-shifts">
-<option value="1" ${(s?.shifts || 1) == 1 ? 'selected' : ''}>۱ شیفت (پیش‌فرض)</option>
-<option value="2" ${s?.shifts == 2 ? 'selected' : ''}>۲ شیفت</option>
-</select></div>
-<div class="card-title" style="margin-top:12px">قابلیت‌ها</div>
-${modHtml}
-<div class="card-title" style="margin-top:12px">پیامک</div>
-<div class="form-group"><label>روش ارسال</label>
-<select class="form-control" id="f-smsmode" onchange="toggleSmsPanelFields()">
-<option value="sim" ${s?.smsMode === 'sim' ? 'selected' : ''}>فقط سیم‌کارت</option>
-<option value="panel" ${s?.smsMode === 'panel' ? 'selected' : ''}>فقط پنل پیامک</option>
-<option value="both" ${(!s || s?.smsMode === 'both') ? 'selected' : ''}>هر دو</option>
-</select></div>
-<div id="sms-panel-fields">
-<div class="form-group"><label>آدرس API</label>
-<input class="form-control" id="f-apiurl" value="${s?.smsApiUrl || ''}" placeholder="https://..." /></div>
-<div class="form-group"><label>نام کاربری پنل</label>
-<input class="form-control" id="f-apiuser" value="${s?.smsApiUser || ''}" /></div>
-<div class="form-group"><label>API Key / رمز</label>
-<input class="form-control" id="f-apikey" value="${s?.smsApiKey || ''}" /></div>
-<div class="form-group"><label>خط فرستنده</label>
-<input class="form-control" id="f-sender" value="${s?.smsSender || ''}" /></div>
-</div>
-<label class="checkbox-row" style="margin-top:10px">
-<input type="checkbox" id="f-active" ${s ? (s.active ? 'checked' : '') : 'checked'} />
-مدرسه فعال (روشن) باشد
-</label>
-<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="saveSchool('${id || ''}')">ذخیره</button>
-${!isNew ? `<button class="btn btn-danger btn-block" style="margin-top:8px" onclick="deleteSchool('${id}')">حذف مدرسه</button>` : ''}
-`;
-document.getElementById('modal').classList.add('show');
-toggleSmsPanelFields();
+  const s = id ? state.schools.find(x => x.id === id) : null;
+  const isNew = !s;
+  document.getElementById('modal-title').textContent = isNew ? 'مدرسه جدید' : 'ویرایش مدرسه';
+
+  const modules = s?.modules || DEFAULT_MODULES.map(m => m.id).filter(id => id !== 'dual_shift');
+  const modHtml = DEFAULT_MODULES.map(m => `
+    <label class="checkbox-row">
+      <input type="checkbox" class="mod-check" value="${m.id}" ${modules.includes(m.id) ? 'checked' : ''} />
+      ${m.label}
+    </label>`).join('');
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group"><label>نام مدرسه *</label>
+      <input class="form-control" id="f-name" value="${s?.name || ''}" /></div>
+    <div class="form-group"><label>کد مدرسه *</label>
+      <input class="form-control" id="f-code" value="${s?.code || genSchoolCode()}" ${isNew ? '' : 'readonly'} /></div>
+    <div class="form-group"><label>نام مدیر *</label>
+      <input class="form-control" id="f-manager" value="${s?.managerName || ''}" /></div>
+    <div class="form-group"><label>شماره تماس مدیر *</label>
+      <input class="form-control" id="f-phone" value="${s?.managerPhone || ''}" type="tel" /></div>
+    <div class="form-group"><label>نام کاربری ورود مدیر مدرسه * — می‌توانید عوض کنید</label>
+      <input class="form-control" id="f-muser" value="${s?.managerUsername || ''}" placeholder="مثلاً admin یا موبایل" autocomplete="off" /></div>
+    <div class="form-group"><label>رمز عبور ورود مدیر *</label>
+      <input class="form-control" id="f-mpass" type="text" value="${s?.managerPassword || ''}" placeholder="حداقل ۶ کاراکتر" autocomplete="off" /></div>
+    <p class="hint">همین نام کاربری و رمز را مدیر در صفحه «ورود به سامانه» با نقش مدیر وارد می‌کند.</p>
+    <div class="form-group"><label>شهر</label>
+      <input class="form-control" id="f-city" value="${s?.city || ''}" /></div>
+    <div class="form-group"><label>توضیحات</label>
+      <textarea class="form-control" id="f-notes">${s?.notes || ''}</textarea></div>
+
+    <div class="card-title" style="margin-top:12px">لایسنس (تاریخ کاملاً شمسی)</div>
+    <div class="form-group"><label>تاریخ شروع</label>
+      ${jalaliSelectHtml('f-start', s?.startDate || todayStr())}</div>
+    <div class="form-group"><label>تاریخ انقضا</label>
+      ${jalaliSelectHtml('f-expire', s?.expireDate || addMonths(todayStr(), 12))}</div>
+    <div class="form-group"><label>سقف تعداد کاربر</label>
+      <input type="number" class="form-control" id="f-maxusers" value="${s?.maxUsers || 20}" min="1" /></div>
+    <div class="form-group"><label>تعداد شیفت</label>
+      <select class="form-control" id="f-shifts">
+        <option value="1" ${(s?.shifts || 1) == 1 ? 'selected' : ''}>۱ شیفت (پیش‌فرض)</option>
+        <option value="2" ${s?.shifts == 2 ? 'selected' : ''}>۲ شیفت</option>
+      </select></div>
+
+    <div class="card-title" style="margin-top:12px">قابلیت‌ها</div>
+    ${modHtml}
+
+    <div class="card-title" style="margin-top:12px">پیامک</div>
+    <div class="form-group"><label>روش ارسال</label>
+      <select class="form-control" id="f-smsmode" onchange="toggleSmsPanelFields()">
+        <option value="sim" ${s?.smsMode === 'sim' ? 'selected' : ''}>فقط سیم‌کارت</option>
+        <option value="panel" ${s?.smsMode === 'panel' ? 'selected' : ''}>فقط پنل پیامک</option>
+        <option value="both" ${(!s || s?.smsMode === 'both') ? 'selected' : ''}>هر دو</option>
+      </select></div>
+    <div id="sms-panel-fields">
+      <div class="form-group"><label>آدرس API</label>
+        <input class="form-control" id="f-apiurl" value="${s?.smsApiUrl || ''}" placeholder="https://..." /></div>
+      <div class="form-group"><label>نام کاربری پنل</label>
+        <input class="form-control" id="f-apiuser" value="${s?.smsApiUser || ''}" /></div>
+      <div class="form-group"><label>API Key / رمز</label>
+        <input class="form-control" id="f-apikey" value="${s?.smsApiKey || ''}" /></div>
+      <div class="form-group"><label>خط فرستنده</label>
+        <input class="form-control" id="f-sender" value="${s?.smsSender || ''}" /></div>
+    </div>
+
+    <label class="checkbox-row" style="margin-top:10px">
+      <input type="checkbox" id="f-active" ${s ? (s.active ? 'checked' : '') : 'checked'} />
+      مدرسه فعال (روشن) باشد
+    </label>
+
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="saveSchool('${id || ''}')">ذخیره</button>
+    ${!isNew ? `<button class="btn btn-danger btn-block" style="margin-top:8px" onclick="deleteSchool('${id}')">حذف مدرسه</button>` : ''}
+  `;
+  document.getElementById('modal').classList.add('show');
+  toggleSmsPanelFields();
 }
+
 function toggleSmsPanelFields() {
-const mode = document.getElementById('f-smsmode')?.value;
-const box = document.getElementById('sms-panel-fields');
-if (box) box.style.display = (mode === 'panel' || mode === 'both') ? 'block' : 'none';
+  const mode = document.getElementById('f-smsmode')?.value;
+  const box = document.getElementById('sms-panel-fields');
+  if (box) box.style.display = (mode === 'panel' || mode === 'both') ? 'block' : 'none';
 }
+
 function saveSchool(id) {
-const name = document.getElementById('f-name').value.trim();
-const code = document.getElementById('f-code').value.trim();
-const managerName = document.getElementById('f-manager').value.trim();
-const managerPhone = document.getElementById('f-phone').value.trim();
-const managerUsername = document.getElementById('f-muser').value.trim();
-const managerPassword = document.getElementById('f-mpass').value;
-if (!name || !code || !managerName || !managerPhone || !managerUsername || !managerPassword) {
-return toast('فیلدهای ستاره‌دار (از جمله کاربری و رمز مدیر) را پر کنید');
+  const name = document.getElementById('f-name').value.trim();
+  const code = document.getElementById('f-code').value.trim();
+  const managerName = document.getElementById('f-manager').value.trim();
+  const managerPhone = document.getElementById('f-phone').value.trim();
+  const managerUsername = document.getElementById('f-muser').value.trim();
+  const managerPassword = document.getElementById('f-mpass').value;
+  if (!name || !code || !managerName || !managerPhone || !managerUsername || !managerPassword) {
+    return toast('فیلدهای ستاره‌دار (از جمله کاربری و رمز مدیر) را پر کنید');
+  }
+  if (managerPassword.length < 6) {
+    return toast('رمز مدیر حداقل ۶ کاراکتر باشد');
+  }
+
+  const modules = [...document.querySelectorAll('.mod-check:checked')].map(c => c.value);
+  const shifts = parseInt(document.getElementById('f-shifts').value) || 1;
+  if (shifts === 2 && !modules.includes('dual_shift')) modules.push('dual_shift');
+  if (shifts === 1) {
+    const i = modules.indexOf('dual_shift');
+    if (i >= 0) modules.splice(i, 1);
+  }
+
+  const data = {
+    name,
+    code,
+    managerName,
+    managerPhone,
+    managerUsername,
+    managerPassword,
+    city: document.getElementById('f-city').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+    startDate: isoFromJalaliSelects('f-start'),
+    expireDate: isoFromJalaliSelects('f-expire'),
+    maxUsers: parseInt(document.getElementById('f-maxusers').value) || 20,
+    shifts,
+    modules,
+    smsMode: document.getElementById('f-smsmode').value,
+    smsApiUrl: document.getElementById('f-apiurl')?.value.trim() || '',
+    smsApiUser: document.getElementById('f-apiuser')?.value.trim() || '',
+    smsApiKey: document.getElementById('f-apikey')?.value.trim() || '',
+    smsSender: document.getElementById('f-sender')?.value.trim() || '',
+    active: document.getElementById('f-active').checked
+  };
+
+  if (id) {
+    const s = state.schools.find(x => x.id === id);
+    if (!s) return;
+    Object.assign(s, data);
+  } else {
+    if (state.schools.some(x => x.code === code)) return toast('این کد مدرسه تکراری است');
+    state.schools.push({
+      id: uid(),
+      ...data,
+      activationCode: genActivationCode(),
+      activationUsed: false,
+      createdAt: todayStr(),
+      plan: 'paid',
+      source: 'mother',
+      _neverSynced: true
+    });
+  }
+  save();
+  closeModal();
+  renderSchools();
+  renderDashboard();
+  toast('ذخیره محلی شد — در حال ارسال به سرور...');
+  cloudSyncSchools().then(function (ok) {
+    if (ok) toast('ذخیره شد و روی سرور آمد ✓');
+  });
 }
-if (managerPassword.length < 6) {
-return toast('رمز مدیر حداقل ۶ کاراکتر باشد');
-}
-const modules = [...document.querySelectorAll('.mod-check:checked')].map(c => c.value);
-const shifts = parseInt(document.getElementById('f-shifts').value) || 1;
-if (shifts === 2 && !modules.includes('dual_shift')) modules.push('dual_shift');
-if (shifts === 1) {
-const i = modules.indexOf('dual_shift');
-if (i >= 0) modules.splice(i, 1);
-}
-const data = {
-name,
-code,
-managerName,
-managerPhone,
-managerUsername,
-managerPassword,
-city: document.getElementById('f-city').value.trim(),
-notes: document.getElementById('f-notes').value.trim(),
-startDate: isoFromJalaliSelects('f-start'),
-expireDate: isoFromJalaliSelects('f-expire'),
-maxUsers: parseInt(document.getElementById('f-maxusers').value) || 20,
-shifts,
-modules,
-smsMode: document.getElementById('f-smsmode').value,
-smsApiUrl: document.getElementById('f-apiurl')?.value.trim() || '',
-smsApiUser: document.getElementById('f-apiuser')?.value.trim() || '',
-smsApiKey: document.getElementById('f-apikey')?.value.trim() || '',
-smsSender: document.getElementById('f-sender')?.value.trim() || '',
-active: document.getElementById('f-active').checked
-};
-if (id) {
-const s = state.schools.find(x => x.id === id);
-if (!s) return;
-Object.assign(s, data);
-} else {
-if (state.schools.some(x => x.code === code)) return toast('این کد مدرسه تکراری است');
-state.schools.push({
-id: uid(),
-...data,
-activationCode: genActivationCode(),
-activationUsed: false,
-createdAt: todayStr(),
-plan: 'paid',
-source: 'mother'
-});
-}
-save();
-closeModal();
-renderSchools();
-renderDashboard();
-toast('ذخیره محلی شد — در حال ارسال به سرور...');
-cloudSyncSchools().then(function (ok) {
-if (ok) toast('ذخیره شد و روی سرور آمد ✓');
-});
-}
+
 async function deleteSchool(id) {
-if (!confirm('حذف کامل این مدرسه از پنل مادر و سرور؟')) return;
-state.schools = state.schools.filter(x => x.id !== id);
-save();
-closeModal();
-renderSchools();
-renderDashboard();
-toast('در حال حذف از سرور...');
-try {
-if (SYNC_API) {
-await apiFetch('/api/schools/' + encodeURIComponent(id), { method: 'DELETE' });
+  if (!confirm('حذف کامل این مدرسه از پنل مادر و سرور؟')) return;
+  const removed = (state.schools || []).find(x => x.id === id);
+  state.schools = state.schools.filter(x => x.id !== id);
+  save();
+  closeModal();
+  renderSchools();
+  renderDashboard();
+  toast('در حال حذف از سرور...');
+  try {
+    if (SYNC_API && id) {
+      await apiFetch('/api/schools/' + encodeURIComponent(id), { method: 'DELETE', retries: 3 });
+    }
+    toast('حذف شد (این دستگاه + سرور)');
+    // بلافاصله دوباره از سرور بگیر تا همه دستگاه‌ها یکدست شوند
+    await cloudPullSchools();
+    renderSchools();
+    renderDashboard();
+  } catch (e) {
+    // اگر حذف سرور شکست خورد، مدرسه را برنگردان — فقط هشدار بده تا دوباره تلاش شود
+    toast('از این دستگاه حذف شد؛ سرور خطا داد — «ارسال همه» یا دوباره حذف را بزنید: ' + (e.message || e));
+    console.error(e);
+  }
 }
-toast('حذف شد (محلی + سرور)');
-} catch (e) {
-toast('محلی حذف شد؛ سرور: ' + (e.message || e));
-}
-}
+
 function closeModal() {
-document.getElementById('modal').classList.remove('show');
+  document.getElementById('modal').classList.remove('show');
 }
 document.getElementById('modal').addEventListener('click', e => {
-if (e.target.id === 'modal') closeModal();
+  if (e.target.id === 'modal') closeModal();
 });
+
 /* Settings */
-function changeMotherPassword() {
-const cur = document.getElementById('cur-pass').value;
-const n1 = document.getElementById('new-pass').value;
-const n2 = document.getElementById('new-pass2').value;
-if (cur !== state.motherPass) return toast('رمز فعلی اشتباه است');
-if (n1.length < 6) return toast('رمز جدید حداقل ۶ کاراکتر');
-if (n1 !== n2) return toast('تکرار رمز یکسان نیست');
-state.motherPass = n1;
-save();
-document.getElementById('cur-pass').value = '';
-document.getElementById('new-pass').value = '';
-document.getElementById('new-pass2').value = '';
-toast('رمز تغییر کرد');
+function changeMotherAccount() {
+  const cur = document.getElementById('cur-pass').value;
+  const n1 = document.getElementById('new-pass').value;
+  const n2 = document.getElementById('new-pass2').value;
+  const newUser = (document.getElementById('mother-user-new').value || '').trim();
+  if (cur !== state.motherPass) return toast('رمز فعلی اشتباه است');
+  if (newUser) {
+    if (newUser.length < 3) return toast('نام کاربری حداقل ۳ کاراکتر');
+    state.motherUser = newUser;
+  }
+  if (n1) {
+    if (n1.length < 6) return toast('رمز جدید حداقل ۶ کاراکتر');
+    if (n1 !== n2) return toast('تکرار رمز یکسان نیست');
+    state.motherPass = n1;
+  }
+  if (!newUser && !n1) return toast('نام کاربری یا رمز جدید را وارد کنید');
+  save();
+  document.getElementById('cur-pass').value = '';
+  document.getElementById('new-pass').value = '';
+  document.getElementById('new-pass2').value = '';
+  document.getElementById('mother-user-new').value = '';
+  const disp = document.getElementById('mother-user-display');
+  if (disp) disp.value = state.motherUser;
+  toast('حساب پنل مادر به‌روز شد');
 }
+function changeMotherPassword(){ changeMotherAccount(); }
+function fillMotherAccountForm(){
+  const disp = document.getElementById('mother-user-display');
+  if (disp) disp.value = state.motherUser || 'admin';
+}
+
 function exportMotherData() {
-const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-const a = document.createElement('a');
-a.href = URL.createObjectURL(blob);
-a.download = 'mother-panel-backup-' + todayStr() + '.json';
-a.click();
-toast('دانلود شد');
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mother-panel-backup-' + todayStr() + '.json';
+  a.click();
+  toast('دانلود شد');
 }
+
 function importMotherData(ev) {
-const file = ev.target.files[0];
-if (!file) return;
-const reader = new FileReader();
-reader.onload = () => {
-try {
-const data = JSON.parse(reader.result);
-if (!data.schools) throw new Error('invalid');
-if (!confirm('داده فعلی پنل مادر جایگزین می‌شود. ادامه؟')) return;
-state.motherUser = data.motherUser || state.motherUser;
-state.motherPass = data.motherPass || state.motherPass;
-state.schools = data.schools || [];
-save();
-renderDashboard();
-renderSchools();
-toast('بازیابی شد');
-} catch {
-toast('فایل نامعتبر است');
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data.schools) throw new Error('invalid');
+      if (!confirm('داده فعلی پنل مادر جایگزین می‌شود. ادامه؟')) return;
+      state.motherUser = data.motherUser || state.motherUser;
+      state.motherPass = data.motherPass || state.motherPass;
+      state.schools = data.schools || [];
+      save();
+      renderDashboard();
+      renderSchools();
+      toast('بازیابی شد');
+    } catch {
+      toast('فایل نامعتبر است');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
 }
-};
-reader.readAsText(file);
-ev.target.value = '';
-}
+
 /* Init */
 load();
 if (state.motherPass) {
-document.getElementById('login-hint').textContent = 'با حساب پنل مادر وارد شوید.';
+  document.getElementById('login-hint').textContent = 'با حساب پنل مادر وارد شوید.';
 }
 cloudPullSchools().then(() => {
-try { if (typeof renderDashboard === 'function') renderDashboard(); if (typeof renderSchools === 'function') renderSchools(); } catch (e) {}
+  try { if (typeof renderDashboard === 'function') renderDashboard(); if (typeof renderSchools === 'function') renderSchools(); } catch (e) {}
 });
 </script>
 </body>
