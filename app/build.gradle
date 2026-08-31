@@ -28,7 +28,9 @@ android {
             resValue "string", "app_name", "پنل مادر"
         }
     }
-
+buildFeatures {
+        buildConfig true
+    }
     buildTypes {
         release {
             minifyEnabled false
