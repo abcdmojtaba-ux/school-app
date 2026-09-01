@@ -333,7 +333,7 @@ th { background: #f5f5f5; font-weight: 700; color: #444; }
       <button data-page="settings" onclick="showPage('settings')">تنظیمات پنل</button>
     </nav>
     <div class="main">
-<div class="vpn-hint">برای کار با <strong>سرور آنلاین</strong> حتماً فیلترشکن را روشن کنید.</div>
+<div class="vpn-hint">همگام‌سازی آنلاین با سرور داده فعال است.</div>
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
         <div class="stats" id="dash-stats"></div>
@@ -461,8 +461,8 @@ function save() {
 }
 
 /* —— سرور همگام‌سازی (Cloudflare Worker) — بدون گوگل/Firebase —— */
-// آدرس ورکر روی دامنه اختصاصی خودت (بدون نیاز به فیلترشکن)
-const DEFAULT_SYNC_API = 'https://sync.nikan-school.top';
+// بعد از ساخت Worker، آدرس را اینجا بگذار — مثال: https://school-sync.xxx.workers.dev
+const DEFAULT_SYNC_API = 'https://school-sync.abcd-mojtaba.workers.dev';
 const SYNC_API = (localStorage.getItem('school_sync_api') || DEFAULT_SYNC_API).replace(/\/$/, '');
 
 function setSyncApi(url) {
