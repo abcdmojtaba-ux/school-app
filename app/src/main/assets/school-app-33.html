@@ -596,31 +596,75 @@ function applySchoolSession(sc){
   if(sc.managerPassword)schoolData.managerPass=String(sc.managerPassword);
   schoolData.shifts=sc.shifts||1;saveSchoolData();
 }
+function normLoginUser(u){
+  u=toEnDigits(String(u||'')).trim().replace(/[\s-]/g,'');
+  if(u.startsWith('98')&&u.length>=12)u='0'+u.slice(2);
+  if(u.length>=10&&!u.startsWith('0')&&/^\d+$/.test(u))u='0'+u;
+  return u;
+}
+function matchManagerCred(s,user,pass){
+  if(!s)return false;
+  if(String(s.managerPassword||'')!==String(pass||''))return false;
+  const u=normLoginUser(user);
+  const mu=normLoginUser(s.managerUsername||'');
+  const mp=normLoginUser(s.managerPhone||'');
+  return mu===u||mp===u;
+}
 async function doLogin(){
-  const code=toEnDigits(document.getElementById('l-code').value).trim(),user=toEnDigits(document.getElementById('l-user').value).trim(),pass=toEnDigits(document.getElementById('l-pass').value);
+  const code=toEnDigits(document.getElementById('l-code').value).trim();
+  let user=toEnDigits(document.getElementById('l-user').value).trim();
+  const pass=toEnDigits(document.getElementById('l-pass').value);
+  user=normLoginUser(user);
   if(!user||!pass)return toast('نام کاربری و رمز را وارد کنید');
-  // اگر قبلاً آدرس خالی ذخیره شده، پاک کن تا پیش‌فرض کار کند
   try{if(localStorage.getItem('school_sync_api')==='')localStorage.removeItem('school_sync_api')}catch(e){}
   const mother=loadMother(),schools=mother.schools||[];
   if(loginRole==='manager'){
     let sc=null;
-    if(code)sc=schools.find(s=>s.code===code&&String(s.managerUsername||'').trim()===user&&String(s.managerPassword||'')===pass);
-    if(!sc)sc=schools.find(s=>String(s.managerUsername||'').trim()===user&&String(s.managerPassword||'')===pass);
+    // 1) حافظه محلی همین اپ
+    if(code)sc=schools.find(s=>s.code===code&&matchManagerCred(s,user,pass));
+    if(!sc)sc=schools.find(s=>matchManagerCred(s,user,pass));
+    // 2) سرور
     if(!sc){
       try{
         toast('در حال ورود از سرور...');
         sc=await cloudFindSchoolByLogin(user,pass,code||null);
       }catch(e){
-        var m=(e&&e.message)?e.message:String(e);
         console.error('login cloud',e);
-        return toast('خطا: '+m);
+        // اگر سرور در دسترس نبود، ادامه بده به سراغ نشست محلی
+        sc=null;
+        var m=(e&&e.message)?e.message:'';
+        if(/اتصال|سرور|network|Failed|fetch/i.test(m)){
+          // فقط اگر بعداً محلی هم پیدا نشد این را نشان می‌دهیم
+          window._lastLoginNetErr=m;
+        }else{
+          window._lastLoginNetErr=m;
+        }
       }
     }
-    if(sc){if(sc.active===false)return toast('مدرسه خاموش است');if(isExpired(sc.expireDate))return toast('منقضی');applySchoolSession(sc);saveUserSession({role:'manager',username:user,name:sc.managerName,schoolId:sc.id});toast('ورود مدیر');enterApp();return}
+    if(sc){
+      if(sc.active===false)return toast('مدرسه خاموش است');
+      if(sc.expireDate&&isExpired(sc.expireDate))return toast('لایسنس منقضی شده');
+      applySchoolSession(sc);
+      saveUserSession({role:'manager',username:user,name:sc.managerName||'مدیر',schoolId:sc.id});
+      toast('ورود مدیر');
+      enterApp();
+      return;
+    }
+    // 3) نشست قبلی همین دستگاه
     let sess=loadSession();
     if(code){const byCode=schools.find(s=>s.code===code);if(byCode){applySchoolSession(byCode);sess=loadSession()}}
-    if(sess){session=sess;loadSchoolData();if(user===schoolData.managerUser&&pass===schoolData.managerPass){saveUserSession({role:'manager',username:user,name:session.managerName,schoolId:session.schoolId});toast('ورود مدیر');enterApp();return}}
-    return toast('نام کاربری یا رمز مدیر در سرور پیدا نشد');
+    if(sess){
+      session=sess;loadSchoolData();
+      const localUser=normLoginUser(schoolData.managerUser||'');
+      if(localUser===user&&String(schoolData.managerPass||'')===String(pass)){
+        saveUserSession({role:'manager',username:user,name:session.managerName||'مدیر',schoolId:session.schoolId});
+        toast('ورود مدیر');
+        enterApp();
+        return;
+      }
+    }
+    if(window._lastLoginNetErr)return toast('ورود نشد. اتصال برقرار نشد — دوباره تلاش کنید');
+    return toast('نام کاربری یا رمز اشتباه است. از پنل مادر همان شماره/رمز را بزنید');
   }
   let sess=loadSession();
   if(code){
@@ -642,7 +686,7 @@ function enterApp(){
   try{if(canManage){/*delay*/}}catch(e){}
   if(!session||!userSession){showScreen('gate');return}
   syncLicenseFromMother();
-  if(!session.active||isExpired(session.expireDate)){document.getElementById('locked-info').innerHTML='<div><strong>'+(session.name||'')+'</strong></div><div>انقضا: '+formatDateFa(session.expireDate)+'</div>';showScreen('locked');return}
+  if(session.active===false||(session.expireDate&&isExpired(session.expireDate))){document.getElementById('locked-info').innerHTML='<div><strong>'+(session.name||'')+'</strong></div><div>انقضا: '+formatDateFa(session.expireDate)+'</div>';showScreen('locked');return}
   loadSchoolData();
   try{ensureAllSubmissionsInAttendance()}catch(e){}
   document.getElementById('app-title').textContent=session.name||'سامانه مدرسه';
