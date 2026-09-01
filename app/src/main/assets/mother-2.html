@@ -461,9 +461,8 @@ function save() {
 }
 
 /* —— سرور همگام‌سازی (Cloudflare Worker) — بدون گوگل/Firebase —— */
-// بعد از ساخت Worker، آدرس را اینجا بگذار — مثال: https://school-sync.xxx.workers.dev
-const DEFAULT_SYNC_API = 'https://sync.nikan-school.top
-
+// آدرس ورکر روی دامنه اختصاصی خودت (بدون نیاز به فیلترشکن)
+const DEFAULT_SYNC_API = 'https://sync.nikan-school.top';
 const SYNC_API = (localStorage.getItem('school_sync_api') || DEFAULT_SYNC_API).replace(/\/$/, '');
 
 function setSyncApi(url) {
