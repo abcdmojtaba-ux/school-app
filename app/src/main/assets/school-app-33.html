@@ -413,7 +413,7 @@ function saveMother(d){localStorage.setItem(MOTHER_KEY,JSON.stringify(d))}
 function importMotherBackup(ev){const file=ev.target.files&&ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(){try{const data=JSON.parse(reader.result);if(!data.schools)throw 0;saveMother(data);toast('پشتیبان مادر بارگذاری شد')}catch(e){toast('فایل نامعتبر')}};reader.readAsText(file);ev.target.value=''}
 
 /* سرور Cloudflare — بدون Firebase/گوگل */
-const DEFAULT_SYNC_API=sync.nikan-school.top
+const DEFAULT_SYNC_API=https://sync.nikan-school.top
 const SYNC_API=(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API).replace(/\/$/,'');
 function setSyncApi(url){url=String(url||'').trim().replace(/\/$/,'');localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
 async function apiFetch(path,options){
