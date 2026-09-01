@@ -777,7 +777,7 @@ function renderHome(){
         const abs=(s.rows||[]).filter(r=>r.status==='absent');
         const late=(s.rows||[]).filter(r=>r.status==='late');
         const absNames=abs.map(r=>{const st=schoolData.students.find(x=>x.id===r.studentId);return st?st.name:'?'}).join('، ');
-        return '<div class="list-item clickable" onclick="openSubmission(\\''+s.id+'\\')"><div style="flex:1"><div class="name">'+(te?te.name:'معلم')+' — '+(s.periodName||'')+'</div><div class="meta">'+(c?c.name:'کلاس')+(s.subject?' · '+s.subject:'')+' · '+formatDateFa(s.date)+'</div><div class="meta">غایب: '+abs.length+(absNames?' ('+absNames+')':'')+' · تأخیر: '+late.length+'</div></div><span class="status-p">باز کردن</span></div>';
+        return '<div class="list-item clickable" onclick="openSubmission(\''+s.id+'\')"><div style="flex:1"><div class="name">'+(te?te.name:'معلم')+' — '+(s.periodName||'')+'</div><div class="meta">'+(c?c.name:'کلاس')+(s.subject?' · '+s.subject:'')+' · '+formatDateFa(s.date)+'</div><div class="meta">غایب: '+abs.length+(absNames?' ('+absNames+')':'')+' · تأخیر: '+late.length+'</div></div><span class="status-p">باز کردن</span></div>';
       }).join('');
     }
     if(done.length){
@@ -787,7 +787,7 @@ function renderHome(){
         const c=(schoolData.classes||[]).find(x=>x.id===s.classId);
         const abs=(s.rows||[]).filter(r=>r.status==='absent').length;
         const late=(s.rows||[]).filter(r=>r.status==='late').length;
-        return '<div class="list-item clickable" onclick="openSubmission(\\''+s.id+'\\')"><div style="flex:1"><div class="name">'+(te?te.name:'معلم')+' — '+(s.periodName||'')+'</div><div class="meta">'+(c?c.name:'')+' · '+formatDateFa(s.date)+' · غایب '+abs+' · تأخیر '+late+'</div></div><span class="badge" style="background:#e8f5e9;color:#2e7d32">بررسی‌شده</span></div>';
+        return '<div class="list-item clickable" onclick="openSubmission(\''+s.id+'\')"><div style="flex:1"><div class="name">'+(te?te.name:'معلم')+' — '+(s.periodName||'')+'</div><div class="meta">'+(c?c.name:'')+' · '+formatDateFa(s.date)+' · غایب '+abs+' · تأخیر '+late+'</div></div><span class="badge" style="background:#e8f5e9;color:#2e7d32">بررسی‌شده</span></div>';
       }).join('');
     }
     if(html){pend.style.display='block';pend.innerHTML=html}else{pend.style.display='none';pend.innerHTML=''}
