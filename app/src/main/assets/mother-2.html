@@ -474,25 +474,46 @@ function setSyncApi(url) {
 async function apiFetch(path, options) {
   if (!SYNC_API) throw new Error('آدرس سرور تنظیم نشده');
   const opts = options || {};
-  const maxTry = opts.retries != null ? opts.retries : 3;
+  const maxTry = opts.retries != null ? opts.retries : 2;
   let lastErr = null;
   for (let i = 1; i <= maxTry; i++) {
     try {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 12000) : null;
       const res = await fetch(SYNC_API + path, {
         method: opts.method || 'GET',
         headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-        body: opts.body ? JSON.stringify(opts.body) : undefined
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+        signal: ctrl ? ctrl.signal : undefined
       });
+      if (timer) clearTimeout(timer);
       let data = null;
       try { data = await res.json(); } catch (e) { data = null; }
       if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
       return data;
     } catch (e) {
       lastErr = e;
-      if (i < maxTry) await new Promise(r => setTimeout(r, 700 * i));
+      if (i < maxTry) await new Promise(r => setTimeout(r, 350 * i));
     }
   }
   throw lastErr || new Error('خطای سرور');
+}
+
+async function cloudPushOneSchool(school) {
+  if (!SYNC_API || !school || !school.id) return false;
+  try {
+    const payload = cleanSchoolForCloud(school);
+    await apiFetch('/api/schools', { method: 'POST', body: payload, retries: 2 });
+    school._neverSynced = false;
+    school._pushed = true;
+    school._synced = true;
+    school.updatedAtMs = Date.now();
+    save();
+    return true;
+  } catch (e) {
+    console.warn('cloudPushOneSchool', e);
+    return false;
+  }
 }
 
 function cleanSchoolForCloud(s) {
@@ -555,27 +576,19 @@ async function cloudSyncSchools() {
 async function cloudPullSchools() {
   if (!SYNC_API) return false;
   try {
-    const data = await apiFetch('/api/schools', { retries: 2 });
+    const data = await apiFetch('/api/schools', { retries: 1 });
     const remote = (data && data.schools) || [];
-    const fulls = await Promise.all(remote.map(function (r) {
-      if (!r || !r.id) return Promise.resolve(null);
-      return apiFetch('/api/schools/' + encodeURIComponent(r.id), { retries: 2 })
-        .then(function (f) { return (f && f.school) ? f.school : r; })
-        .catch(function () { return r; });
-    }));
-    // سرور مرجع است: هر مدرسه‌ای که روی سرور نیست حذف شده
-    // فقط مدارس محلی که هنوز هرگز به سرور نرفته‌اند نگه داشته می‌شوند
+    // مدارس فقط-محلی که هنوز به سرور نرفته‌اند
     const localOnly = (state.schools || []).filter(function (s) {
       return s && s.id && s._neverSynced === true;
     });
     const map = {};
-    remote.forEach(function (r, i) {
+    remote.forEach(function (r) {
       if (!r || !r.id) return;
-      map[r.id] = Object.assign({}, r, fulls[i] || {}, { _synced: true, _pushed: true, _neverSynced: false });
+      // داده سرور اولویت دارد (کامل)
+      map[r.id] = Object.assign({}, r, { _synced: true, _pushed: true, _neverSynced: false });
     });
-    localOnly.forEach(function (s) {
-      if (!map[s.id]) map[s.id] = s;
-    });
+    localOnly.forEach(function (s) { if (!map[s.id]) map[s.id] = s; });
     state.schools = Object.values(map);
     save();
     return true;
@@ -714,6 +727,7 @@ function doLogin() {
 function enterApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  try { startMotherAutoSync(); motherAutoPull(); } catch (e) {}
   showPage('dashboard');
 }
 
@@ -1041,14 +1055,23 @@ function saveSchool(id) {
       _neverSynced: true
     });
   }
+  // علامت بزن و فوری همان مدرسه را بفرست
+  const saved = id ? state.schools.find(function (x) { return x.id === id; }) : state.schools[state.schools.length - 1];
+  if (saved) {
+    saved._neverSynced = false;
+    saved.updatedAtMs = Date.now();
+  }
   save();
   closeModal();
   renderSchools();
   renderDashboard();
-  toast('ذخیره محلی شد — در حال ارسال به سرور...');
-  cloudSyncSchools().then(function (ok) {
-    if (ok) toast('ذخیره شد و روی سرور آمد ✓');
-  });
+  toast('در حال ارسال به سرور...');
+  if (saved) {
+    cloudPushOneSchool(saved).then(function (ok) {
+      if (ok) toast('ذخیره شد و روی همه دستگاه‌ها می‌آید ✓');
+      else toast('محلی ذخیره شد — اتصال سرور برقرار نشد');
+    });
+  }
 }
 
 async function deleteSchool(id) {
@@ -1148,6 +1171,31 @@ function importMotherData(ev) {
   ev.target.value = '';
 }
 
+/* همگام خودکار بین دستگاه‌ها */
+let _motherPullTimer = null, _motherPullBusy = false;
+function startMotherAutoSync() {
+  clearInterval(_motherPullTimer);
+  _motherPullTimer = setInterval(function () {
+    if (document.hidden) return;
+    if (document.getElementById('app').style.display === 'none') return;
+    motherAutoPull();
+  }, 20000);
+}
+async function motherAutoPull() {
+  if (_motherPullBusy) return;
+  _motherPullBusy = true;
+  try {
+    const ok = await cloudPullSchools();
+    if (ok) {
+      try { renderDashboard(); renderSchools(); } catch (e) {}
+    }
+  } catch (e) {}
+  finally { _motherPullBusy = false; }
+}
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && document.getElementById('app').style.display !== 'none') motherAutoPull();
+});
+
 /* Init */
 load();
 if (state.motherPass) {
@@ -1155,6 +1203,7 @@ if (state.motherPass) {
 }
 cloudPullSchools().then(() => {
   try { if (typeof renderDashboard === 'function') renderDashboard(); if (typeof renderSchools === 'function') renderSchools(); } catch (e) {}
+  startMotherAutoSync();
 });
 </script>
 </body>
