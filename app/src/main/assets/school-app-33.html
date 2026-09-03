@@ -499,8 +499,14 @@ async function cloudFindSchoolByCodeAct(code,act){
   }catch(e){return null}
 }
 async function cloudPushSchool(rec){
-  if(!SYNC_API||!rec||!rec.id)return;
-  try{await apiFetch('/api/schools',{method:'POST',body:rec})}catch(e){console.warn(e)}
+  if(!SYNC_API||!rec||!rec.id)return false;
+  try{
+    await apiFetch('/api/schools',{method:'POST',body:rec,retries:3});
+    return true;
+  }catch(e){
+    console.warn('cloudPushSchool',e);
+    return false;
+  }
 }
 async function cloudPushSubmission(schoolId,sub){
   if(!SYNC_API||!schoolId||!sub)return;
@@ -561,15 +567,16 @@ function _dataRichness(d){
   return (d.classes||[]).length*10+(d.students||[]).length*3+(d.staff||[]).length*2+(d.assignments||[]).length+(d.attendance||[]).length;
 }
 function applyRemoteAppData(d,remoteTs){
-  if(Array.isArray(d.classes))schoolData.classes=d.classes;
-  if(Array.isArray(d.students))schoolData.students=d.students;
-  if(Array.isArray(d.staff))schoolData.staff=d.staff;
-  if(Array.isArray(d.assignments))schoolData.assignments=d.assignments;
-  if(Array.isArray(d.colleagues))schoolData.colleagues=d.colleagues;
-  if(Array.isArray(d.attendance))schoolData.attendance=d.attendance;
-  if(Array.isArray(d.submissions))schoolData.submissions=d.submissions;
-  if(Array.isArray(d.disciplineTypes))schoolData.disciplineTypes=d.disciplineTypes;
-  if(Array.isArray(d.smsTemplates))schoolData.smsTemplates=d.smsTemplates;
+  // آرایه خالی سرور، داده پر محلی را پاک نکند
+  if(Array.isArray(d.classes)&&(d.classes.length||!(schoolData.classes||[]).length))schoolData.classes=d.classes;
+  if(Array.isArray(d.students)&&(d.students.length||!(schoolData.students||[]).length))schoolData.students=d.students;
+  if(Array.isArray(d.staff)&&(d.staff.length||!(schoolData.staff||[]).length))schoolData.staff=d.staff;
+  if(Array.isArray(d.assignments)&&(d.assignments.length||!(schoolData.assignments||[]).length))schoolData.assignments=d.assignments;
+  if(Array.isArray(d.colleagues)&&(d.colleagues.length||!(schoolData.colleagues||[]).length))schoolData.colleagues=d.colleagues;
+  if(Array.isArray(d.attendance)&&(d.attendance.length||!(schoolData.attendance||[]).length))schoolData.attendance=d.attendance;
+  if(Array.isArray(d.submissions)&&(d.submissions.length||!(schoolData.submissions||[]).length))schoolData.submissions=d.submissions;
+  if(Array.isArray(d.disciplineTypes)&&d.disciplineTypes.length)schoolData.disciplineTypes=d.disciplineTypes;
+  if(Array.isArray(d.smsTemplates)&&d.smsTemplates.length)schoolData.smsTemplates=d.smsTemplates;
   if(d.rules)schoolData.rules=d.rules;
   if(d.managerUser)schoolData.managerUser=d.managerUser;
   if(d.managerPass)schoolData.managerPass=d.managerPass;
@@ -645,18 +652,15 @@ async function autoPullAll(checkSchool){
   _pullBusy=true;
   _pullTick++;
   try{
-    // هر ۳ بار یک‌بار وضعیت مدرسه را چک کن (سبک‌تر)
-    if(checkSchool||(_pullTick%3===0)){
+    // همیشه وضعیت حذف مدرسه را چک کن
+    if(true){
       try{
-        const chk=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId),{retries:1});
-        if(!chk||!chk.school){
-          clearUserSession();try{clearSession()}catch(e){}
-          try{localStorage.removeItem('school_session_v1')}catch(e){}
-          showScreen('gate');
-          toast('این مدرسه از پنل مادر حذف شده است');
+        const st=await assertSchoolExistsOnServer(session.schoolId);
+        if(st===false){
+          forceKickDeletedSchool('این مدرسه از پنل مادر حذف شده است');
           return;
         }
-        if(chk.school.active===false){
+        if(st==='inactive'){
           session.active=false;saveSession(session);
           showScreen('locked');
           return;
@@ -664,10 +668,7 @@ async function autoPullAll(checkSchool){
       }catch(e){
         var m=(e&&e.message)?e.message:'';
         if(/not found|404/i.test(m)){
-          clearUserSession();
-          try{localStorage.removeItem('school_session_v1')}catch(e2){}
-          showScreen('gate');
-          toast('این مدرسه دیگر روی سرور نیست');
+          forceKickDeletedSchool('این مدرسه دیگر روی سرور نیست');
           return;
         }
       }
@@ -699,17 +700,35 @@ function isTeacher(){return userSession&&userSession.role==='teacher'}
 function canManage(){return isManager()||isDeputy()}
 function dualShift(){return (session&&session.shifts===2)||schoolData.shifts===2||(session&&(session.modules||[]).includes('dual_shift'))}
 
-function doRegister(){
-  const school=document.getElementById('r-school').value.trim(),manager=document.getElementById('r-manager').value.trim(),phone=fixPhone(document.getElementById('r-phone').value),city=document.getElementById('r-city').value.trim(),user=document.getElementById('r-user').value.trim(),pass=document.getElementById('r-pass').value,pass2=document.getElementById('r-pass2').value;
+async function doRegister(){
+  const school=document.getElementById('r-school').value.trim(),manager=document.getElementById('r-manager').value.trim(),phone=fixPhone(document.getElementById('r-phone').value),city=document.getElementById('r-city').value.trim(),user=normLoginUser(document.getElementById('r-user').value.trim()),pass=document.getElementById('r-pass').value,pass2=document.getElementById('r-pass2').value;
   if(!school||!manager||!phone||!user)return toast('فیلدهای ضروری را پر کنید');
   if(pass.length<6)return toast('رمز حداقل ۶ کاراکتر');if(pass!==pass2)return toast('رمز یکسان نیست');
   const start=todayStr(),expire=addDays(start,30),code='SCH-'+(1000+Math.floor(Math.random()*9000)),act=Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase(),id=uid();
-  const rec={id,name:school,code,managerName:manager,managerPhone:phone,managerUsername:user,managerPassword:pass,city,notes:'ثبت‌نام',startDate:start,expireDate:expire,maxUsers:15,shifts:1,modules:['sms','discipline'],smsMode:'sim',active:true,activationCode:act,activationUsed:true,createdAt:start,source:'trial',plan:'trial'};
+  // ۳۰ روز آزمایشی — بعد از expireDate سامانه قفل می‌شود
+  const rec={id,name:school,code,managerName:manager,managerPhone:phone,managerUsername:user,managerPassword:pass,city,notes:'ثبت‌نام خودخدمت (آزمایشی ۳۰ روز)',startDate:start,expireDate:expire,maxUsers:15,shifts:1,modules:['sms','discipline','teacher_attendance'],smsMode:'sim',active:true,activationCode:act,activationUsed:true,createdAt:start,source:'self_register',plan:'trial',updatedAtMs:Date.now()};
+  toast('در حال ثبت روی سرور...');
   const mother=loadMother();if(!mother.schools)mother.schools=[];mother.schools.push(rec);if(!mother.motherUser)mother.motherUser='admin';saveMother(mother);
-  cloudPushSchool(rec);
+  let ok=false;
+  try{ok=await cloudPushSchool(rec)}catch(e){ok=false}
+  if(!ok){
+    // باز هم محلی ذخیره می‌شود ولی هشدار می‌دهیم
+    toast('ثبت محلی شد؛ ارسال سرور ناموفق — دکمه ارسال به سرور را بعداً بزنید');
+  }
   saveSession({schoolId:id,code,name:school,managerName:manager,phone,city,startDate:start,expireDate:expire,plan:'trial',active:true,shifts:1,modules:rec.modules});
-  loadSchoolData();schoolData.managerUser=user;schoolData.managerPass=pass;schoolData.shifts=1;saveSchoolData();
-  saveUserSession({role:'manager',username:user,name:manager,schoolId:id});toast('ثبت‌نام موفق');enterApp();
+  session=loadSession();
+  loadSchoolData();
+  schoolData.managerUser=user;schoolData.managerPass=pass;schoolData.shifts=1;
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  // داده اولیه مدرسه را هم روی سرور بگذار
+  try{await cloudPushAppData(true)}catch(e){}
+  // یک‌بار دیگر مشخصات مدرسه (برای پنل مادر)
+  if(ok){try{await cloudPushSchool(rec)}catch(e){}}
+  saveUserSession({role:'manager',username:user,name:manager,schoolId:id});
+  if(ok)toast('ثبت‌نام موفق — ۳۰ روز آزمایشی تا '+formatDateFa(expire));
+  else toast('ثبت شد (محلی). برای دیدن در پنل مادر اینترنت را چک و دوباره وارد شوید');
+  enterApp();
 }
 async function activateWithCode(){
   const code=document.getElementById('a-code').value.trim(),act=document.getElementById('a-act').value.trim();
@@ -724,10 +743,15 @@ async function activateWithCode(){
   school.activationUsed=true;
   const mother=loadMother();const i=(mother.schools||[]).findIndex(s=>s.id===school.id||s.code===school.code);
   if(i>=0)mother.schools[i]={...mother.schools[i],...school};else{if(!mother.schools)mother.schools=[];mother.schools.push(school)}
-  saveMother(mother);cloudPushSchool(school);
+  saveMother(mother);
+  toast('در حال ثبت روی سرور...');
+  const pushed=await cloudPushSchool(school);
   applySchoolSession(school);
   schoolData.managerUser=user;schoolData.managerPass=pass;schoolData.shifts=school.shifts||1;saveSchoolData();
-  saveUserSession({role:'manager',username:user,name:school.managerName,schoolId:school.id});toast('فعال شد');enterApp();
+  try{await cloudPushAppData(true)}catch(e){}
+  saveUserSession({role:'manager',username:user,name:school.managerName,schoolId:school.id});
+  toast(pushed?'فعال شد و روی سرور ثبت شد':'فعال شد (محلی) — بعداً ارسال به سرور را بزنید');
+  enterApp();
 }
 function applySchoolSession(sc){
   saveSession({schoolId:sc.id,code:sc.code,name:sc.name,managerName:sc.managerName,phone:sc.managerPhone,city:sc.city||'',startDate:sc.startDate,expireDate:sc.expireDate,plan:sc.plan||'paid',active:sc.active!==false,shifts:sc.shifts||1,modules:sc.modules||[]});
@@ -782,8 +806,26 @@ async function doLogin(){
       }
     }
     if(sc){
+      // از سرور نسخه به‌روز لایسنس بگیر (تمدید)
+      if(SYNC_API&&sc.id){
+        toast('در حال تأیید مدرسه روی سرور...');
+        try{
+          const chk=await apiFetch('/api/schools/'+encodeURIComponent(sc.id),{retries:2});
+          if(!chk||!chk.school){
+            wipeSchoolLocal(sc.id,sc.code);
+            return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
+          }
+          sc=Object.assign({},sc,chk.school);
+        }catch(e){
+          var m=(e&&e.message)?String(e.message):'';
+          if(/not found|404/i.test(m)){
+            wipeSchoolLocal(sc.id,sc.code);
+            return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
+          }
+        }
+      }
       if(sc.active===false)return toast('مدرسه خاموش است');
-      if(sc.expireDate&&isExpired(sc.expireDate))return toast('لایسنس منقضی شده');
+      if(sc.expireDate&&isExpired(sc.expireDate))return toast('لایسنس منقضی شده — از پشتیبانی تمدید کنید');
       applySchoolSession(sc);
       saveUserSession({role:'manager',username:user,name:sc.managerName||'مدیر',schoolId:sc.id});
       toast('ورود مدیر');
@@ -797,6 +839,15 @@ async function doLogin(){
       session=sess;loadSchoolData();
       const localUser=normLoginUser(schoolData.managerUser||'');
       if(localUser===user&&String(schoolData.managerPass||'')===String(pass)){
+        if(SYNC_API&&session.schoolId){
+          toast('در حال تأیید مدرسه روی سرور...');
+          const st=await assertSchoolExistsOnServer(session.schoolId);
+          if(st===false){
+            wipeSchoolLocal(session.schoolId,session.code);
+            return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
+          }
+          if(st==='inactive')return toast('مدرسه خاموش است');
+        }
         saveUserSession({role:'manager',username:user,name:session.managerName||'مدیر',schoolId:session.schoolId});
         toast('ورود مدیر');
         enterApp();
@@ -814,19 +865,95 @@ async function doLogin(){
   }
   if(!sess)return toast('کد مدرسه را وارد کنید یا اول مدیر فعال کند');
   session=sess;loadSchoolData();
+  if(SYNC_API&&session.schoolId){
+    const exists=await assertSchoolExistsOnServer(session.schoolId);
+    if(exists===false){
+      wipeSchoolLocal(session.schoolId,session.code);
+      return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
+    }
+    if(exists==='inactive')return toast('مدرسه خاموش است');
+  }
   await cloudPullStaff(session.schoolId);
-  const st=(schoolData.staff||[]).find(u=>u.username===user&&u.pass===pass&&u.role===loginRole&&u.active!==false);
-  if(!st)return toast('کاربر یافت نشد یا نقش اشتباه است');
+  const staffList=schoolData.staff||[];
+  if(!staffList.length)return toast('هنوز معلم/معاونی ثبت نشده یا به سرور ارسال نشده. اول با مدیر وارد شوید و تیم را ذخیره کنید');
+  const st=staffList.find(u=>String(u.username||'')===String(user)&&String(u.pass||'')===String(pass)&&u.role===loginRole&&u.active!==false);
+  if(!st){
+    const sameUser=staffList.find(u=>String(u.username||'')===String(user));
+    if(sameUser&&sameUser.role!==loginRole)return toast('نقش را درست انتخاب کنید (الان این کاربر: '+(sameUser.role==='teacher'?'معلم':sameUser.role==='deputy'?'معاون':sameUser.role)+')');
+    if(sameUser)return toast('رمز عبور اشتباه است');
+    return toast('کاربر یافت نشد. نام کاربری را دقیق مثل تعریف در تیم وارد کنید');
+  }
   saveUserSession({role:st.role,username:st.username,name:st.name,schoolId:session.schoolId,staffId:st.id,shift:st.shift||null});
   toast('ورود '+(st.role==='deputy'?'معاون':'معلم'));enterApp();
 }
-function syncLicenseFromMother(){if(!session)return;const mother=loadMother(),s=(mother.schools||[]).find(x=>x.id===session.schoolId||x.code===session.code);if(s){session.expireDate=s.expireDate;session.active=s.active;session.name=s.name;session.plan=s.plan||session.plan;session.shifts=s.shifts||session.shifts;session.modules=s.modules||session.modules;saveSession(session)}}
-function enterApp(){
+function applyLicenseFields(s){
+  if(!session||!s)return;
+  if(s.expireDate!=null)session.expireDate=s.expireDate;
+  if(s.active!=null)session.active=s.active!==false;
+  if(s.name)session.name=s.name;
+  if(s.plan)session.plan=s.plan;
+  if(s.shifts)session.shifts=s.shifts;
+  if(s.modules)session.modules=s.modules;
+  // اگر تاریخ انقضا هنوز نرسیده و از پنل مادر تمدید شده → فعال
+  if(session.expireDate&&!isExpired(session.expireDate)){
+    if(s.active!==false)session.active=true;
+  }
+  if(session.expireDate&&isExpired(session.expireDate)){
+    session.active=false;
+  }
+  saveSession(session);
+}
+function syncLicenseFromMother(){
+  if(!session)return;
+  const mother=loadMother(),s=(mother.schools||[]).find(x=>x.id===session.schoolId||x.code===session.code);
+  if(s)applyLicenseFields(s);
+  else if(session.expireDate&&isExpired(session.expireDate)){
+    session.active=false;saveSession(session);
+  }
+}
+/** لایسنس را از سرور بگیر — تمدید از پنل مادر اینجا اعمال می‌شود */
+async function syncLicenseFromServer(){
+  if(!session||!session.schoolId||!SYNC_API){syncLicenseFromMother();return}
+  try{
+    const chk=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId),{retries:1});
+    const s=chk&&chk.school;
+    if(s){
+      applyLicenseFields(s);
+      // در مادر محلی هم به‌روز کن تا یکدست باشد
+      try{
+        const mother=loadMother();
+        if(!mother.schools)mother.schools=[];
+        const i=mother.schools.findIndex(x=>x.id===s.id||x.code===s.code);
+        if(i>=0)mother.schools[i]=Object.assign({},mother.schools[i],s);
+        else mother.schools.push(s);
+        saveMother(mother);
+      }catch(e){}
+      return;
+    }
+  }catch(e){console.warn('syncLicense',e)}
+  syncLicenseFromMother();
+}
+async function recheckLicense(){
+  toast('در حال بررسی لایسنس...');
+  await syncLicenseFromServer();
+  session=loadSession();
+  if(session&&session.active!==false&&session.expireDate&&!isExpired(session.expireDate)){
+    toast('لایسنس فعال شد');
+    enterApp();
+  }else toast('هنوز منقضی یا غیرفعال است');
+}
+async function enterApp(){
   session=loadSession();userSession=loadUserSession();
   try{if(canManage){/*delay*/}}catch(e){}
   if(!session||!userSession){showScreen('gate');return}
-  syncLicenseFromMother();
-  if(session.active===false||(session.expireDate&&isExpired(session.expireDate))){document.getElementById('locked-info').innerHTML='<div><strong>'+(session.name||'')+'</strong></div><div>انقضا: '+formatDateFa(session.expireDate)+'</div>';showScreen('locked');return}
+  // اول لایسنس از سرور (تمدید از مادر)
+  await syncLicenseFromServer();
+  session=loadSession();
+  if(session.active===false||(session.expireDate&&isExpired(session.expireDate))){
+    document.getElementById('locked-info').innerHTML='<div><strong>'+(session.name||'')+'</strong></div><div>انقضا: '+formatDateFa(session.expireDate)+'</div><p class="hint" style="margin-top:8px">در صورت خرید لایسنس، از پنل پشتیبانی تمدید می‌شود. یک‌بار خارج و دوباره وارد شوید.</p><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="recheckLicense()">بررسی مجدد لایسنس</button>';
+    showScreen('locked');
+    return;
+  }
   loadSchoolData();
   try{ensureAllSubmissionsInAttendance()}catch(e){}
   document.getElementById('app-title').textContent=session.name||'سامانه مدرسه';
@@ -852,31 +979,66 @@ function enterApp(){
   };
   startAutoSync();
   if(session.schoolId){
-    // اول چک حذف مدرسه
-    apiFetch('/api/schools/'+encodeURIComponent(session.schoolId),{retries:1}).then(function(chk){
-      if(!chk||!chk.school){
-        clearUserSession();
-        try{localStorage.removeItem('school_session_v1')}catch(e){}
-        showScreen('gate');
-        toast('این مدرسه از پنل مادر حذف شده');
+    assertSchoolExistsOnServer(session.schoolId).then(function(st){
+      if(st===false){
+        forceKickDeletedSchool('این مدرسه از پنل مادر حذف شده است');
         return;
       }
-      if(chk.school.active===false){
+      if(st==='inactive'){
         session.active=false;saveSession(session);
         showScreen('locked');
         return;
       }
-      // همگام‌سازی
+      // st===true یا offline
       cloudPullAppData(true).then(function(ok){
         if(!ok&&_dataRichness(schoolData)>0&&canManage())cloudPushAppData(true).catch(function(){});
         afterSync();
       }).catch(afterSync);
     }).catch(function(){
-      cloudPullAppData().then(function(ok){afterSync()}).catch(afterSync);
+      forceKickDeletedSchool('امکان تأیید مدرسه روی سرور نیست — دوباره وارد شوید');
     });
   }else afterSync();
 }
 function clearSession(){try{localStorage.removeItem('school_session_v1');session=null}catch(e){}}
+function wipeSchoolLocal(schoolId,code){
+  try{
+    if(schoolId)localStorage.removeItem(DATA_PREFIX+schoolId);
+    if(code)localStorage.removeItem(DATA_PREFIX+code);
+  }catch(e){}
+  try{
+    var keys=[];
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(k&&k.indexOf(DATA_PREFIX)===0){
+        if(schoolId&&k.indexOf(schoolId)>=0)keys.push(k);
+        if(code&&k.indexOf(code)>=0)keys.push(k);
+      }
+    }
+    keys.forEach(function(k){try{localStorage.removeItem(k)}catch(e){}});
+  }catch(e){}
+  try{clearUserSession()}catch(e){}
+  clearSession();
+}
+async function assertSchoolExistsOnServer(schoolId){
+  if(!SYNC_API||!schoolId)return true;
+  try{
+    const chk=await apiFetch('/api/schools/'+encodeURIComponent(schoolId),{retries:2});
+    if(!chk||!chk.school)return false;
+    if(chk.school.active===false)return 'inactive';
+    return true;
+  }catch(e){
+    var m=(e&&e.message)?String(e.message):'';
+    if(/not found|404|یافت نشد/i.test(m))return false;
+    return 'offline';
+  }
+}
+function forceKickDeletedSchool(msg){
+  var sid=session&&session.schoolId;
+  var code=session&&session.code;
+  wipeSchoolLocal(sid,code);
+  showScreen('gate');
+  toast(msg||'این مدرسه از سامانه حذف شده است');
+}
 function doLogout(){clearUserSession();clearSession();showScreen('gate');toast('خارج شدید')}
 function buildNav(){
   const nav=document.getElementById('bottom-nav');
@@ -1474,8 +1636,19 @@ function renderSettings(){
 }
 function closeModal(){document.getElementById('modal').classList.remove('show')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
-(function(){session=loadSession();userSession=loadUserSession();if(session&&userSession)enterApp();else showScreen('gate');
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&session&&userSession)autoPullAll(true);});
+(async function(){
+  session=loadSession();userSession=loadUserSession();
+  if(session&&userSession){
+    if(typeof SYNC_API!=='undefined'&&SYNC_API&&session.schoolId){
+      try{
+        const st=await assertSchoolExistsOnServer(session.schoolId);
+        if(st===false){forceKickDeletedSchool('این مدرسه حذف شده است');}
+        else if(st==='inactive'){showScreen('locked');}
+        else enterApp();
+      }catch(e){enterApp()}
+    }else enterApp();
+  }else showScreen('gate');
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&session&&userSession)autoPullAll(true);});
 })();
 </script>
 </body>
