@@ -1,5 +1,6 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-<path android:fillColor="#1b5e20" android:pathData="M0,0h108v108h-108z"/>
-<path android:fillColor="#ffffff" android:pathData="M54,28L90,44L54,60L18,44Z"/>
-<path android:fillColor="#ffffff" android:pathData="M36,52v14c0,7 36,7 36,0v-14l-18,8z"/>
-</vector>
+<div class="brand-logo" style="text-align:center;margin:12px 0">
+  <!-- SVG بالا را اینجا بچسبان -->
+  <div style="font-family:Tahoma,sans-serif;font-weight:bold;color:#1a237e;font-size:1.2rem;margin-top:6px">
+    سامانه مدارس نیکان
+  </div>
+</div>
