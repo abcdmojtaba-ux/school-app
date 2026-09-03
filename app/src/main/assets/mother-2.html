@@ -947,6 +947,13 @@ function openSchoolModal(id) {
       ${jalaliSelectHtml('f-start', s?.startDate || todayStr())}</div>
     <div class="form-group"><label>تاریخ انقضا</label>
       ${jalaliSelectHtml('f-expire', s?.expireDate || addMonths(todayStr(), 12))}</div>
+      <div class="form-group"><label>نوع لایسنس</label>
+        <select class="form-control" id="f-plan">
+          <option value="paid" ${(s?.plan||'paid')==='paid'?'selected':''}>رسمی / خریداری‌شده</option>
+          <option value="trial" ${s?.plan==='trial'?'selected':''}>آزمایشی</option>
+        </select>
+        <p class="hint">برای تمدید: تاریخ انقضا را جلو ببرید، نوع را «رسمی» بگذارید و فعال باشد. مدرسه بعد از ورود دوباره باز می‌شود.</p>
+      </div>
     <div class="form-group"><label>سقف تعداد کاربر</label>
       <input type="number" class="form-control" id="f-maxusers" value="${s?.maxUsers || 20}" min="1" /></div>
     <div class="form-group"><label>تعداد شیفت</label>
@@ -1016,6 +1023,15 @@ function saveSchool(id) {
     if (i >= 0) modules.splice(i, 1);
   }
 
+  let plan = (document.getElementById('f-plan') && document.getElementById('f-plan').value) || 'paid';
+  const expireDate = isoFromJalaliSelects('f-expire');
+  let active = document.getElementById('f-active').checked;
+  // اگر تاریخ انقضا معتبر است و کاربر فعال گذاشته → لایسنس زنده
+  if (expireDate && expireDate >= todayStr() && active) {
+    if (plan === 'trial' && id) {
+      /* ویرایش آزمایشی مجاز */
+    }
+  }
   const data = {
     name,
     code,
@@ -1026,7 +1042,7 @@ function saveSchool(id) {
     city: document.getElementById('f-city').value.trim(),
     notes: document.getElementById('f-notes').value.trim(),
     startDate: isoFromJalaliSelects('f-start'),
-    expireDate: isoFromJalaliSelects('f-expire'),
+    expireDate,
     maxUsers: parseInt(document.getElementById('f-maxusers').value) || 20,
     shifts,
     modules,
@@ -1035,13 +1051,19 @@ function saveSchool(id) {
     smsApiUser: document.getElementById('f-apiuser')?.value.trim() || '',
     smsApiKey: document.getElementById('f-apikey')?.value.trim() || '',
     smsSender: document.getElementById('f-sender')?.value.trim() || '',
-    active: document.getElementById('f-active').checked
+    active,
+    plan
   };
 
   if (id) {
     const s = state.schools.find(x => x.id === id);
     if (!s) return;
+    // تمدید: تاریخ جدید + فعال = رسمی مگر خودت آزمایشی بگذاری
+    if (data.expireDate && data.expireDate >= todayStr() && data.active && data.plan !== 'trial') {
+      data.plan = 'paid';
+    }
     Object.assign(s, data);
+    s.updatedAtMs = Date.now();
   } else {
     if (state.schools.some(x => x.code === code)) return toast('این کد مدرسه تکراری است');
     state.schools.push({
@@ -1050,9 +1072,10 @@ function saveSchool(id) {
       activationCode: genActivationCode(),
       activationUsed: false,
       createdAt: todayStr(),
-      plan: 'paid',
+      plan: data.plan || 'paid',
       source: 'mother',
-      _neverSynced: true
+      _neverSynced: true,
+      updatedAtMs: Date.now()
     });
   }
   // علامت بزن و فوری همان مدرسه را بفرست
@@ -1175,11 +1198,12 @@ function importMotherData(ev) {
 let _motherPullTimer = null, _motherPullBusy = false;
 function startMotherAutoSync() {
   clearInterval(_motherPullTimer);
+  const base = 90000 + Math.floor(Math.random() * 30000);
   _motherPullTimer = setInterval(function () {
     if (document.hidden) return;
     if (document.getElementById('app').style.display === 'none') return;
     motherAutoPull();
-  }, 20000);
+  }, base);
 }
 async function motherAutoPull() {
   if (_motherPullBusy) return;
