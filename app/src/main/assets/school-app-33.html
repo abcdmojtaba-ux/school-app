@@ -229,8 +229,21 @@ textarea.form-control{min-height:72px;resize:vertical}
       <div id="teacher-slots"></div>
     </div>
     <div class="card">
-      <div class="card-title">دفتر حضور و غیاب (ژورنال)</div>
-      <p class="hint">تعداد غیبت و تأخیر هر دانش‌آموز در کلاس‌های شما</p>
+      <div class="card-title">کلاس‌های من — عملکرد دانش‌آموزان</div>
+      <p class="hint">یک کلاس را انتخاب کنید، بازه تاریخ بدهید و عملکرد را ببینید</p>
+      <div id="teacher-class-list"></div>
+      <div id="teacher-perf-panel" style="display:none;margin-top:12px">
+        <div class="card-title" id="teacher-perf-title">عملکرد کلاس</div>
+        <div class="form-group"><label>از تاریخ (مثلاً 1403/07/01 یا خالی=همه)</label>
+          <input class="form-control" id="tp-from" placeholder="1403/07/01" /></div>
+        <div class="form-group"><label>تا تاریخ</label>
+          <input class="form-control" id="tp-to" placeholder="1403/07/30" /></div>
+        <button class="btn btn-primary btn-block" onclick="runTeacherClassPerf()">نمایش عملکرد</button>
+        <div id="teacher-perf-out" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">خلاصه سریع ژورنال</div>
       <div id="teacher-journal"></div>
     </div>
   </div>
@@ -543,31 +556,64 @@ async function cloudPushAppData(force){
     try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
   }catch(e){console.warn('push',e);if(force)throw e}
 }
-async function cloudPullAppData(){
+function _dataRichness(d){
+  if(!d)return 0;
+  return (d.classes||[]).length*10+(d.students||[]).length*3+(d.staff||[]).length*2+(d.assignments||[]).length+(d.attendance||[]).length;
+}
+function applyRemoteAppData(d,remoteTs){
+  if(Array.isArray(d.classes))schoolData.classes=d.classes;
+  if(Array.isArray(d.students))schoolData.students=d.students;
+  if(Array.isArray(d.staff))schoolData.staff=d.staff;
+  if(Array.isArray(d.assignments))schoolData.assignments=d.assignments;
+  if(Array.isArray(d.colleagues))schoolData.colleagues=d.colleagues;
+  if(Array.isArray(d.attendance))schoolData.attendance=d.attendance;
+  if(Array.isArray(d.submissions))schoolData.submissions=d.submissions;
+  if(Array.isArray(d.disciplineTypes))schoolData.disciplineTypes=d.disciplineTypes;
+  if(Array.isArray(d.smsTemplates))schoolData.smsTemplates=d.smsTemplates;
+  if(d.rules)schoolData.rules=d.rules;
+  if(d.managerUser)schoolData.managerUser=d.managerUser;
+  if(d.managerPass)schoolData.managerPass=d.managerPass;
+  if(d.shifts)schoolData.shifts=d.shifts;
+  schoolData._cloudUpdatedAtMs=remoteTs||d.updatedAtMs||Date.now();
+  localStorage.setItem(dataKey(),JSON.stringify(schoolData));
+}
+async function cloudPullAppData(force){
   if(!SYNC_API||!session||!session.schoolId)return false;
   try{
-    const data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{retries:1});
+    const since=(!force&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
+    const data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:1});
+    if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
-    if(!d)return false;
-    const remoteTs=d.updatedAtMs||0;
+    if(!d){
+      // سرور خالی است ولی ما داده داریم → یک‌بار جبرانی (نه مکرر)
+      if(_dataRichness(schoolData)>0&&canManage()){
+        const lastFix=schoolData._lastEmptyPush||0;
+        if(Date.now()-lastFix>120000){
+          schoolData._lastEmptyPush=Date.now();
+          cloudPushAppData(true).catch(function(){});
+        }
+      }
+      return false;
+    }
+    const remoteTs=d.updatedAtMs||(data&&data.updatedAt)||0;
     const localTs=schoolData._cloudUpdatedAtMs||0;
-    // اگر سرور جدیدتر یا برابر است، بگیر (حذف انضباط هم باید بیاید)
-    if(remoteTs>=localTs){
-      if(Array.isArray(d.classes))schoolData.classes=d.classes;
-      if(Array.isArray(d.students))schoolData.students=d.students;
-      if(Array.isArray(d.staff))schoolData.staff=d.staff;
-      if(Array.isArray(d.assignments))schoolData.assignments=d.assignments;
-      if(Array.isArray(d.colleagues))schoolData.colleagues=d.colleagues;
-      if(Array.isArray(d.attendance))schoolData.attendance=d.attendance;
-      if(Array.isArray(d.submissions))schoolData.submissions=d.submissions;
-      if(Array.isArray(d.disciplineTypes))schoolData.disciplineTypes=d.disciplineTypes;
-      if(Array.isArray(d.smsTemplates))schoolData.smsTemplates=d.smsTemplates;
-      if(d.rules)schoolData.rules=d.rules;
-      if(d.managerUser)schoolData.managerUser=d.managerUser;
-      if(d.managerPass)schoolData.managerPass=d.managerPass;
-      if(d.shifts)schoolData.shifts=d.shifts;
-      schoolData._cloudUpdatedAtMs=remoteTs;
-      localStorage.setItem(dataKey(),JSON.stringify(schoolData));
+    const rRich=_dataRichness(d);
+    const lRich=_dataRichness(schoolData);
+    // قوانین پایدار:
+    // 1) force یا دستگاه خالی → بگیر
+    // 2) سرور جدیدتر → بگیر
+    // 3) سرور غنی‌تر و تقریباً هم‌زمان → بگیر
+    // 4) اگر محلی غنی‌تر و سرور قدیمی/خالی‌تر → push کن، overwrite نکن
+    if(lRich>0&&rRich===0){
+      if(canManage())cloudPushAppData(true).catch(function(){});
+      return false;
+    }
+    if(lRich>rRich&&localTs>remoteTs&&!force){
+      if(canManage())cloudPushAppData(true).catch(function(){});
+      return false;
+    }
+    if(force||lRich===0||remoteTs>=localTs||rRich>lRich){
+      applyRemoteAppData(d,remoteTs||Date.now());
       return true;
     }
   }catch(e){console.warn('pull',e)}
@@ -579,17 +625,20 @@ function scheduleCloudPush(){
   // معلم هم بعد از حضور، submission جدا می‌فرستد؛ appData را مدیر/معاون می‌فرستد
   if(userSession&&userSession.role==='teacher')return;
   clearTimeout(_pushTimer);
-  _pushTimer=setTimeout(function(){cloudPushAppData(false).catch(function(){})},250);
+  _pushTimer=setTimeout(function(){cloudPushAppData(false).catch(function(){})},800);
 }
 let _pullTick=0,_pullBusy=false;
 function startAutoSync(){
   clearInterval(_pullTimer);
+  // 90 ثانیه + پخش تصادفی تا هزاران کلاینت هم‌زمان نکوبند
+  const base=90000;
+  const jitter=Math.floor(Math.random()*30000);
   _pullTimer=setInterval(function(){
     if(document.hidden)return;
     if(!session||!session.schoolId||!userSession)return;
     if(_pullBusy)return;
     autoPullAll(false);
-  },40000);
+  },base+jitter);
 }
 async function autoPullAll(checkSchool){
   if(_pullBusy)return;
@@ -623,18 +672,16 @@ async function autoPullAll(checkSchool){
         }
       }
     }
-    const ok=await cloudPullAppData();
+    const ok=await cloudPullAppData(false);
     if(canManage()&&session.schoolId){
-      // submissions جدا فقط اگر لازم
       try{await cloudPullSubmissions(session.schoolId)}catch(e){}
       try{ensureAllSubmissionsInAttendance()}catch(e){}
-      // ذخیره محلی بدون push دوباره (جلوگیری از حلقه)
       try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+      // فقط اگر سرور خالی/ضعیف بود cloudPull خودش push می‌کند — اینجا فشار اضافه نه
       try{renderHome()}catch(e){}
     }else if(isTeacher()){
-      try{renderTeacherDay();renderTeacherJournal()}catch(e){}
+      try{renderTeacherDay();renderTeacherJournal();renderTeacherClassList()}catch(e){}
     }
-    if(ok){/* silent */}
   }catch(e){console.warn('autoPull',e)}
   finally{_pullBusy=false}
 }
@@ -820,8 +867,8 @@ function enterApp(){
         return;
       }
       // همگام‌سازی
-      cloudPullAppData().then(function(ok){
-        if(ok){/* همگام شد */}
+      cloudPullAppData(true).then(function(ok){
+        if(!ok&&_dataRichness(schoolData)>0&&canManage())cloudPushAppData(true).catch(function(){});
         afterSync();
       }).catch(afterSync);
     }).catch(function(){
@@ -856,7 +903,7 @@ function showAppPage(name){
   if(name==='teacher')renderTeacherDay();
   if(name==='schedule')renderAssignments();
 
-  if(name==='teacher'){try{renderTeacherJournal()}catch(e){}}
+  if(name==='teacher'){try{renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}catch(e){}}
 }
 function daysLeft(){if(!session?.expireDate)return 0;return Math.ceil((new Date(session.expireDate+'T12:00:00')-new Date(todayStr()+'T12:00:00'))/86400000)}
 
@@ -1222,7 +1269,67 @@ function openTakeAtt(assignId){
   showAppPage('take-att');
 }
 let submittingAtt=false;
-async 
+
+let teacherPerfClassId=null;
+function renderTeacherClassList(){
+  const box=document.getElementById('teacher-class-list');
+  if(!box||!userSession)return;
+  const myClassIds=[...new Set((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).map(a=>a.classId))];
+  if(!myClassIds.length){box.innerHTML='<p class="hint">کلاسی اختصاص داده نشده</p>';return}
+  box.innerHTML=myClassIds.map(cid=>{
+    const c=(schoolData.classes||[]).find(x=>x.id===cid);
+    const n=(schoolData.students||[]).filter(s=>s.classId===cid).length;
+    return '<button class="btn btn-outline btn-block" style="margin-bottom:6px;text-align:right" onclick="openTeacherClassPerf(\''+cid+'\')">'+(c?c.name:'کلاس')+' · '+n+' دانش‌آموز</button>';
+  }).join('');
+}
+function openTeacherClassPerf(cid){
+  teacherPerfClassId=cid;
+  const c=(schoolData.classes||[]).find(x=>x.id===cid);
+  const panel=document.getElementById('teacher-perf-panel');
+  if(panel)panel.style.display='block';
+  const title=document.getElementById('teacher-perf-title');
+  if(title)title.textContent='عملکرد: '+(c?c.name:'کلاس');
+  document.getElementById('teacher-perf-out').innerHTML='';
+  runTeacherClassPerf();
+}
+function parseFaDateInput(s){
+  s=toEnDigits(String(s||'').trim());
+  if(!s)return null;
+  // accept 1403/07/01 or 1403-07-01
+  const m=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if(!m)return null;
+  const jy=+m[1],jm=+m[2],jd=+m[3];
+  // store as comparable string jyyy-mm-dd via existing jalali helpers if any
+  try{
+    if(typeof jalaali!=='undefined'&&jalaali.toGregorian){
+      const g=jalaali.toGregorian(jy,jm,jd);
+      const mm=String(g.gm).padStart(2,'0'),dd=String(g.gd).padStart(2,'0');
+      return g.gy+'-'+mm+'-'+dd;
+    }
+  }catch(e){}
+  // fallback: if attendance dates are jalali-like keep as zero-padded
+  return jy+'-'+String(jm).padStart(2,'0')+'-'+String(jd).padStart(2,'0');
+}
+function runTeacherClassPerf(){
+  if(!teacherPerfClassId)return;
+  const from=parseFaDateInput(document.getElementById('tp-from').value);
+  const to=parseFaDateInput(document.getElementById('tp-to').value);
+  const stus=(schoolData.students||[]).filter(s=>s.classId===teacherPerfClassId);
+  let html='';
+  if(!stus.length){document.getElementById('teacher-perf-out').innerHTML='<p class="hint">دانش‌آموزی نیست</p>';return}
+  stus.forEach(s=>{
+    let att=(schoolData.attendance||[]).filter(a=>a.studentId===s.id);
+    if(from)att=att.filter(a=>String(a.date||'')>=from);
+    if(to)att=att.filter(a=>String(a.date||'')<=to);
+    const abs=att.filter(a=>a.type==='absent').length;
+    const late=att.filter(a=>a.type==='late').length;
+    const other=att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
+    let score=20;att.forEach(a=>{score-=parseFloat(a.scoreDeduct)||0});score=Math.max(0,Math.round(score*100)/100);
+    html+='<div class="list-item"><div style="flex:1"><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+(other?' · سایر: '+other:'')+'</div></div><strong style="color:var(--primary)">'+score+'</strong></div>';
+  });
+  document.getElementById('teacher-perf-out').innerHTML=html;
+}
+
 function renderTeacherJournal(){
   const box=document.getElementById('teacher-journal');
   if(!box||!userSession)return;
