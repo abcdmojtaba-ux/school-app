@@ -5,154 +5,337 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>سامانه نیکان | پنل مدرسه</title>
 <style>
-:root{--primary:#0d47a1;--primary-light:#1565c0;--success:#2e7d32;--warning:#f9a825;--danger:#c62828;--bg:#f0f2f5;--card:#fff;--text:#212121;--muted:#757575;--border:#e0e0e0;--radius:12px;--font-scale:1}
+/* سامانه نیکان — قالب داشبورد حرفه‌ای (نزدیک نمونه ۳) */
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap');
+
+:root, body.theme-dark {
+  --bg: #070b14;
+  --bg-elev: #0d1526;
+  --card: #111a2e;
+  --card2: #152038;
+  --text: #e8eef7;
+  --muted: #8b9cb3;
+  --line: rgba(56,189,248,.14);
+  --cyan: #22d3ee;
+  --blue: #38bdf8;
+  --blue-dim: #0ea5e9;
+  --green: #34d399;
+  --orange: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --radius: 16px;
+  --shadow: 0 10px 40px rgba(0,0,0,.45);
+  --font-scale: 1;
+  --primary: #38bdf8;
+  --success: #34d399;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --border: rgba(56,189,248,.14);
+  --input-bg: #0a1220;
+  --nav-bg: rgba(7,11,20,.92);
+}
+
+body.theme-light {
+  --bg: #eef2f7;
+  --bg-elev: #ffffff;
+  --card: #ffffff;
+  --card2: #f8fafc;
+  --text: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --cyan: #0891b2;
+  --blue: #2563eb;
+  --blue-dim: #1d4ed8;
+  --green: #059669;
+  --orange: #d97706;
+  --red: #dc2626;
+  --purple: #7c3aed;
+  --shadow: 0 8px 28px rgba(15,23,42,.08);
+  --primary: #2563eb;
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --border: #e2e8f0;
+  --input-bg: #f8fafc;
+  --nav-bg: rgba(255,255,255,.94);
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--app-font,Tahoma,'Segoe UI',Arial,sans-serif);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;font-size:calc(15px*var(--font-scale))}
-.screen{display:none;min-height:100vh}.screen.active{display:block}
-.auth-bg{min-height:100vh;background:linear-gradient(160deg,#0d47a1 0%,#1565c0 45%,#e3f2fd 45%);padding:28px 16px 40px}
-.auth-logo{text-align:center;color:#fff;padding:20px 10px 28px}
-.auth-logo h1{font-size:1.4rem;margin-bottom:6px}.auth-logo p{opacity:.9;font-size:.92rem}
-.auth-card{background:#fff;border-radius:16px;padding:22px 18px;max-width:420px;margin:0 auto;box-shadow:0 12px 40px rgba(0,0,0,.18)}
-.auth-card h2{font-size:1.1rem;color:var(--primary);margin-bottom:14px;text-align:center}
+html,body{height:100%}
+body{
+  font-family:'Vazirmatn',Tahoma,'Segoe UI',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  line-height:1.65;
+  font-size:calc(14.5px * var(--font-scale));
+}
+body.theme-dark{
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(14,165,233,.16), transparent 55%),
+    radial-gradient(800px 400px at 0% 20%, rgba(34,211,238,.08), transparent 50%),
+    var(--bg);
+}
+
+.screen{display:none;min-height:100vh}
+.screen.active{display:block}
+
+/* —— ورود —— */
+.auth-bg{
+  min-height:100vh;
+  padding:36px 18px 48px;
+  background:
+    radial-gradient(600px 300px at 50% 0%, rgba(56,189,248,.2), transparent 60%),
+    linear-gradient(180deg, #050810 0%, #070b14 40%, #0a1220 100%);
+}
+body.theme-light .auth-bg{
+  background: linear-gradient(180deg, #dbeafe 0%, #eef2f7 45%, #eef2f7 100%);
+}
+.auth-logo{text-align:center;color:#fff;padding:12px 8px 22px}
+body.theme-light .auth-logo{color:#0f172a}
+.auth-logo h1{font-size:1.65rem;font-weight:800;letter-spacing:-.3px;margin-bottom:6px}
+.auth-logo p{opacity:.85;font-size:.9rem}
+.brand-orb{
+  width:76px;height:76px;margin:0 auto 16px;border-radius:22px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:2rem;color:#041018;
+  background:linear-gradient(145deg,#67e8f9,#0ea5e9);
+  box-shadow:0 0 0 1px rgba(103,232,249,.4),0 12px 40px rgba(14,165,233,.35);
+}
+.auth-card{
+  background:rgba(17,26,46,.92);
+  border:1px solid rgba(56,189,248,.18);
+  border-radius:20px;padding:22px 18px;max-width:420px;margin:0 auto;
+  box-shadow:var(--shadow);backdrop-filter:blur(12px);
+}
+body.theme-light .auth-card{background:#fff;border-color:#e2e8f0}
+.auth-card h2{font-size:1.05rem;color:var(--blue);margin-bottom:14px;text-align:center;font-weight:700}
+
 .role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.role-btn{border:2px solid var(--border);background:#fafafa;border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;font-family:inherit;font-size:.82em;font-weight:600}
-.role-btn.active{border-color:var(--primary);background:#e3f2fd;color:var(--primary)}
-.role-btn span{display:block;font-size:1.4rem;margin-bottom:4px}
-.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
-.card-title{font-weight:700;color:var(--primary);margin-bottom:10px;font-size:1rem}
+.role-btn{
+  border:1px solid var(--line);background:var(--bg-elev);color:var(--text);
+  border-radius:14px;padding:12px 6px;text-align:center;cursor:pointer;
+  font-family:inherit;font-size:.8rem;font-weight:600;
+}
+.role-btn.active{
+  border-color:var(--cyan);background:rgba(34,211,238,.1);color:var(--cyan);
+  box-shadow:0 0 0 1px rgba(34,211,238,.2);
+}
+
+/* —— اپ —— */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 14px;
+  background:var(--nav-bg);
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(16px);
+}
+.topbar h1{font-size:.95rem;font-weight:700}
+.topbar .sub{font-size:.7rem;color:var(--muted);margin-top:1px}
+.topbar .actions{display:flex;gap:6px;flex-wrap:wrap}
+
+.page{display:none;padding:14px 14px 96px;max-width:560px;margin:0 auto}
+.page.active{display:block}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:16px;
+  margin-bottom:12px;
+  box-shadow:var(--shadow);
+}
+.card-title{font-weight:700;color:var(--blue);margin-bottom:12px;font-size:.95rem}
+
+.dash-hello .hi{font-size:1.2rem;font-weight:800}
+.dash-hello .sub{font-size:.8rem;color:var(--muted);margin-top:4px}
+.license-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.stat{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px 10px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+body.theme-dark .stat{
+  background:linear-gradient(160deg,rgba(21,32,56,.95),rgba(13,21,38,.98));
+}
+.stat:nth-child(1){border-color:rgba(56,189,248,.35)}
+.stat:nth-child(2){border-color:rgba(52,211,153,.3)}
+.stat:nth-child(3){border-color:rgba(167,139,250,.3)}
+.stat .n{font-size:1.45rem;font-weight:800;color:var(--blue);letter-spacing:-.5px}
+.stat:nth-child(2) .n{color:var(--green)}
+.stat:nth-child(3) .n{color:var(--purple)}
+.stat .l{font-size:.7rem;color:var(--muted);margin-top:4px}
+
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qa-item{
+  display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+  padding:14px 12px;min-height:88px;border-radius:14px;cursor:pointer;
+  border:1px solid var(--line);background:var(--card2);
+  font-family:inherit;color:var(--text);text-align:right;
+  transition:transform .12s,border-color .12s;
+}
+.qa-item:active{transform:scale(.98)}
+body.theme-dark .qa-item{
+  background:linear-gradient(165deg,rgba(21,32,56,.9),rgba(11,18,32,.95));
+}
+.qa-item.accent{border-color:rgba(56,189,248,.45);box-shadow:0 0 24px rgba(14,165,233,.08)}
+.qa-item.ok{border-color:rgba(52,211,153,.4)}
+.qa-item .ic{font-size:1.3rem}
+.qa-item .lb{font-size:.84rem;font-weight:700}
+.qa-item .ds{font-size:.68rem;color:var(--muted)}
+
 .form-group{margin-bottom:12px}
-.form-group label{display:block;font-size:.85em;font-weight:600;margin-bottom:4px}
-.form-control{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:1em;font-family:inherit}
-.form-control:focus{outline:none;border-color:var(--primary)}
-textarea.form-control{min-height:72px;resize:vertical}
-.btn{display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:10px;padding:11px 14px;font-size:.9em;font-weight:700;font-family:inherit;cursor:pointer}
-.btn-primary{background:var(--primary);color:#fff}.btn-success{background:var(--success);color:#fff}
-.btn-danger{background:var(--danger);color:#fff}.btn-warning{background:var(--warning);color:#222}
-.btn-outline{background:#fff;color:var(--primary);border:1.5px solid var(--primary)}
-.btn-block{width:100%}.btn-sm{padding:6px 10px;font-size:.78em}
-.hint{font-size:.8em;color:var(--muted);margin-top:6px}
-.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:.75em;font-weight:700}
-.badge-trial{background:#e3f2fd;color:#1565c0}.badge-ok{background:#e8f5e9;color:var(--success)}.badge-wait{background:#fff8e1;color:#f57f17}
-.vpn-hint{background:#fff3cd;color:#856404;padding:8px 12px;font-size:.8rem;text-align:center;border-bottom:1px solid #ffc107;line-height:1.5}
-.vpn-hint strong{color:#c62828}
-.topbar{background:var(--primary);color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:40}
-.topbar h1{font-size:.95rem}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:6px 0;z-index:40}
-.bottom-nav button{background:none;border:none;font-size:.68em;color:var(--muted);padding:6px 2px;cursor:pointer;font-family:inherit;flex:1}
-.bottom-nav button.active{color:var(--primary);font-weight:700}
-.page{display:none;padding:12px 12px 84px;max-width:560px;margin:0 auto}.page.active{display:block}
-.list-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap}
-.list-item .name{font-weight:600}.list-item .meta{font-size:.8em;color:var(--muted)}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-.stat{background:var(--card);border-radius:var(--radius);padding:12px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06)}
-.stat .n{font-size:1.25rem;font-weight:700;color:var(--primary)}.stat .l{font-size:.72em;color:var(--muted)}
-.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:11px 16px;border-radius:10px;font-size:.88em;z-index:200;opacity:0;transition:.3s;max-width:90%;text-align:center;pointer-events:none}
-.toast.show{opacity:1}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center}
+.form-group label{display:block;font-size:.82rem;font-weight:600;margin-bottom:5px;color:var(--muted)}
+.form-control{
+  width:100%;padding:12px 14px;border-radius:12px;
+  border:1px solid var(--line);background:var(--input-bg);color:var(--text);
+  font-size:1em;font-family:inherit;
+}
+.form-control:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(56,189,248,.15)}
+textarea.form-control{min-height:76px;resize:vertical}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:none;border-radius:12px;padding:11px 14px;
+  font-size:.88rem;font-weight:700;font-family:inherit;cursor:pointer;
+}
+.btn-primary{
+  background:linear-gradient(135deg,#38bdf8,#0ea5e9);
+  color:#041018;box-shadow:0 6px 20px rgba(14,165,233,.3);
+}
+body.theme-light .btn-primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff}
+.btn-success{background:linear-gradient(135deg,#34d399,#10b981);color:#042f1a}
+.btn-danger{background:linear-gradient(135deg,#f87171,#ef4444);color:#fff}
+.btn-warning{background:var(--orange);color:#1c1000}
+.btn-outline{
+  background:transparent;color:var(--blue);
+  border:1px solid rgba(56,189,248,.4);
+}
+body.theme-light .btn-outline{border-color:#93c5fd;color:#1d4ed8}
+.btn-block{width:100%}
+.btn-sm{padding:7px 10px;font-size:.76rem;border-radius:10px}
+
+.hint{font-size:.78rem;color:var(--muted);margin-top:6px}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:700}
+.badge-ok{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.badge-trial{background:rgba(56,189,248,.12);color:var(--blue);border:1px solid rgba(56,189,248,.25)}
+.badge-wait{background:rgba(251,191,36,.12);color:var(--orange)}
+
+.list-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--line);gap:8px;flex-wrap:wrap;
+}
+.list-item:last-child{border-bottom:none}
+.list-item .name{font-weight:700}
+.list-item .meta{font-size:.76rem;color:var(--muted)}
+.list-item .who{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+
+.avatar{
+  width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;
+  background:linear-gradient(145deg,#0ea5e9,#0369a1);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:.9rem;border:2px solid rgba(56,189,248,.25);
+}
+.avatar-lg{width:72px;height:72px;font-size:1.4rem}
+.photo-pick{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  display:flex;justify-content:space-around;
+  padding:8px 4px 12px;
+  background:var(--nav-bg);
+  border-top:1px solid var(--line);
+  backdrop-filter:blur(16px);
+}
+.bottom-nav button{
+  background:none;border:none;font-family:inherit;cursor:pointer;
+  color:var(--muted);font-size:.68rem;padding:6px 2px;flex:1;font-weight:600;
+}
+.bottom-nav button.active{color:var(--blue)}
+
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{
+  flex:1;min-width:70px;padding:9px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:.78rem;
+  border:1px solid var(--line);background:var(--bg-elev);color:var(--text);
+}
+.tabs button.active{background:rgba(56,189,248,.15);border-color:var(--blue);color:var(--blue);font-weight:700}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
-.modal{background:#fff;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:18px}
+.modal{
+  background:var(--card);color:var(--text);width:100%;max-width:480px;max-height:92vh;
+  overflow-y:auto;border-radius:20px 20px 0 0;padding:18px;border:1px solid var(--line);
+}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.modal-header h2{font-size:1.05rem;color:var(--primary)}
+.modal-header h2{font-size:1.05rem;color:var(--blue)}
 .modal-close{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted)}
+
+.toast{
+  position:fixed;bottom:78px;left:50%;transform:translateX(-50%);
+  background:#0f172a;color:#fff;padding:12px 16px;border-radius:12px;
+  font-size:.86rem;z-index:200;opacity:0;transition:.3s;max-width:90%;text-align:center;pointer-events:none;
+  border:1px solid rgba(56,189,248,.25);
+}
+.toast.show{opacity:1}
+
 .checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.9em}
 .color-swatch{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer;display:inline-block;margin:4px}
-.color-swatch.active{border-color:#111}
-.preview-box{background:#f5f5f5;border-radius:8px;padding:10px;font-size:.88em;white-space:pre-wrap;margin:8px 0}
+.color-swatch.active{border-color:var(--cyan)}
+.preview-box{background:var(--bg-elev);border-radius:10px;padding:10px;font-size:.86em;white-space:pre-wrap;margin:8px 0;border:1px solid var(--line)}
 .clickable{cursor:pointer}
-.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.tabs button{flex:1;min-width:70px;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:8px;font-family:inherit;cursor:pointer;font-size:.8em}
-.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-.divider{height:1px;background:var(--border);margin:16px 0}
-.linkish{background:none;border:none;color:var(--primary);font-family:inherit;cursor:pointer;font-size:.88em;text-decoration:underline}
-.status-p{color:#f57f17;font-weight:700;font-size:.8em}.status-ok{color:var(--success);font-weight:700;font-size:.8em}
+.divider{height:1px;background:var(--line);margin:16px 0}
+.linkish{background:none;border:none;color:var(--blue);font-family:inherit;cursor:pointer;font-size:.86em;text-decoration:underline}
+.status-p{color:var(--orange);font-weight:700;font-size:.8em}
+.status-ok{color:var(--green);font-weight:700;font-size:.8em}
+.vpn-hint{display:none}
+.theme-switch{display:flex;gap:8px;margin:8px 0}
+.theme-switch button{flex:1}
+.theme-switch button.active{outline:2px solid var(--cyan)}
 
-/* سامانه نیکان — ظاهر تخصصی */
-:root {
-  --primary: #0f1c4d;
-  --primary-light: #1a2f6e;
-  --accent: #c9a84c;
-  --success: #1b7a4e;
-  --warning: #c47f00;
-  --danger: #b3261e;
-  --bg: #eef1f6;
-  --card: #ffffff;
-  --text: #1a1d26;
-  --muted: #6b7280;
-  --border: #e2e6ef;
-  --radius: 14px;
-  --shadow: 0 4px 20px rgba(15,28,77,.08);
+/* topbar pill buttons */
+.topbar .btn-outline{
+  background:rgba(56,189,248,.08);
+  border-color:rgba(56,189,248,.3);
+  color:var(--blue);
+  border-radius:999px;
+  padding:7px 12px;
 }
-body {
-  background: linear-gradient(180deg, #e8ecf5 0%, var(--bg) 120px);
-}
-.topbar {
-  background: linear-gradient(135deg, #0f1c4d 0%, #1a2f6e 55%, #243b7a 100%);
-  box-shadow: 0 4px 18px rgba(15,28,77,.25);
-}
-.topbar h1 { letter-spacing: -0.2px; }
-.card {
-  border: 1px solid rgba(15,28,77,.06);
-  box-shadow: var(--shadow);
-}
-.card-title { color: var(--primary); }
-.btn-primary {
-  background: linear-gradient(135deg, #0f1c4d, #1a2f6e);
-  box-shadow: 0 2px 8px rgba(15,28,77,.2);
-}
-.btn-success { background: linear-gradient(135deg, #1b7a4e, #259d64); }
-.stat {
-  border: 1px solid rgba(15,28,77,.06);
-  background: linear-gradient(180deg, #fff, #f8f9fc);
-}
-.stat .n { color: var(--primary); }
-.badge-ok { background: #e6f5ed; color: var(--success); }
-.badge-trial { background: #fff6e0; color: #9a6b00; }
-.list-item { border-radius: 12px; transition: background .15s; }
-.list-item:hover { background: #f5f7fb; }
-#gate, #login-role-screen, .gate-screen {
-  background: linear-gradient(160deg, #0f1c4d 0%, #1a2f6e 50%, #0d47a1 100%) !important;
-}
-.brand-mark {
-  width: 64px; height: 64px; margin: 0 auto 12px;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #c9a84c, #a88b2f);
-  display: flex; align-items: center; justify-content: center;
-  color: #0f1c4d; font-weight: 800; font-size: 1.4rem;
-  box-shadow: 0 8px 24px rgba(201,168,76,.35);
-}
-.footer-credit {
-  text-align: center; font-size: .72rem; color: var(--muted);
-  padding: 16px 8px 80px;
-}
-
+body.theme-light .topbar .btn-outline{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
 </style>
+
 </head>
-<body>
+<body class="theme-dark">
 
 <div id="screen-gate" class="screen active">
   <div class="auth-bg">
-    <div class="auth-logo"><div style="text-align:center;margin:0 0 10px">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="72" height="60" aria-hidden="true">
-<path d="M60 8c12 0 22 3 28 8v32c0 16-12 30-28 40-16-10-28-24-28-40V16c6-5 16-8 28-8z" fill="#fff" stroke="#1a237e" stroke-width="3"/>
-<path d="M44 42l14 5v22l-14-5zM76 42l-14 5v22l14-5zM60 45v24" fill="none" stroke="#1a237e" stroke-width="2.5" stroke-linejoin="round"/>
-</svg>
-</div><h1>سامانه مدیریت مدرسه</h1><p>حضور و غیاب · پیامک · انضباط · گزارش</p></div>
-    <div class="auth-card">
-      <h2>خوش آمدید</h2>
+    <div class="auth-logo">
+      <div class="brand-orb">ن</div>
+      <h1>سامانه نیکان</h1>
+      <p>داشبورد هوشمند مدیریت مدرسه</p>
+    </div>
+    <div class="auth-card" style="border-top:3px solid #c9a84c">
+      <h2 style="color:#0f1c4d">خوش آمدید</h2>
       <button class="btn btn-success btn-block" onclick="showScreen('register')">ثبت‌نام در سامانه</button>
       <p class="hint" style="text-align:center;margin:8px 0 14px">مدارس جدید — ثبت‌نام مدیر (۳۰ روز رایگان)</p>
       <button class="btn btn-primary btn-block" onclick="showScreen('login')">ورود به سامانه</button>
       <p class="hint" style="text-align:center;margin-top:8px">مدیر / معاون / معلم</p>
       <div class="divider"></div>
       <button class="btn btn-outline btn-block" onclick="showScreen('activate')">فعال‌سازی با کد پشتیبانی</button>
-      <p class="hint" style="text-align:center;margin-top:14px">طراحی: سید مجتبی موسوی</p>
+      <p class="hint" style="text-align:center;margin-top:14px">سامانه نیکان · طراحی سید مجتبی موسوی</p>
     </div>
   </div>
 </div>
 
 <div id="screen-register" class="screen">
   <div class="auth-bg">
-    <div class="auth-logo"><h1>ثبت‌نام مدرسه</h1><p>حساب مدیر + ۳۰ روز رایگان</p></div>
+    <div class="auth-logo"><div class="brand-orb" style="width:56px;height:56px;font-size:1.4rem;border-radius:16px;margin-bottom:10px" style="width:56px;height:56px;margin:0 auto 10px;border-radius:16px;background:linear-gradient(145deg,#e0c36a,#c9a84c);display:flex;align-items:center;justify-content:center;color:#0f1c4d;font-weight:800;font-size:1.3rem">ن</div><h1>ثبت‌نام در سامانه نیکان</h1><p>حساب مدیر + ۳۰ روز رایگان</p></div>
     <div class="auth-card">
       <div class="form-group"><label>نام مدرسه *</label><input class="form-control" id="r-school" /></div>
       <div class="form-group"><label>نام مدیر *</label><input class="form-control" id="r-manager" /></div>
@@ -169,7 +352,7 @@ body {
 
 <div id="screen-login" class="screen">
   <div class="auth-bg">
-    <div class="auth-logo"><h1>ورود به سامانه</h1><p>نقش خود را انتخاب کنید</p></div>
+    <div class="auth-logo"><div class="brand-orb" style="width:56px;height:56px;font-size:1.3rem;border-radius:16px;margin:0 auto 10px" style="width:56px;height:56px;margin:0 auto 10px;border-radius:16px;background:linear-gradient(145deg,#e0c36a,#c9a84c);display:flex;align-items:center;justify-content:center;color:#0f1c4d;font-weight:800;font-size:1.3rem">ن</div><h1>ورود به سامانه نیکان</h1><p>نقش خود را انتخاب کنید</p></div>
     <div class="auth-card">
       <div class="role-grid">
         <button type="button" class="role-btn active" data-role="manager" onclick="pickRole(this)"><span>👔</span>مدیر</button>
@@ -216,21 +399,22 @@ body {
 <div id="screen-app" data-sync="1" class="screen">
   
   <div class="topbar">
-    <div><h1 id="app-title">سامانه مدرسه</h1><div style="font-size:.72rem;opacity:.85" id="app-role"></div></div>
+    <div><h1 id="app-title">سامانه نیکان</h1><div class="sub" id="app-role"></div></div>
     <div style="display:flex;gap:6px;align-items:center">
-      <button class="btn btn-sm btn-outline" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.5)" onclick="manualSyncAll()">ارسال به سرور</button>
+      <button class="btn btn-sm btn-outline" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.5)" onclick="toggleThemeQuick()" title="تغییر ظاهر تیره/روشن">◐ ظاهر</button>
+      <button class="btn btn-sm btn-outline" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.5)" onclick="manualSyncAll()">ارسال</button>
       <button class="btn btn-sm btn-outline" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.5)" onclick="doLogout()">خروج</button>
     </div>
   </div>
 
   <!-- HOME -->
   <div id="page-home" class="page active">
+    <div class="card" id="license-mini"></div>
     <div class="stats">
       <div class="stat"><div class="n" id="st-classes">0</div><div class="l">کلاس</div></div>
       <div class="stat"><div class="n" id="st-students">0</div><div class="l">دانش‌آموز</div></div>
       <div class="stat"><div class="n" id="st-days">0</div><div class="l" id="st-days-label">روز مانده</div></div>
     </div>
-    <div class="card" id="license-mini"></div>
     <div class="card" id="home-actions"></div>
     <div class="card" id="home-pending" style="display:none"></div>
   </div>
@@ -418,6 +602,23 @@ body {
   </div>
 
   <!-- SETTINGS -->
+  <div id="page-exams" class="page">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card-title" style="margin:0">امتحانات و نمرات</div>
+        <button class="btn btn-primary btn-sm" id="btn-add-exam" onclick="openExamModal()">+ امتحان</button>
+      </div>
+      <p class="hint">امتحان برای کلاس تعریف کنید و نمره هر دانش‌آموز را ثبت کنید.</p>
+      <div id="exams-list"></div>
+    </div>
+    <div class="card" id="exam-scores-panel" style="display:none">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('exam-scores-panel').style.display='none'">← بازگشت</button>
+      <div class="card-title" style="margin-top:10px" id="exam-scores-title">نمرات</div>
+      <div id="exam-scores-list"></div>
+      <button class="btn btn-success btn-block" style="margin-top:10px" onclick="saveExamScores()">ذخیره نمرات</button>
+    </div>
+  </div>
+
   <div id="page-settings" class="page">
     <div class="card" id="set-disc-types">
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -468,14 +669,22 @@ body {
       <div class="form-group"><label>سایر (پیش‌فرض)</label><input type="number" step="0.25" class="form-control" id="rule-other" onchange="saveRules()" /></div>
     </div>
     <div class="card">
-      <div class="card-title">ظاهر</div>
+      <div class="card-title">ظاهر سامانه</div>
+      <div class="form-group"><label>حالت نمایش</label>
+        <div class="theme-switch">
+          <button type="button" class="btn btn-outline" data-mode="dark" onclick="setThemeMode('dark')">🌙 تیره</button>
+          <button type="button" class="btn btn-outline" data-mode="light" onclick="setThemeMode('light')">☀️ روشن</button>
+        </div>
+        <p class="hint">بین حالت تیره حرفه‌ای و روشن روزانه جابه‌جا شوید.</p>
+      </div>
+      <div class="form-group"><label>رنگ تاکید (حالت روشن)</label>
       <div>
         <span class="color-swatch" style="background:#0d47a1" data-c="#0d47a1" onclick="setColor(this)"></span>
         <span class="color-swatch" style="background:#1b5e20" data-c="#1b5e20" onclick="setColor(this)"></span>
         <span class="color-swatch" style="background:#4a148c" data-c="#4a148c" onclick="setColor(this)"></span>
         <span class="color-swatch" style="background:#b71c1c" data-c="#b71c1c" onclick="setColor(this)"></span>
         <span class="color-swatch" style="background:#006064" data-c="#006064" onclick="setColor(this)"></span>
-      </div>
+      </div></div>
       <div class="form-group" style="margin-top:10px"><label>اندازه فونت</label>
         <select class="form-control" id="set-fsize" onchange="setFontSize(this.value)">
           <option value="0.9">کوچک</option>
@@ -483,6 +692,15 @@ body {
           <option value="1.12">بزرگ</option>
           <option value="1.25">خیلی بزرگ</option>
         </select></div>
+    </div>
+    <div class="card" id="set-manager-photo-card">
+      <div class="card-title">عکس مدیر</div>
+      <div class="photo-pick">
+        <div id="mgr-photo-prev"></div>
+        <div id="mgr-photo-btns"></div>
+      </div>
+      <p class="hint">این عکس در داشبورد و برای شناسایی مدیر استفاده می‌شود و با سرور همگام می‌شود.</p>
+      <button class="btn btn-primary btn-block" onclick="saveManagerPhoto()">ذخیره عکس مدیر</button>
     </div>
     <div class="card"><div class="card-title">لایسنس</div><div id="set-license"></div></div>
     <div class="card"><p class="hint">طراحی: سید مجتبی موسوی</p></div>
@@ -524,35 +742,43 @@ function saveMother(d){localStorage.setItem(MOTHER_KEY,JSON.stringify(d))}
 function importMotherBackup(ev){const file=ev.target.files&&ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(){try{const data=JSON.parse(reader.result);if(!data.schools)throw 0;saveMother(data);toast('پشتیبان مادر بارگذاری شد')}catch(e){toast('فایل نامعتبر')}};reader.readAsText(file);ev.target.value=''}
 
 /* سرور Cloudflare — بدون Firebase/گوگل */
-const DEFAULT_SYNC_API='https://school-sync.abcd-mojtaba.workers.dev';
+const DEFAULT_SYNC_API='https://api.nikan-school.top';
+const FALLBACK_SYNC_API='https://school-sync.abcd-mojtaba.workers.dev';
 const SYNC_API=(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API).replace(/\/$/,'');
 function setSyncApi(url){url=String(url||'').trim().replace(/\/$/,'');localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
 async function apiFetch(path,options){
-  if(!SYNC_API)throw new Error('آدرس سرور تنظیم نشده');
   const opts=options||{};
   const maxTry=opts.retries!=null?opts.retries:2;
   let lastErr=null;
-  for(let i=1;i<=maxTry;i++){
-    try{
-      const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-      const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},12000):null;
-      const res=await fetch(SYNC_API+path,{
-        method:opts.method||'GET',
-        headers:{'Content-Type':'application/json'},
-        body:opts.body?JSON.stringify(opts.body):undefined,
-        signal:ctrl?ctrl.signal:undefined
-      });
-      if(timer)clearTimeout(timer);
-      let data=null;try{data=await res.json()}catch(e){}
-      if(!res.ok)throw new Error((data&&data.error)||('HTTP '+res.status));
-      return data;
-    }catch(e){
-      lastErr=e;
-      if(i<maxTry)await new Promise(r=>setTimeout(r,400*i));
+  const bases=[];
+  const primary=(typeof SYNC_API!=='undefined'&&SYNC_API)?SYNC_API:'';
+  if(primary)bases.push(primary);
+  if(typeof FALLBACK_SYNC_API!=='undefined'&&FALLBACK_SYNC_API&&FALLBACK_SYNC_API!==primary)bases.push(FALLBACK_SYNC_API);
+  if(!bases.length)throw new Error('آدرس سرور تنظیم نشده');
+  for(const base of bases){
+    for(let i=1;i<=maxTry;i++){
+      try{
+        const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
+        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},14000):null;
+        const res=await fetch(base+path,{
+          method:opts.method||'GET',
+          headers:{'Content-Type':'application/json',...(opts.headers||{})},
+          body:opts.body?JSON.stringify(opts.body):undefined,
+          signal:ctrl?ctrl.signal:undefined
+        });
+        if(timer)clearTimeout(timer);
+        let data=null;
+        try{data=await res.json()}catch(e){data=null}
+        if(!res.ok)throw new Error((data&&data.error)||('HTTP '+res.status));
+        // اگر با fallback جواب گرفت، همان را ترجیح بده برای دفعات بعد
+        try{if(base!==primary)localStorage.setItem('school_sync_api',base)}catch(e){}
+        return data;
+      }catch(e){
+        lastErr=e;
+        if(i<maxTry)await new Promise(r=>setTimeout(r,300*i));
+      }
     }
   }
-  const m=(lastErr&&lastErr.message)?lastErr.message:String(lastErr);
-  if(/fetch|network|Failed|Load|abort|Abort/i.test(m))throw new Error('اتصال به سرور برقرار نشد — دوباره تلاش کنید');
   throw lastErr||new Error('خطای سرور');
 }
 async function manualSyncAll(){
@@ -641,11 +867,13 @@ async function cloudPushAppData(force){
       submissions:schoolData.submissions||[],
       disciplineTypes:schoolData.disciplineTypes||[],
       smsTemplates:schoolData.smsTemplates||[],
+      exams:schoolData.exams||[],
       smsConfig:schoolData.smsConfig||null,
       theme:schoolData.theme||{},
       rules:schoolData.rules||{},
       managerUser:schoolData.managerUser||'',
       managerPass:schoolData.managerPass||'',
+      managerPhoto:schoolData.managerPhoto||'',
       shifts:schoolData.shifts||1,
       updatedAtMs:Date.now()
     };
@@ -669,11 +897,13 @@ function applyRemoteAppData(d,remoteTs){
   if(Array.isArray(d.submissions)&&(d.submissions.length||!(schoolData.submissions||[]).length))schoolData.submissions=d.submissions;
   if(Array.isArray(d.disciplineTypes)&&d.disciplineTypes.length)schoolData.disciplineTypes=d.disciplineTypes;
   if(Array.isArray(d.smsTemplates)&&d.smsTemplates.length)schoolData.smsTemplates=d.smsTemplates;
+  if(Array.isArray(d.exams))schoolData.exams=d.exams;
   if(d.smsConfig&&typeof d.smsConfig==='object')schoolData.smsConfig=d.smsConfig;
   if(d.theme&&typeof d.theme==='object')schoolData.theme=d.theme;
   if(d.rules)schoolData.rules=d.rules;
   if(d.managerUser)schoolData.managerUser=d.managerUser;
   if(d.managerPass)schoolData.managerPass=d.managerPass;
+  if(d.managerPhoto!==undefined)schoolData.managerPhoto=d.managerPhoto;
   if(d.shifts)schoolData.shifts=d.shifts;
   schoolData._cloudUpdatedAtMs=remoteTs||d.updatedAtMs||Date.now();
   localStorage.setItem(dataKey(),JSON.stringify(schoolData));
@@ -781,11 +1011,70 @@ async function autoPullAll(checkSchool){
   finally{_pullBusy=false}
 }
 function dataKey(){return DATA_PREFIX+(session?.schoolId||session?.code||'local')}
-function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,other:1},theme:{},shifts:1}}
-function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
+function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,other:1},theme:{},shifts:1}}
+function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
 function saveSchoolData(){localStorage.setItem(dataKey(),JSON.stringify(schoolData));scheduleCloudPush()}
 function isExpired(exp){return exp&&exp<todayStr()}
 function toEnDigits(s){s=String(s||'');const fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩';let o='';for(const ch of s){let i=fa.indexOf(ch);if(i>=0){o+=i;continue}i=ar.indexOf(ch);if(i>=0){o+=i;continue}o+=ch}return o}
+
+function compressPhoto(file, maxW, cb){
+  maxW=maxW||160;
+  const reader=new FileReader();
+  reader.onload=function(){
+    const img=new Image();
+    img.onload=function(){
+      const r=Math.min(1, maxW/img.width);
+      const w=Math.round(img.width*r), h=Math.round(img.height*r);
+      const c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',0.62));
+    };
+    img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+function avatarHtml(photo, name, cls){
+  const ch=(name||'؟').trim().charAt(0)||'؟';
+  if(photo)return '<img class="avatar '+(cls||'')+'" src="'+photo+'" alt="" />';
+  return '<div class="avatar '+(cls||'')+'">'+ch+'</div>';
+}
+function onPhotoPick(inputId, previewId){
+  const inp=document.getElementById(inputId);
+  if(!inp||!inp.files||!inp.files[0])return;
+  compressPhoto(inp.files[0], 160, function(url){
+    window._pendingPhoto=url;
+    const prev=document.getElementById(previewId);
+    if(prev)prev.innerHTML='<img class="avatar avatar-lg" src="'+url+'" />';
+  });
+}
+function photoButtons(fileId, prevId){
+  return '<div style="display:flex;flex-direction:column;gap:6px">'+
+    '<label class="btn btn-outline btn-sm">از گالری / فایل<input type="file" id="'+fileId+'-gal" accept="image/*" style="display:none" onchange="copyPhotoInput(this,\''+fileId+'\',\''+prevId+'\')" /></label>'+
+    '<label class="btn btn-outline btn-sm">از دوربین<input type="file" id="'+fileId+'-cam" accept="image/*" capture="environment" style="display:none" onchange="copyPhotoInput(this,\''+fileId+'\',\''+prevId+'\')" /></label>'+
+    '<input type="file" id="'+fileId+'" accept="image/*" style="display:none" onchange="onPhotoPick(\''+fileId+'\',\''+prevId+'\')" />'+
+    '</div>';
+}
+function copyPhotoInput(src, fileId, prevId){
+  const dest=document.getElementById(fileId);
+  if(!dest||!src.files||!src.files[0])return;
+  try{
+    const dt=new DataTransfer();
+    dt.items.add(src.files[0]);
+    dest.files=dt.files;
+  }catch(e){
+    // fallback: compress directly
+    compressPhoto(src.files[0],160,function(url){
+      window._pendingPhoto=url;
+      const prev=document.getElementById(prevId);
+      if(prev)prev.innerHTML='<img class="avatar avatar-lg" src="'+url+'" />';
+    });
+    return;
+  }
+  onPhotoPick(fileId, prevId);
+}
+
+
 function fixPhone(p){p=(p||'').toString().replace(/\s|-/g,'').replace(/^\+98/,'0');if(p&&!p.startsWith('0')&&p.length>=10)p='0'+p;return p}
 function pickRole(el){document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');loginRole=el.getAttribute('data-role')}
 function isManager(){return userSession&&userSession.role==='manager'}
@@ -837,7 +1126,7 @@ function canAccessClass(classId){
 
 function isTeacher(){return userSession&&userSession.role==='teacher'}
 function canManage(){return isManager()||isDeputy()}
-function dualShift(){return (session&&session.shifts===2)||schoolData.shifts===2||(session&&(session.modules||[]).includes('dual_shift'))}
+function dualShift(){try{if(session&&(Number(session.shifts)===2||(session.modules||[]).indexOf('dual_shift')>=0))return true;if(schoolData&&Number(schoolData.shifts)===2)return true;if(schoolData&&(schoolData.classes||[]).some(function(c){return Number(c.shift)===1||Number(c.shift)===2}))return true;if(schoolData&&(schoolData.staff||[]).some(function(u){return Number(u.shift)===1||Number(u.shift)===2}))return true}catch(e){}return false}
 
 async function doRegister(){
   const school=document.getElementById('r-school').value.trim(),manager=document.getElementById('r-manager').value.trim(),phone=fixPhone(document.getElementById('r-phone').value),city=document.getElementById('r-city').value.trim(),user=normLoginUser(document.getElementById('r-user').value.trim()),pass=document.getElementById('r-pass').value,pass2=document.getElementById('r-pass2').value;
@@ -1031,9 +1320,17 @@ function applyLicenseFields(s){
   if(s.active!=null)session.active=s.active!==false;
   if(s.name)session.name=s.name;
   if(s.plan)session.plan=s.plan;
-  if(s.shifts)session.shifts=s.shifts;
+  if(s.shifts!=null)session.shifts=Number(s.shifts)||1;
   if(s.modules)session.modules=s.modules;
-  // اگر تاریخ انقضا هنوز نرسیده و از پنل مادر تمدید شده → فعال
+  // دو شیفت از مادر → روی داده محلی مدرسه هم بنشینند
+  try{
+    if(typeof schoolData!=='undefined'&&schoolData){
+      if(s.shifts!=null)schoolData.shifts=Number(s.shifts)||1;
+      if(Array.isArray(s.modules)&&s.modules.indexOf('dual_shift')>=0)schoolData.shifts=2;
+      if(Number(session.shifts)===2)schoolData.shifts=2;
+      try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+    }
+  }catch(e){}
   if(session.expireDate&&!isExpired(session.expireDate)){
     if(s.active!==false)session.active=true;
   }
@@ -1094,11 +1391,14 @@ async function enterApp(){
     return;
   }
   loadSchoolData();
+  // هم‌تراز کردن شیفت با لایسنس/مادر
+  if(session&&Number(session.shifts)===2)schoolData.shifts=2;
+  else if(session&&session.modules&&session.modules.indexOf('dual_shift')>=0)schoolData.shifts=2;
   try{ensureAllSubmissionsInAttendance()}catch(e){}
   document.getElementById('app-title').textContent=session.name||'سامانه مدرسه';
   const roleFa={manager:'مدیر',deputy:'معاون',teacher:'معلم'};
   let roleLine=(roleFa[userSession.role]||'')+' · '+(userSession.name||userSession.username);
-  if(userSession.role==='deputy'&&userSession.shift)roleLine+=' · شیفت '+userSession.shift;
+  if(userSession.role==='deputy'&&userSession.shift)roleLine+=' · شیفت '+(shiftLabel(userSession.shift)||userSession.shift);
   document.getElementById('app-role').textContent=roleLine;
   buildNav();
   showScreen('app');
@@ -1182,12 +1482,12 @@ function doLogout(){clearUserSession();clearSession();showScreen('gate');toast('
 function buildNav(){
   const nav=document.getElementById('bottom-nav');
   if(isTeacher()){
-    nav.innerHTML='<button class="active" data-p="teacher" onclick="showAppPage(\'teacher\')">کلاس‌های من</button><button data-p="home" onclick="showAppPage(\'home\')">خانه</button>';
+    nav.innerHTML='<button class="active" data-p="teacher" onclick="showAppPage(\'teacher\')">کلاس‌های من</button><button data-p="exams" onclick="showAppPage(\'exams\')">امتحان</button><button data-p="home" onclick="showAppPage(\'home\')">خانه</button>';
     return;
   }
   let html='<button data-p="home" onclick="showAppPage(\'home\')">خانه</button><button data-p="classes" onclick="showAppPage(\'classes\')">کلاس</button>';
-  if(isManager())html+='<button data-p="schedule" onclick="showAppPage(\'schedule\')">برنامه</button><button data-p="team" onclick="showAppPage(\'team\')">تیم</button>';
-  html+='<button data-p="send" onclick="showAppPage(\'send\')">پیامک</button><button data-p="reports" onclick="showAppPage(\'reports\')">گزارش</button><button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
+  if(isManager())html+='<button data-p="team" onclick="showAppPage(\'team\')">تیم</button>';
+  html+='<button data-p="exams" onclick="showAppPage(\'exams\')">امتحان</button><button data-p="send" onclick="showAppPage(\'send\')">پیامک</button><button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
   nav.innerHTML=html;
 }
 function showAppPage(name){
@@ -1203,27 +1503,48 @@ function showAppPage(name){
   if(name==='settings')renderSettings();
   if(name==='teacher')renderTeacherDay();
   if(name==='schedule')renderAssignments();
+  if(name==='exams')renderExams();
 
   if(name==='teacher'){try{renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}catch(e){}}
 }
 function daysLeft(){if(!session?.expireDate)return 0;return Math.ceil((new Date(session.expireDate+'T12:00:00')-new Date(todayStr()+'T12:00:00'))/86400000)}
 
 function renderHome(){
-  const _vc=classesForRole();document.getElementById('st-classes').textContent=_vc.length;
-  const _vids=_vc.map(c=>c.id);document.getElementById('st-students').textContent=schoolData.students.filter(s=>_vids.includes(s.classId)).length;
+  const _vc=classesForRole();
+  const _vids=_vc.map(c=>c.id);
+  const stuN=schoolData.students.filter(s=>_vids.includes(s.classId)).length;
+  document.getElementById('st-classes').textContent=_vc.length;
+  document.getElementById('st-students').textContent=stuN;
   document.getElementById('st-days').textContent=isTeacher()?'—':daysLeft();
   document.getElementById('st-days-label').textContent=isTeacher()?'نقش':'روز مانده';
   const badge=session.plan==='trial'?'<span class="badge badge-trial">آزمایشی</span>':'<span class="badge badge-ok">فعال</span>';
-  document.getElementById('license-mini').innerHTML=isTeacher()?'<div class="hint">فقط کلاس‌های اختصاص‌یافته و حضور و غیاب</div>':'<div style="display:flex;justify-content:space-between"><span class="card-title" style="margin:0">لایسنس</span>'+badge+'</div><div class="hint">انقضا: '+formatDateFa(session.expireDate)+' · '+daysLeft()+' روز</div>';
+  const roleFa={manager:'مدیر',deputy:'معاون',teacher:'معلم'};
+  const helloName=(userSession&&(userSession.name||userSession.username))||'';
+  const helloRole=roleFa[(userSession&&userSession.role)]||'';
+  const mgrAv=isManager()?('<div style="float:left;margin-left:8px">'+avatarHtml(schoolData.managerPhoto,helloName||'مدیر','')+'</div>'):'';
+  document.getElementById('license-mini').innerHTML=
+    '<div class="dash-hello">'+mgrAv+'<div class="hi">سلام'+(helloName?'، '+helloName:'')+' 👋</div>'+
+    '<div class="sub">خوش آمدید به داشبورد نیکان'+(helloRole?' · '+helloRole:'')+(session.name?' · '+session.name:'')+'</div></div>'+
+    (isTeacher()
+      ?'<div class="hint">فقط کلاس‌های اختصاص‌یافته و حضور و غیاب</div>'
+      :'<div class="license-row"><div><div class="card-title" style="margin:0">لایسنس</div><div class="hint">انقضا: '+formatDateFa(session.expireDate)+' · '+daysLeft()+' روز</div></div>'+badge+'</div>');
   const act=document.getElementById('home-actions');
   if(isTeacher()){
-    act.innerHTML='<div class="card-title">دسترسی معلم</div><button class="btn btn-primary btn-block" onclick="showAppPage(\'teacher\')">کلاس‌های امروز و حضور و غیاب</button><p class="hint">پیامک و مدیریت مدرسه فقط برای مدیر و معاون است.</p>';
+    act.innerHTML='<div class="card-title">دسترسی سریع</div><div class="qa-grid">'+
+      '<button type="button" class="qa-item accent" onclick="showAppPage(\'teacher\')"><span class="ic">📋</span><span class="lb">حضور و غیاب</span><span class="ds">کلاس‌های امروز</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">امتحانات</span><span class="ds">ثبت نمرات</span></button>'+
+      '</div>';
   }else{
-    act.innerHTML='<div class="card-title">دسترسی سریع</div>'+
-      '<button class="btn btn-primary btn-block" style="margin-bottom:8px" onclick="showAppPage(\'classes\')">کلاس‌ها و دانش‌آموزان</button>'+
-      '<button class="btn btn-success btn-block" style="margin-bottom:8px" onclick="showAppPage(\'send\')">ارسال پیامک</button>'+
-      '<button class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="showAppPage(\'reports\')">گزارش و عملکرد</button>'+
-      (isManager()?'<button class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="showAppPage(\'schedule\')">برنامه معلمان</button><button class="btn btn-outline btn-block" onclick="showAppPage(\'team\')">تیم و همکاران</button>':'');
+    act.innerHTML='<div class="card-title">دسترسی سریع</div><div class="qa-grid">'+
+      '<button type="button" class="qa-item accent" onclick="showAppPage(\'classes\')"><span class="ic">🏫</span><span class="lb">کلاس و دانش‌آموز</span><span class="ds">'+_vc.length+' کلاس · '+stuN+' نفر</span></button>'+
+      '<button type="button" class="qa-item ok" onclick="showAppPage(\'send\')"><span class="ic">✉️</span><span class="lb">ارسال پیامک</span><span class="ds">اولیا و همکاران</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'reports\')"><span class="ic">📊</span><span class="lb">گزارش و عملکرد</span><span class="ds">انضباط و حضور</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">امتحان و نمره</span><span class="ds">کارنامه کلاسی</span></button>'+
+      (isManager()
+        ?'<button type="button" class="qa-item" onclick="showAppPage(\'schedule\')"><span class="ic">📅</span><span class="lb">برنامه معلمان</span><span class="ds">زنگ و کلاس</span></button>'+
+         '<button type="button" class="qa-item" onclick="showAppPage(\'team\')"><span class="ic">👥</span><span class="lb">تیم و همکاران</span><span class="ds">معاون و معلم</span></button>'
+        :'')+
+      '</div>';
   }
   // pending + reviewed submissions
   const pend=document.getElementById('home-pending');
@@ -1396,9 +1717,9 @@ function openClassModal(id){if(!isManager())return toast('فقط مدیر');cons
 function saveClass(id){const name=document.getElementById('c-name').value.trim();if(!name)return toast('نام کلاس لازم است');const shift=document.getElementById('c-shift')?parseInt(document.getElementById('c-shift').value):1;if(id){const c=schoolData.classes.find(x=>x.id===id);if(c){c.name=name;c.shift=shift}}else schoolData.classes.push({id:uid(),name,shift});saveSchoolData();closeModal();renderClasses();renderHome();toast('ذخیره شد')}
 function delClass(id){if(!confirm('حذف کلاس؟'))return;schoolData.classes=schoolData.classes.filter(c=>c.id!==id);schoolData.students=schoolData.students.filter(s=>s.classId!==id);schoolData.assignments=(schoolData.assignments||[]).filter(a=>a.classId!==id);saveSchoolData();renderClasses();renderHome()}
 function openClassStudents(id){if(!canAccessClass(id))return toast('به این کلاس دسترسی ندارید');currentClassId=id;const c=schoolData.classes.find(x=>x.id===id);document.getElementById('students-title').textContent='دانش‌آموزان '+classTitle(c);document.getElementById('btn-add-stu').style.display=canManage()?'':'none';showAppPage('students');renderStudents()}
-function renderStudents(){const list=document.getElementById('students-list');const st=schoolData.students.filter(s=>s.classId===currentClassId);if(!st.length){list.innerHTML='<p class="hint">خالی</p>';return}list.innerHTML=st.map(s=>'<div class="list-item"><div class="clickable" style="flex:1" onclick="'+(canManage()?'openPerformance(\''+s.id+'\')':'')+'"><div class="name">'+s.name+'</div><div class="meta">'+(s.phones||[]).join(' | ')+(s.note?' — '+s.note:'')+'</div></div>'+(canManage()?'<button class="btn btn-outline btn-sm" onclick="openStudentModal(\''+s.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStudent(\''+s.id+'\')">حذف</button>':'')+'</div>').join('')}
-function openStudentModal(id){if(!canManage())return;const s=id?schoolData.students.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=s?'ویرایش':'دانش‌آموز جدید';document.getElementById('modal-body').innerHTML='<div class="form-group"><label>نام</label><input class="form-control" id="s-name" value="'+(s?.name||'')+'" /></div><div class="form-group"><label>شماره پدر</label><input class="form-control" id="s-p1" value="'+((s?.phones||[])[0]||'')+'" /></div><div class="form-group"><label>شماره مادر</label><input class="form-control" id="s-p2" value="'+((s?.phones||[])[1]||'')+'" /></div><div class="form-group"><label>توضیحات</label><textarea class="form-control" id="s-note">'+(s?.note||'')+'</textarea></div><button class="btn btn-primary btn-block" onclick="saveStudent(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
-function saveStudent(id){const name=document.getElementById('s-name').value.trim(),p1=fixPhone(document.getElementById('s-p1').value),p2=fixPhone(document.getElementById('s-p2').value),note=document.getElementById('s-note').value.trim();if(!name)return toast('نام لازم است');const phones=[p1,p2].filter(Boolean);if(id){const s=schoolData.students.find(x=>x.id===id);if(s){s.name=name;s.phones=phones;s.note=note}}else schoolData.students.push({id:uid(),classId:currentClassId,name,phones,note});saveSchoolData();closeModal();renderStudents();renderHome();toast('ذخیره شد')}
+function renderStudents(){const list=document.getElementById('students-list');const st=schoolData.students.filter(s=>s.classId===currentClassId);if(!st.length){list.innerHTML='<p class="hint">خالی</p>';return}list.innerHTML=st.map(s=>'<div class="list-item"><div class="who clickable" onclick="'+(canManage()?'openPerformance(\''+s.id+'\')':'')+'">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">'+(s.phones||[]).join(' | ')+(s.note?' — '+s.note:'')+'</div></div></div>'+(canManage()?'<button class="btn btn-outline btn-sm" onclick="openStudentModal(\''+s.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStudent(\''+s.id+'\')">حذف</button>':'')+'</div>').join('')}
+function openStudentModal(id){if(!canManage())return;const s=id?schoolData.students.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=s?'ویرایش':'دانش‌آموز جدید';window._pendingPhoto=(s&&s.photo)||'';document.getElementById('modal-body').innerHTML='<div class="photo-pick"><div id="s-photo-prev">'+avatarHtml(s&&s.photo,s&&s.name,'avatar-lg')+'</div>'+photoButtons('s-photo','s-photo-prev')+'</div><p class="hint">عکس همگام با سرور می‌شود</p><div class="form-group"><label>نام</label><input class="form-control" id="s-name" value="'+(s?.name||'')+'" /></div><div class="form-group"><label>شماره پدر</label><input class="form-control" id="s-p1" value="'+((s?.phones||[])[0]||'')+'" /></div><div class="form-group"><label>شماره مادر</label><input class="form-control" id="s-p2" value="'+((s?.phones||[])[1]||'')+'" /></div><div class="form-group"><label>توضیحات</label><textarea class="form-control" id="s-note">'+(s?.note||'')+'</textarea></div><button class="btn btn-primary btn-block" onclick="saveStudent(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
+function saveStudent(id){const name=document.getElementById('s-name').value.trim(),p1=fixPhone(document.getElementById('s-p1').value),p2=fixPhone(document.getElementById('s-p2').value),note=document.getElementById('s-note').value.trim();if(!name)return toast('نام لازم است');const phones=[p1,p2].filter(Boolean);const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';if(id){const s=schoolData.students.find(x=>x.id===id);if(s){s.name=name;s.phones=phones;s.note=note;if(photo!==null&&photo!==undefined)s.photo=photo}}else schoolData.students.push({id:uid(),classId:currentClassId,name,phones,note,photo:photo||''});saveSchoolData();closeModal();renderStudents();renderHome();toast('ذخیره شد')}
 function delStudent(id){if(!confirm('حذف؟'))return;schoolData.students=schoolData.students.filter(s=>s.id!==id);saveSchoolData();renderStudents();renderHome()}
 function importExcel(ev){
   const file=ev.target.files[0];if(!file)return;
@@ -1447,7 +1768,7 @@ function teamTab(t){document.getElementById('tab-staff').classList.toggle('activ
 function renderTeam(){
   const sl=document.getElementById('staff-list');
   if(!schoolData.staff.length)sl.innerHTML='<p class="hint">معاون/معلمی نیست.</p>';
-  else sl.innerHTML=schoolData.staff.map(u=>'<div class="list-item"><div><div class="name">'+u.name+'</div><div class="meta">'+(u.role==='deputy'?'معاون':'معلم')+(u.role==='deputy'&&u.shift?' · '+shiftLabel(u.shift):'')+(u.role==='teacher'?' · کلاس‌ها از برنامه':'')+' · '+u.username+(u.phone?' · '+u.phone:'')+'</div></div><button class="btn btn-outline btn-sm" onclick="openStaffModal(\''+u.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStaff(\''+u.id+'\')">حذف</button></div>').join('');
+  else sl.innerHTML=schoolData.staff.map(u=>'<div class="list-item"><div class="who">'+avatarHtml(u.photo,u.name)+'<div><div class="name">'+u.name+'</div><div class="meta">'+(u.role==='deputy'?'معاون':'معلم')+(u.shift?(' · '+shiftLabel(u.shift)):' · هر دو شیفت')+' · '+u.username+(u.phone?' · '+u.phone:'')+'</div></div></div><button class="btn btn-outline btn-sm" onclick="openStaffModal(\''+u.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStaff(\''+u.id+'\')">حذف</button></div>').join('');
   const cl=document.getElementById('col-list');
   if(!schoolData.colleagues.length)cl.innerHTML='<p class="hint">همکاری نیست</p>';
   else cl.innerHTML=schoolData.colleagues.map(c=>'<div class="list-item"><div><div class="name">'+c.name+'</div><div class="meta">'+(c.role||'')+' · '+c.phone+'</div></div><button class="btn btn-outline btn-sm" onclick="openColleagueModal(\''+c.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delColleague(\''+c.id+'\')">حذف</button></div>').join('');
@@ -1455,30 +1776,40 @@ function renderTeam(){
 function openStaffModal(id){
   const u=id?schoolData.staff.find(x=>x.id===id):null;
   document.getElementById('modal-title').textContent=u?'ویرایش کاربر':'کاربر جدید';
-  let shiftHtml='<div class="form-group" id="st-shift-wrap" style="display:none"><label>شیفت معاون</label><select class="form-control" id="st-shift"><option value="1">صبح</option><option value="2">عصر</option></select></div>';
+  const curShift=(u&&u.shift!=null&&u.shift!=='')?String(u.shift):'';
+  let shiftHtml=
+    '<div class="form-group" id="st-shift-wrap">'+
+    '<label>شیفت کاری</label>'+
+    '<select class="form-control" id="st-shift">'+
+    '<option value=""'+(curShift===''?' selected':'')+'>هر دو شیفت / همه</option>'+
+    '<option value="1"'+(curShift==='1'?' selected':'')+'>صبح</option>'+
+    '<option value="2"'+(curShift==='2'?' selected':'')+'>عصر</option>'+
+    '</select>'+
+    '<p class="hint">معاون عصر فقط کلاس‌های عصر را می‌بیند. معلم با «هر دو» می‌تواند کلاس صبح و عصر داشته باشد.</p>'+
+    '</div>';
+  window._pendingPhoto=(u&&u.photo)||'';
   document.getElementById('modal-body').innerHTML=
+    '<div class="photo-pick"><div id="st-photo-prev">'+avatarHtml(u&&u.photo,u&&u.name,'avatar-lg')+'</div>'+photoButtons('st-photo','st-photo-prev')+'</div><p class="hint">عکس بعد از ذخیره روی سرور می‌رود و بقیه دستگاه‌ها می‌بینند</p>'+
     '<div class="form-group"><label>نام</label><input class="form-control" id="st-name" value="'+(u?.name||'')+'" /></div>'+
-    '<div class="form-group"><label>نقش</label><select class="form-control" id="st-role" onchange="toggleStaffShift()"><option value="deputy"'+(u&&u.role==='deputy'?' selected':'')+'>معاون</option><option value="teacher"'+(u&&u.role==='teacher'?' selected':'')+'>معلم</option></select></div>'+
+    '<div class="form-group"><label>نقش</label><select class="form-control" id="st-role"><option value="deputy"'+(u&&u.role==='deputy'?' selected':'')+'>معاون</option><option value="teacher"'+(u&&u.role==='teacher'?' selected':'')+'>معلم</option></select></div>'+
     shiftHtml+
     '<div class="form-group"><label>نام کاربری</label><input class="form-control" id="st-user" value="'+(u?.username||'')+'" /></div>'+
     '<div class="form-group"><label>رمز</label><input class="form-control" id="st-pass" type="text" value="'+(u?.pass||'')+'" /></div>'+
     '<div class="form-group"><label>موبایل</label><input class="form-control" id="st-phone" value="'+(u?.phone||'')+'" /></div>'+
     '<button class="btn btn-primary btn-block" onclick="saveStaff(\''+(id||'')+'\')">ذخیره</button>';
   document.getElementById('modal').classList.add('show');
-  if(u&&u.shift){const el=document.getElementById('st-shift');if(el)el.value=String(u.shift)}
-  toggleStaffShift();
 }
-function toggleStaffShift(){
-  const role=document.getElementById('st-role')?.value;
-  const wrap=document.getElementById('st-shift-wrap');
-  if(wrap)wrap.style.display=(role==='deputy'&&dualShift())?'block':'none';
-}
+function toggleStaffShift(){/* شیفت همیشه نمایش داده می‌شود */}
 function saveStaff(id){
   const name=document.getElementById('st-name').value.trim(),role=document.getElementById('st-role').value,username=document.getElementById('st-user').value.trim(),pass=document.getElementById('st-pass').value,phone=fixPhone(document.getElementById('st-phone').value);
-  const shift=(role==='deputy'&&dualShift()&&document.getElementById('st-shift'))?parseInt(document.getElementById('st-shift').value):null;
+  const shiftRaw=document.getElementById('st-shift')?document.getElementById('st-shift').value:'';
+  const shift=shiftRaw===''?null:parseInt(shiftRaw,10);
   if(!name||!username||!pass)return toast('نام، کاربری و رمز لازم است');
-  if(id){const u=schoolData.staff.find(x=>x.id===id);if(u){u.name=name;u.role=role;u.username=username;u.pass=pass;u.phone=phone;u.shift=shift}}
-  else schoolData.staff.push({id:uid(),name,role,username,pass,phone,shift,active:true});
+  // اگر شیفت تعیین شد، حالت دو شیفت مدرسه را هم فعال کن
+  if(shift===1||shift===2){schoolData.shifts=2}
+  const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:(null);
+  if(id){const u=schoolData.staff.find(x=>x.id===id);if(u){u.name=name;u.role=role;u.username=username;u.pass=pass;u.phone=phone;u.shift=shift;if(photo!==null&&photo!==undefined)u.photo=photo}}
+  else schoolData.staff.push({id:uid(),name,role,username,pass,phone,shift,photo:photo||'',active:true});
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
   if(session&&session.schoolId){
@@ -1564,7 +1895,7 @@ function openTakeAtt(assignId){
   }
   document.getElementById('take-list').innerHTML=st.length?st.map(s=>{
     const cur=lastMap[s.id]||'present';
-    return '<div class="list-item"><div class="name">'+s.name+'</div><select class="form-control att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present"'+(cur==='present'?' selected':'')+'>حاضر</option><option value="absent"'+(cur==='absent'?' selected':'')+'>غایب</option><option value="late"'+(cur==='late'?' selected':'')+'>تأخیر</option></select></div>';
+    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><select class="form-control att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present"'+(cur==='present'?' selected':'')+'>حاضر</option><option value="absent"'+(cur==='absent'?' selected':'')+'>غایب</option><option value="late"'+(cur==='late'?' selected':'')+'>تأخیر</option></select></div>';
   }).join(''):'<p class="hint">دانش‌آموزی در این کلاس نیست</p>';
   const btn=document.querySelector('#page-take-att .btn-success');
   if(btn){btn.disabled=false;btn.textContent=done?'به‌روزرسانی و ارسال مجدد':'ثبت و ارسال برای مدیر/معاون';btn.onclick=submitAttendance}
@@ -1627,7 +1958,7 @@ function runTeacherClassPerf(){
     const late=att.filter(a=>a.type==='late').length;
     const other=att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
     let score=20;att.forEach(a=>{score-=parseFloat(a.scoreDeduct)||0});score=Math.max(0,Math.round(score*100)/100);
-    html+='<div class="list-item"><div style="flex:1"><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+(other?' · سایر: '+other:'')+'</div></div><strong style="color:var(--primary)">'+score+'</strong></div>';
+    html+='<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+(other?' · سایر: '+other:'')+'</div></div></div></div>';
   });
   document.getElementById('teacher-perf-out').innerHTML=html;
 }
@@ -1647,7 +1978,7 @@ function renderTeacherJournal(){
       const att=(schoolData.attendance||[]).filter(a=>a.studentId===s.id);
       const abs=att.filter(a=>a.type==='absent').length;
       const late=att.filter(a=>a.type==='late').length;
-      return '<div class="list-item"><div><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+' · نمره انضباط تقریبی: '+calcScore(s.id)+'</div></div></div>';
+      return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+'</div></div></div></div>';
     }).join('');
   });
   box.innerHTML=html;
@@ -1817,7 +2148,43 @@ function openDiscTypeModal(id){const t=id?(schoolData.disciplineTypes||[]).find(
 function saveDiscType(id){const name=document.getElementById('dt-name').value.trim();const score=parseFloat(document.getElementById('dt-score').value)||0;if(!name)return toast('نام لازم است');if(id){const t=schoolData.disciplineTypes.find(x=>x.id===id);if(t){t.name=name;t.scoreDeduct=score}}else schoolData.disciplineTypes.push({id:uid(),name,scoreDeduct:score});saveSchoolData();closeModal();renderSettings();toast('ذخیره شد')}
 function delDiscType(id){if(['absent','late','other'].includes(id))return toast('مورد پیش‌فرض را نمی‌توان حذف کرد');if(!confirm('حذف؟'))return;schoolData.disciplineTypes=schoolData.disciplineTypes.filter(t=>t.id!==id);saveSchoolData();renderSettings()}
 function saveRules(){schoolData.rules.absent=parseFloat(document.getElementById('rule-absent').value)||0.5;schoolData.rules.late=parseFloat(document.getElementById('rule-late').value)||0.25;schoolData.rules.other=parseFloat(document.getElementById('rule-other').value)||1;const ab=schoolData.disciplineTypes.find(t=>t.id==='absent');const la=schoolData.disciplineTypes.find(t=>t.id==='late');const ot=schoolData.disciplineTypes.find(t=>t.id==='other');if(ab)ab.scoreDeduct=schoolData.rules.absent;if(la)la.scoreDeduct=schoolData.rules.late;if(ot)ot.scoreDeduct=schoolData.rules.other;saveSchoolData();toast('ذخیره شد')}
-function applyTheme(){const t=schoolData.theme||{};if(t.color){document.documentElement.style.setProperty('--primary',t.color);document.documentElement.style.setProperty('--primary-light',t.color)}if(t.fontSize)document.documentElement.style.setProperty('--font-scale',t.fontSize)}
+function saveManagerPhoto(){
+  if(!isManager())return toast('فقط مدیر');
+  const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';
+  schoolData.managerPhoto=photo||'';
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  toast('در حال ذخیره عکس...');
+  cloudPushAppData(true).then(function(){toast('عکس مدیر ذخیره و روی سرور آمد')}).catch(function(){toast('محلی ذخیره شد؛ ارسال سرور ناموفق')});
+  try{renderHome()}catch(e){}
+}
+function applyTheme(){
+  const t=schoolData.theme||{};
+  const mode=t.mode||localStorage.getItem('nikan_theme')||'dark';
+  document.body.classList.remove('theme-dark','theme-light');
+  document.body.classList.add(mode==='light'?'theme-light':'theme-dark');
+  try{localStorage.setItem('nikan_theme',mode)}catch(e){}
+  if(t.fontSize)document.documentElement.style.setProperty('--font-scale',t.fontSize);
+  // رنگ سفارشی فقط در حالت روشن کمی اعمال شود
+  if(mode==='light'&&t.color){
+    document.documentElement.style.setProperty('--primary',t.color);
+    document.documentElement.style.setProperty('--primary-light',t.color);
+  }
+}
+function toggleThemeQuick(){
+  const cur=(schoolData.theme&&schoolData.theme.mode)||localStorage.getItem('nikan_theme')||'dark';
+  setThemeMode(cur==='dark'?'light':'dark');
+}
+function setThemeMode(mode){
+  if(!schoolData.theme)schoolData.theme={};
+  schoolData.theme.mode=mode;
+  saveSchoolData();
+  applyTheme();
+  try{
+    document.querySelectorAll('.theme-switch button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-mode')===mode));
+  }catch(e){}
+  toast(mode==='dark'?'حالت تیره':'حالت روشن');
+}
 function setColor(el){document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));el.classList.add('active');schoolData.theme.color=el.getAttribute('data-c');saveSchoolData();applyTheme()}
 function setFontSize(v){schoolData.theme.fontSize=v;saveSchoolData();applyTheme()}
 
@@ -1905,6 +2272,83 @@ function smsModeAllowsPanel(){const m=getSmsCfg().mode;return m==='panel'||m==='
 function smsModeAllowsSim(){const m=getSmsCfg().mode;return m==='sim'||m==='both'||!m}
 
 
+
+
+function renderExams(){
+  const box=document.getElementById('exams-list');
+  if(!box)return;
+  const list=schoolData.exams||[];
+  if(!list.length){box.innerHTML='<p class="hint">امتحانی ثبت نشده</p>';return}
+  box.innerHTML=list.slice().reverse().map(ex=>{
+    const c=(schoolData.classes||[]).find(x=>x.id===ex.classId);
+    const n=Object.keys(ex.scores||{}).length;
+    return '<div class="list-item"><div><div class="name">'+ex.title+'</div><div class="meta">'+classTitle(c||{name:'؟'})+' · '+formatDateFa(ex.date)+' · نمره از '+(ex.maxScore||20)+' · ثبت‌شده: '+n+'</div></div>'+
+      ((canManage()||isTeacher())?('<button class="btn btn-primary btn-sm" onclick="openExamScores(\''+ex.id+'\')">نمرات</button>'):'')+
+      (isManager()?('<button class="btn btn-danger btn-sm" onclick="delExam(\''+ex.id+'\')">حذف</button>'):'')+'</div>';
+  }).join('');
+}
+function openExamModal(){
+  if(!canManage()&&!isTeacher())return toast('دسترسی ندارید');
+  const cls=isTeacher()?[...new Set((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).map(a=>a.classId))].map(id=>(schoolData.classes||[]).find(c=>c.id===id)).filter(Boolean):classesForRole();
+  if(!cls.length)return toast('کلاسی نیست');
+  document.getElementById('modal-title').textContent='امتحان جدید';
+  document.getElementById('modal-body').innerHTML=
+    '<div class="form-group"><label>عنوان امتحان</label><input class="form-control" id="ex-title" placeholder="مثلاً ریاضی میان‌ترم" /></div>'+
+    '<div class="form-group"><label>کلاس</label><select class="form-control" id="ex-class">'+cls.map(c=>'<option value="'+c.id+'">'+classTitle(c)+'</option>').join('')+'</select></div>'+
+    '<div class="form-group"><label>تاریخ (اختیاری)</label><input class="form-control" id="ex-date" value="'+todayStr()+'" /></div>'+
+    '<div class="form-group"><label>نمره از</label><input type="number" class="form-control" id="ex-max" value="20" /></div>'+
+    '<button class="btn btn-primary btn-block" onclick="saveExam()">ذخیره</button>';
+  document.getElementById('modal').classList.add('show');
+}
+function saveExam(){
+  const title=document.getElementById('ex-title').value.trim();
+  const classId=document.getElementById('ex-class').value;
+  const date=document.getElementById('ex-date').value||todayStr();
+  const maxScore=parseFloat(document.getElementById('ex-max').value)||20;
+  if(!title||!classId)return toast('عنوان و کلاس لازم است');
+  if(!schoolData.exams)schoolData.exams=[];
+  schoolData.exams.push({id:uid(),title,classId,date,maxScore,scores:{},createdAt:Date.now()});
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  closeModal();renderExams();toast('امتحان اضافه شد');
+}
+function delExam(id){
+  if(!confirm('حذف امتحان؟'))return;
+  schoolData.exams=(schoolData.exams||[]).filter(e=>e.id!==id);
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();cloudPushAppData(true).catch(function(){});
+  renderExams();
+}
+let currentExamId=null;
+function openExamScores(id){
+  currentExamId=id;
+  const ex=(schoolData.exams||[]).find(e=>e.id===id);
+  if(!ex)return;
+  const stus=(schoolData.students||[]).filter(s=>s.classId===ex.classId);
+  document.getElementById('exam-scores-panel').style.display='block';
+  document.getElementById('exam-scores-title').textContent=ex.title+' (از '+(ex.maxScore||20)+')';
+  document.getElementById('exam-scores-list').innerHTML=stus.map(s=>{
+    const sc=(ex.scores&&ex.scores[s.id]!=null)?ex.scores[s.id]:'';
+    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><input type="number" step="0.25" class="form-control ex-score" data-sid="'+s.id+'" value="'+sc+'" style="width:90px" placeholder="—" /></div>';
+  }).join('')||'<p class="hint">دانش‌آموزی نیست</p>';
+}
+function saveExamScores(){
+  const ex=(schoolData.exams||[]).find(e=>e.id===currentExamId);
+  if(!ex)return;
+  if(!ex.scores)ex.scores={};
+  document.querySelectorAll('.ex-score').forEach(inp=>{
+    const v=inp.value.trim();
+    if(v==='')delete ex.scores[inp.getAttribute('data-sid')];
+    else ex.scores[inp.getAttribute('data-sid')]=parseFloat(v);
+  });
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  renderExams();
+  toast('نمرات ذخیره شد');
+}
+
 function renderSettings(){
   if(isTeacher()){document.getElementById('set-disc-types').style.display='none'}else{document.getElementById('set-disc-types').style.display='block'}
   const tplBox=document.getElementById('set-sms-tpl');
@@ -1913,7 +2357,16 @@ function renderSettings(){
   if(tl){tl.innerHTML=getSmsTemplates().map(tp=>'<div class="list-item"><div style="flex:1"><div class="name">'+tp.name+'</div><div class="meta" style="white-space:pre-wrap">'+tp.text+'</div></div><button class="btn btn-outline btn-sm" onclick="openSmsTplModal(\''+tp.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delSmsTpl(\''+tp.id+'\')">حذف</button></div>').join('')||'<p class="hint">قالبی نیست</p>'}
 
   const r=schoolData.rules||{};document.getElementById('rule-absent').value=r.absent??0.5;document.getElementById('rule-late').value=r.late??0.25;document.getElementById('rule-other').value=r.other??1;
-  const t=schoolData.theme||{};if(t.fontSize)document.getElementById('set-fsize').value=t.fontSize;
+  const t=schoolData.theme||{};if(t.fontSize&&document.getElementById('set-fsize'))document.getElementById('set-fsize').value=t.fontSize;const mode=t.mode||localStorage.getItem('nikan_theme')||'dark';document.querySelectorAll('.theme-switch button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-mode')===mode));
+  if(document.getElementById('mgr-photo-prev')){
+    const mp=schoolData.managerPhoto||'';
+    const mn=(session&&session.managerName)||'مدیر';
+    document.getElementById('mgr-photo-prev').innerHTML=avatarHtml(mp,mn,'avatar-lg');
+    document.getElementById('mgr-photo-btns').innerHTML=photoButtons('mgr-photo','mgr-photo-prev');
+    window._pendingPhoto=mp;
+    const card=document.getElementById('set-manager-photo-card');
+    if(card)card.style.display=isManager()?'block':'none';
+  }
   document.getElementById('set-license').innerHTML='<div class="hint" style="margin-bottom:6px">سامانه نیکان · طراحی سید مجتبی موسوی</div><div class="hint">'+(session?.name||'')+'</div><div class="hint">انقضا: '+formatDateFa(session?.expireDate)+'</div>';
   const dl=document.getElementById('disc-type-list');
   dl.innerHTML=(schoolData.disciplineTypes||[]).map(d=>'<div class="list-item"><div><div class="name">'+d.name+'</div><div class="meta">کسر پیش‌فرض: '+(d.scoreDeduct??0)+'</div></div><button class="btn btn-outline btn-sm" onclick="openDiscTypeModal(\''+d.id+'\')">ویرایش</button>'+(['absent','late','other'].includes(d.id)?'':'<button class="btn btn-danger btn-sm" onclick="delDiscType(\''+d.id+'\')">حذف</button>')+'</div>').join('');
