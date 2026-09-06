@@ -757,23 +757,32 @@ body.theme-light .dash-hello .sub{color:#475569!important}
       <button class="btn btn-primary btn-block" onclick="saveManagerPhoto()">ذخیره عکس مدیر</button>
     </div>
     <div class="card"><div class="card-title">لایسنس</div><div id="set-license"></div></div>
+    <div class="card" id="set-contact-us" style="display:none">
+      <div class="card-title">ارتباط با ما</div>
+      <p class="hint">کارشناس فروش و پشتیبانی سامانه نیکان</p>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-weight:700;flex:1">۰۹۳۳۴۴۴۳۳۵۸</div>
+        <a class="btn btn-outline btn-sm" href="tel:09334443358">تماس</a>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        <a class="btn btn-outline btn-block" href="https://eitaa.com/Mosavi1008" target="_blank" rel="noopener">پیام در ایتا</a>
+        <a class="btn btn-outline btn-block" href="https://rubika.ir/mojtaba_mousavi77" target="_blank" rel="noopener">پیام در روبیکا</a>
+        <a class="btn btn-outline btn-block" href="https://shad.ir/Mousavi_1399_80" target="_blank" rel="noopener">پیام در شاد</a>
+        <a class="btn btn-outline btn-block" href="https://ble.ir/Mousavi3358" target="_blank" rel="noopener">پیام در بله</a>
+        <a class="btn btn-outline btn-block" href="https://t.me/Mojtaba13779980" target="_blank" rel="noopener">پیام در تلگرام</a>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <div style="flex:1;font-size:.85rem">abcd.mojtaba@gmail.com</div>
+        <a class="btn btn-outline btn-sm" href="mailto:abcd.mojtaba@gmail.com">ایمیل</a>
+      </div>
+    </div>
+
     <div class="card"><p class="hint">طراحی: سید مجتبی موسوی</p></div>
   </div>
 
   <nav class="bottom-nav" id="bottom-nav"></nav>
 </div>
 
-<div class="modal-overlay" id="cam-overlay" style="z-index:200;align-items:center;justify-content:center">
-  <div style="background:var(--card);border-radius:var(--radius);padding:16px;max-width:420px;width:92%;display:flex;flex-direction:column;gap:10px;align-items:center">
-    <video id="cam-video" autoplay playsinline muted style="width:100%;border-radius:10px;background:#000"></video>
-    <canvas id="cam-canvas" style="display:none"></canvas>
-    <div id="cam-error" style="color:var(--danger);font-size:13px;display:none;text-align:center"></div>
-    <div style="display:flex;gap:8px;width:100%">
-      <button type="button" class="btn btn-primary btn-block" onclick="captureCameraPhoto()">گرفتن عکس</button>
-      <button type="button" class="btn btn-outline btn-block" onclick="closeCameraCapture()">انصراف</button>
-    </div>
-  </div>
-</div>
 <div class="modal-overlay" id="modal"><div class="modal">
   <div class="modal-header"><h2 id="modal-title">عنوان</h2><button class="modal-close" onclick="closeModal()">×</button></div>
   <div id="modal-body"></div>
@@ -1181,7 +1190,7 @@ function onPhotoPick(inputId, previewId){
 function photoButtons(fileId, prevId){
   return '<div style="display:flex;flex-direction:column;gap:6px">'+
     '<label class="btn btn-outline btn-sm">از گالری / فایل<input type="file" id="'+fileId+'-gal" accept="image/*" style="display:none" onchange="copyPhotoInput(this,\''+fileId+'\',\''+prevId+'\')" /></label>'+
-    '<button type="button" class="btn btn-outline btn-sm" onclick="openCameraCapture(\''+fileId+'\',\''+prevId+'\')">از دوربین</button>'+
+    '<label class="btn btn-outline btn-sm">از دوربین<input type="file" id="'+fileId+'-cam" accept="image/*" capture style="display:none" onchange="copyPhotoInput(this,\''+fileId+'\',\''+prevId+'\')" /></label>'+
     '<input type="file" id="'+fileId+'" accept="image/*" style="display:none" onchange="onPhotoPick(\''+fileId+'\',\''+prevId+'\')" />'+
     '</div>';
 }
@@ -1202,61 +1211,6 @@ function copyPhotoInput(src, fileId, prevId){
     return;
   }
   onPhotoPick(fileId, prevId);
-}
-let _camStream=null,_camFileId=null,_camPrevId=null;
-function openCameraCapture(fileId, prevId){
-  _camFileId=fileId;_camPrevId=prevId;
-  const ov=document.getElementById('cam-overlay');
-  const err=document.getElementById('cam-error');
-  if(err){err.style.display='none';err.textContent=''}
-  if(ov)ov.classList.add('show');
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    if(err){err.textContent='مرورگر شما از دوربین زنده پشتیبانی نمی‌کند. از «گالری / فایل» استفاده کنید.';err.style.display='block'}
-    return;
-  }
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}).catch(function(){
-    return navigator.mediaDevices.getUserMedia({video:true,audio:false});
-  }).then(function(stream){
-    _camStream=stream;
-    const v=document.getElementById('cam-video');
-    if(v)v.srcObject=stream;
-  }).catch(function(){
-    if(err){err.textContent='دسترسی به دوربین ممکن نشد. مجوز دوربین را در تنظیمات بررسی کنید یا از «گالری / فایل» استفاده کنید.';err.style.display='block'}
-  });
-}
-function closeCameraCapture(){
-  const ov=document.getElementById('cam-overlay');
-  if(ov)ov.classList.remove('show');
-  if(_camStream){_camStream.getTracks().forEach(function(t){t.stop()});_camStream=null}
-  const v=document.getElementById('cam-video');
-  if(v)v.srcObject=null;
-}
-function captureCameraPhoto(){
-  const v=document.getElementById('cam-video');
-  const c=document.getElementById('cam-canvas');
-  if(!v||!c||!v.videoWidth)return;
-  const maxW=480;
-  const r=Math.min(1,maxW/v.videoWidth);
-  const w=Math.round(v.videoWidth*r),h=Math.round(v.videoHeight*r);
-  c.width=w;c.height=h;
-  c.getContext('2d').drawImage(v,0,0,w,h);
-  const url=c.toDataURL('image/jpeg',0.7);
-  const img=new Image();
-  img.onload=function(){
-    const rr=Math.min(1,160/img.width);
-    const w2=Math.round(img.width*rr),h2=Math.round(img.height*rr);
-    const c2=document.createElement('canvas');
-    c2.width=w2;c2.height=h2;
-    c2.getContext('2d').drawImage(img,0,0,w2,h2);
-    const finalUrl=c2.toDataURL('image/jpeg',0.62);
-    window._pendingPhoto=finalUrl;
-    if(_camPrevId){
-      const prev=document.getElementById(_camPrevId);
-      if(prev)prev.innerHTML='<img class="avatar avatar-lg" src="'+finalUrl+'" />';
-    }
-    closeCameraCapture();
-  };
-  img.src=url;
 }
 
 
@@ -2738,6 +2692,8 @@ function saveExamScores(){
 
 function renderSettings(){
   if(isTeacher()){document.getElementById('set-disc-types').style.display='none'}else{document.getElementById('set-disc-types').style.display='block'}
+  const cu=document.getElementById('set-contact-us');
+  if(cu)cu.style.display=canManage()?'block':'none';
   const tplBox=document.getElementById('set-sms-tpl');
   if(tplBox)tplBox.style.display=isTeacher()?'none':'block';
   const tl=document.getElementById('sms-tpl-list');
