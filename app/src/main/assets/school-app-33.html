@@ -962,14 +962,20 @@ function applyRemoteAppData(d,remoteTs){
   if(Array.isArray(d.disciplineTypes)&&d.disciplineTypes.length)schoolData.disciplineTypes=d.disciplineTypes;
   if(Array.isArray(d.smsTemplates)&&d.smsTemplates.length)schoolData.smsTemplates=d.smsTemplates;
   schoolData.exams=_pickArr(schoolData.exams,d.exams);
+  // smsConfig همیشه از سرور اولویت دارد تا بین دستگاه‌ها یکی بماند
   if(d.smsConfig&&typeof d.smsConfig==='object'){
     const rem=d.smsConfig;
     const loc=schoolData.smsConfig||{};
-    // اگر سرور نام‌کاربری/رمز دارد، همان را بگیر (همگام بین دستگاه‌ها)
-    if(rem.username||rem.password||rem.apiUrl||rem.mode){
-      schoolData.smsConfig=Object.assign({},loc,rem);
-    }else if(!loc.username&&!loc.password){
-      schoolData.smsConfig=rem;
+    if(rem.mode||rem.username||rem.password||rem.sender||rem.apiUrl||rem.provider){
+      schoolData.smsConfig={
+        mode:rem.mode||loc.mode||'sim',
+        provider:rem.provider||loc.provider||'melipayamak',
+        username:rem.username!=null&&rem.username!==''?rem.username:(loc.username||''),
+        password:rem.password!=null&&rem.password!==''?rem.password:(loc.password||''),
+        sender:rem.sender!=null&&rem.sender!==''?rem.sender:(loc.sender||''),
+        apiUrl:rem.apiUrl!=null&&rem.apiUrl!==''?rem.apiUrl:(loc.apiUrl||''),
+        updatedAtMs:rem.updatedAtMs||Date.now()
+      };
     }
   }
   if(d.theme&&typeof d.theme==='object')schoolData.theme=d.theme;
@@ -1009,6 +1015,25 @@ async function cloudPullAppData(force){
       return false;
     }
     // اگر سرور جدیدتر یا غنی‌تر یا force → اعمال
+    // همیشه smsConfig را از سرور همگام کن (حتی اگر بقیه داده محلی بماند)
+    if(d.smsConfig&&typeof d.smsConfig==='object'){
+      try{
+        const rem=d.smsConfig,loc=schoolData.smsConfig||{};
+        if(rem.mode||rem.username||rem.password){
+          schoolData.smsConfig={
+            mode:rem.mode||loc.mode||'sim',
+            provider:rem.provider||loc.provider||'melipayamak',
+            username:rem.username||loc.username||'',
+            password:rem.password||loc.password||'',
+            sender:rem.sender||loc.sender||'',
+            apiUrl:rem.apiUrl||loc.apiUrl||'',
+            updatedAtMs:rem.updatedAtMs||Date.now()
+          };
+          try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+          try{fillSmsPanelForm()}catch(e){}
+        }
+      }catch(e){}
+    }
     if(force||needFull||lRich===0||remoteTs>=localTs||rRich>=lRich){
       applyRemoteAppData(d,remoteTs||Date.now());
       try{fillSmsPanelForm()}catch(e){}
@@ -2238,13 +2263,20 @@ function prepareSms(){
   const uniq=[...new Set(allPhones)];
   const gText=applyVars(msg,'فرزند شما');
   let top='';
+  const cfg=getSmsCfg();
+  const modeLabel=cfg.mode==='panel'?'فقط پنل':(cfg.mode==='both'?'سیم‌کارت + پنل':'فقط سیم‌کارت');
+  top+='<div class="card"><div class="meta">حالت ارسال فعلی: <strong>'+modeLabel+'</strong>'+(cfg.username?' · '+cfg.provider+' · '+cfg.username:'')+'</div></div>';
   if(smsModeAllowsPanel()&&uniq.length){
     window._smsJobs=jobs;
     window._smsGroupText=gText;
     window._smsGroupPhones=uniq;
-    top+='<div class="card" style="border-right:4px solid var(--success)"><div class="card-title">ارسال از پنل پیامک</div>';
-    top+='<button class="btn btn-success btn-block" onclick="doPanelSendAll()">ارسال همه از پنل ('+uniq.length+' شماره)</button>';
-    top+='<p class="hint">شماره‌ها و متن از سامانه؛ فقط ارسال با پنل پیامک مدرسه</p></div>';
+    if(!cfg.username||!cfg.password){
+      top+='<div class="card" style="border-right:4px solid var(--warning)"><div class="card-title">پنل پیامک</div><p class="hint">حالت پنل فعال است ولی نام کاربری/رمز خالی است. در «بیشتر → تنظیمات پیامک» پر کنید و ذخیره بزنید.</p></div>';
+    }else{
+      top+='<div class="card" style="border-right:4px solid var(--success)"><div class="card-title">ارسال از پنل پیامک</div>';
+      top+='<button class="btn btn-success btn-block" onclick="doPanelSendAll()">ارسال همه از پنل ('+uniq.length+' شماره)</button>';
+      top+='<p class="hint">با '+cfg.provider+(cfg.sender?' · خط '+cfg.sender:'')+' — بدون باز شدن برنامه پیامک گوشی</p></div>';
+    }
   }
   if(smsModeAllowsSim()&&uniq.length>1){
     top+='<div class="card" style="border-right:4px solid var(--primary)"><div class="card-title">گروهی سیم‌کارت</div><a class="btn btn-primary btn-block" href="sms:'+uniq.join(',')+'?body='+encodeURIComponent(gText)+'">باز کردن پیامک گروهی</a></div>';
@@ -2256,17 +2288,23 @@ function prepareSms(){
 async function doPanelSendAll(){
   const jobs=window._smsJobs||[];
   if(!jobs.length)return toast('ابتدا آماده‌سازی کنید');
-  if(!confirm('ارسال '+jobs.length+' پیامک از پنل؟'))return;
+  const cfg=getSmsCfg();
+  if(!cfg.username||!cfg.password)return toast('نام کاربری و رمز پنل پیامک را در تنظیمات پر کنید');
+  if(!confirm('ارسال '+jobs.length+' پیامک از پنل ('+cfg.provider+')؟'))return;
   toast('در حال ارسال از پنل...');
-  // گروه با متن یکسان
   const byText={};
   jobs.forEach(j=>{const k=j.text;if(!byText[k])byText[k]=[];byText[k].push(j.phone)});
-  let sent=0,fail=0;
+  let sent=0,fail=0,lastErr='';
   for(const text of Object.keys(byText)){
     const r=await sendViaSmsPanel(byText[text],text);
-    if(r&&r.ok)sent+=(r.sent||byText[text].length);else fail+=byText[text].length;
+    if(r&&r.ok)sent+=(r.sent||byText[text].length);
+    else{
+      fail+=byText[text].length;
+      lastErr=(r&&r.error)||(r&&r.results&&r.results[0]&&(r.results[0].detail||r.results[0].error))||'خطا';
+    }
   }
-  toast('نتیجه پنل: موفق '+sent+(fail?' / ناموفق '+fail:''));
+  if(fail&&lastErr)toast('نتیجه: موفق '+sent+' / ناموفق '+fail+' — '+String(lastErr).slice(0,120));
+  else toast('نتیجه پنل: موفق '+sent+(fail?' / ناموفق '+fail:''));
 }
 
 
@@ -2342,22 +2380,26 @@ function getSmsCfg(){
 }
 async function saveSmsPanelCfg(){
   if(isTeacher())return toast('دسترسی ندارید');
-  schoolData.smsConfig={
-    mode:document.getElementById('sms-mode').value,
-    provider:document.getElementById('sms-provider').value,
-    username:document.getElementById('sms-user').value.trim(),
-    password:document.getElementById('sms-pass').value.trim(),
-    sender:document.getElementById('sms-sender').value.trim(),
-    apiUrl:document.getElementById('sms-url').value.trim()
-  };
+  const mode=document.getElementById('sms-mode').value;
+  const provider=document.getElementById('sms-provider').value;
+  const username=document.getElementById('sms-user').value.trim();
+  const password=document.getElementById('sms-pass').value.trim();
+  const sender=document.getElementById('sms-sender').value.trim();
+  const apiUrl=document.getElementById('sms-url').value.trim();
+  if((mode==='panel'||mode==='both')&&!username){
+    return toast('برای پنل پیامک، نام کاربری الزامی است');
+  }
+  schoolData.smsConfig={mode,provider,username,password,sender,apiUrl,updatedAtMs:Date.now()};
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
   toast('در حال ارسال تنظیمات پیامک به سرور...');
   try{
     await cloudPushAppData(true);
-    toast('تنظیمات پیامک ذخیره و روی سرور آمد — روی بقیه دستگاه‌ها هم می‌آید');
+    const label=mode==='sim'?'فقط سیم‌کارت':(mode==='panel'?'فقط پنل':'سیم‌کارت + پنل');
+    toast('ذخیره شد: '+label+' — روی بقیه دستگاه‌ها با همگام‌سازی می‌آید');
+    try{fillSmsPanelForm()}catch(e){}
   }catch(e){
-    toast('محلی ذخیره شد؛ ارسال سرور ناموفق — دکمه ارسال به سرور را بزنید');
+    toast('محلی ذخیره شد؛ «ارسال به سرور» را بزنید');
   }
 }
 function fillSmsPanelForm(){
