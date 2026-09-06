@@ -1794,42 +1794,56 @@ function openSubmission(id){
     if(el&&tL)el.value=tL.text;
   }catch(e){}
   document.getElementById('sub-sms-out').innerHTML='';
+  window._openSub=s;
   showAppPage('submission');
 }
 function prepareSmsFromSubmission(kind){
-  kind=kind||'absent';
-  const msgEl=document.getElementById(kind==='late'?'sub-msg-late':'sub-msg-absent');
-  const msg=(msgEl&&msgEl.value||'').trim();
-  const both=document.getElementById('sub-both').checked;
-  // فقط همان وضعیت
-  const ids=[...document.querySelectorAll('.sub-sc:checked')].filter(c=>c.getAttribute('data-status')===kind).map(c=>c.value);
-  // اگر هیچ‌کدام تیک نبود، همه همان kind
-  let useIds=ids;
-  if(!useIds.length){
-    useIds=[...document.querySelectorAll('.sub-sc')].filter(c=>c.getAttribute('data-status')===kind).map(c=>c.value);
-  }
-  if(!useIds.length)return toast(kind==='late'?'تأخیری در لیست نیست':'غایبی در لیست نیست');
-  if(!msg)return toast('متن پیامک را بنویسید');
-  let html='';const allPhones=[];
+  const s=window._openSub||(schoolData.submissions||[]).find(x=>x.id===currentSubmissionId);if(!s||!s.rows)return toast('ابتدا حضور و غیاب را باز کنید');
+  const useIds=s.rows.filter(r=>r.status===(kind==='late'?'late':'absent')).map(r=>r.studentId);
+  if(!useIds.length)return toast(kind==='late'?'تأخیری نیست':'غایبی نیست');
+  let tplText='';
+  try{const el=document.getElementById(kind==='late'?'sub-msg-late':'sub-msg-absent');if(el&&el.value.trim())tplText=el.value.trim()}catch(e){}
+  if(!tplText){const tpl=getSmsTemplates().find(t=>t.id===(kind==='late'?'late':'absent'));tplText=(tpl&&tpl.text)||(kind==='late'?TPL.late:TPL.absent)}
+  const tpl={text:tplText};
+  const both=document.getElementById('sub-both')?document.getElementById('sub-both').checked:true;
+  let html='',allPhones=[],jobs=[];
   useIds.forEach(id=>{
-    const st=schoolData.students.find(s=>s.id===id);if(!st)return;
-    const phones=(st.phones||[]).filter(Boolean);
+    const stu=schoolData.students.find(x=>x.id===id);if(!stu)return;
+    const phones=(stu.phones||[]).filter(Boolean);
     const use=both?phones:(phones[0]?[phones[0]]:[]);
-    const finalText=applyVars(msg,st.name);
-    use.forEach(ph=>allPhones.push(ph));
-    html+='<div class="card"><div class="name">'+st.name+' <span class="badge '+(kind==='late'?'badge-warn':'badge-off')+'">'+(kind==='late'?'تأخیر':'غایب')+'</span></div>';
-    use.forEach((ph,i)=>{html+='<div class="meta">'+ph+'</div><a class="btn btn-primary btn-block btn-sm" style="margin:4px 0" href="sms:'+ph+'?body='+encodeURIComponent(finalText)+'">پیامک '+(i+1)+'</a>'});
-    if(!use.length)html+='<div class="hint">شماره‌ای ثبت نشده</div>';
+    const finalText=applyVars(tpl.text||'',stu.name);
+    use.forEach(ph=>{allPhones.push(ph);jobs.push({phone:ph,text:finalText,name:stu.name})});
+    html+='<div class="card"><div class="name">'+stu.name+'</div>';
+    use.forEach((ph,i)=>{
+      html+='<div class="meta">'+ph+'</div>';
+      if(smsModeAllowsSim())html+='<a class="btn btn-primary btn-block btn-sm" style="margin:4px 0" href="sms:'+ph+'?body='+encodeURIComponent(finalText)+'">سیم‌کارت '+(i+1)+'</a>';
+    });
     html+='<div class="preview-box">'+finalText+'</div></div>';
   });
-  if(allPhones.length>=1){
-    const g=applyVars(msg,'فرزند شما');
-    const title=kind==='late'?'ارسال گروهی تأخیرها':'ارسال گروهی غایب‌ها';
-    html='<div class="card" style="border-right:4px solid '+(kind==='late'?'#f57f17':'var(--danger)')+'"><div class="card-title">'+title+' ('+useIds.length+' نفر)</div><a class="btn '+(kind==='late'?'btn-warning':'btn-danger')+' btn-block" href="sms:'+[...new Set(allPhones)].join(',')+'?body='+encodeURIComponent(g)+'">پیامک گروهی</a></div>'+html;
+  const uniq=[...new Set(allPhones)];
+  const g=applyVars(tpl.text||'','فرزند شما');
+  const title=kind==='late'?'تأخیرها':'غایب‌ها';
+  let top='';
+  const cfg=getSmsCfg();
+  top+='<div class="card"><div class="meta">حالت: <strong>'+(cfg.mode==='panel'?'فقط پنل':cfg.mode==='both'?'هر دو':'فقط سیم‌کارت')+'</strong></div></div>';
+  if(smsModeAllowsPanel()&&uniq.length){
+    window._smsJobs=jobs;
+    if(cfg.username&&cfg.password){
+      top+='<div class="card" style="border-right:4px solid var(--success)"><div class="card-title">ارسال از پنل — '+title+'</div><button class="btn btn-success btn-block" onclick="doPanelSendAll()">ارسال همه از پنل ('+uniq.length+')</button></div>';
+    }else{
+      top+='<div class="card"><p class="hint">حالت پنل فعال است؛ نام کاربری/رمز را در تنظیمات پیامک پر کنید.</p></div>';
+    }
   }
-  document.getElementById('sub-sms-out').innerHTML=html;
-  toast('پیامک '+(kind==='late'?'تأخیر':'غیبت')+' آماده شد');
+  if(smsModeAllowsSim()&&uniq.length){
+    top+='<div class="card" style="border-right:4px solid var(--primary)"><div class="card-title">'+title+' ('+useIds.length+' نفر)</div>';
+    if(uniq.length>1)top+='<a class="btn '+(kind==='late'?'btn-warning':'btn-danger')+' btn-block" href="sms:'+uniq.join(',')+'?body='+encodeURIComponent(g)+'">پیامک گروهی سیم‌کارت</a>';
+    top+='</div>';
+  }
+  if(!smsModeAllowsSim()&&!smsModeAllowsPanel())top+='<p class="hint">حالت ارسال تنظیم نشده</p>';
+  document.getElementById('sub-sms-out').innerHTML=top+html;
+  toast('آماده شد');
 }
+
 function markSubmissionDone(){
   if(!currentSubmissionId)return;
   const s=(schoolData.submissions||[]).find(x=>x.id===currentSubmissionId);
@@ -1984,7 +1998,33 @@ function saveColleague(id){const name=document.getElementById('co-name').value.t
 function delColleague(id){schoolData.colleagues=schoolData.colleagues.filter(x=>x.id!==id);saveSchoolData();renderTeam()}
 function renderColSmsPick(){const box=document.getElementById('col-sms-list');if(!schoolData.colleagues.length){box.innerHTML='<p class="hint">همکاری نیست</p>';return}box.innerHTML=schoolData.colleagues.map(c=>'<label class="checkbox-row"><input type="checkbox" class="col-sc" value="'+c.id+'" /> '+c.name+' — '+c.phone+'</label>').join('');document.getElementById('col-sel-all').checked=false;document.getElementById('col-sms-out').innerHTML=''}
 function toggleColAll(on){document.querySelectorAll('.col-sc').forEach(c=>c.checked=on)}
-function prepareColSms(){const msg=document.getElementById('col-msg').value.trim();const ids=[...document.querySelectorAll('.col-sc:checked')].map(c=>c.value);if(!ids.length)return toast('همکار انتخاب کنید');if(!msg)return toast('متن را بنویسید');const phones=[];let html='';ids.forEach(id=>{const c=schoolData.colleagues.find(x=>x.id===id);if(!c||!c.phone)return;phones.push(c.phone);html+='<div class="card"><div class="name">'+c.name+'</div><div class="meta">'+c.phone+'</div><div class="preview-box">'+msg+'</div><a class="btn btn-primary btn-block btn-sm" href="sms:'+c.phone+'?body='+encodeURIComponent(msg)+'">باز کردن پیامک</a></div>'});if(phones.length>1)html='<div class="card" style="border-right:4px solid var(--success)"><div class="card-title">گروهی</div><a class="btn btn-success btn-block" href="sms:'+phones.join(',')+'?body='+encodeURIComponent(msg)+'">ارسال گروهی</a></div>'+html;document.getElementById('col-sms-out').innerHTML=html||'<p class="hint">شماره‌ای نیست</p>';toast('آماده شد')}
+function prepareColSms(){
+  const msg=document.getElementById('col-msg').value.trim();
+  const ids=[...document.querySelectorAll('.col-sc:checked')].map(c=>c.value);
+  if(!ids.length)return toast('همکار انتخاب کنید');
+  if(!msg)return toast('متن را بنویسید');
+  const phones=[];const jobs=[];let html='';
+  ids.forEach(id=>{
+    const c=schoolData.colleagues.find(x=>x.id===id);if(!c||!c.phone)return;
+    phones.push(c.phone);jobs.push({phone:c.phone,text:msg,name:c.name});
+    html+='<div class="card"><div class="name">'+c.name+'</div><div class="meta">'+c.phone+'</div><div class="preview-box">'+msg+'</div>';
+    if(smsModeAllowsSim())html+='<a class="btn btn-primary btn-block btn-sm" href="sms:'+c.phone+'?body='+encodeURIComponent(msg)+'">سیم‌کارت</a>';
+    html+='</div>';
+  });
+  let top='';
+  const cfg=getSmsCfg();
+  top+='<div class="card"><div class="meta">حالت: <strong>'+(cfg.mode==='panel'?'فقط پنل':cfg.mode==='both'?'هر دو':'فقط سیم‌کارت')+'</strong></div></div>';
+  if(smsModeAllowsPanel()&&phones.length){
+    window._smsJobs=jobs;
+    if(cfg.username&&cfg.password)top+='<div class="card" style="border-right:4px solid var(--success)"><div class="card-title">ارسال از پنل</div><button class="btn btn-success btn-block" onclick="doPanelSendAll()">ارسال همه از پنل ('+phones.length+')</button></div>';
+    else top+='<div class="card"><p class="hint">نام کاربری/رمز پنل را در تنظیمات پر کنید</p></div>';
+  }
+  if(smsModeAllowsSim()&&phones.length>1){
+    top+='<div class="card" style="border-right:4px solid var(--primary)"><div class="card-title">گروهی سیم‌کارت</div><a class="btn btn-success btn-block" href="sms:'+phones.join(',')+'?body='+encodeURIComponent(msg)+'">ارسال گروهی سیم‌کارت</a></div>';
+  }
+  document.getElementById('col-sms-out').innerHTML=top+html||'<p class="hint">شماره‌ای نیست</p>';
+  toast('آماده شد');
+}
 
 /* Assignments */
 function renderAssignments(){
@@ -2362,20 +2402,23 @@ function setColor(el){document.querySelectorAll('.color-swatch').forEach(s=>s.cl
 function setFontSize(v){schoolData.theme.fontSize=v;saveSchoolData();applyTheme()}
 
 function getSmsCfg(){
-  const c=schoolData.smsConfig||{};
-  // از لایسنس مادر هم بخوان اگر خالی بود
+  const raw=(schoolData&&schoolData.smsConfig)&&typeof schoolData.smsConfig==='object'?schoolData.smsConfig:{};
+  const c=Object.assign({},raw);
+  // فقط اگر در داده مدرسه خالی بود از لایسنس مادر پر کن
   if(!c.mode&&session&&session.smsMode)c.mode=session.smsMode;
   if(!c.username&&session&&session.smsApiUser)c.username=session.smsApiUser;
   if(!c.password&&session&&session.smsApiKey)c.password=session.smsApiKey;
   if(!c.apiUrl&&session&&session.smsApiUrl)c.apiUrl=session.smsApiUrl;
   if(!c.sender&&session&&session.smsSender)c.sender=session.smsSender;
+  let mode=String(c.mode||'sim').trim().toLowerCase();
+  if(mode!=='sim'&&mode!=='panel'&&mode!=='both')mode='sim';
   return {
-    mode:c.mode||'sim',
+    mode:mode,
     provider:c.provider||'melipayamak',
-    username:c.username||'',
-    password:c.password||'',
-    sender:c.sender||'',
-    apiUrl:c.apiUrl||''
+    username:String(c.username||'').trim(),
+    password:String(c.password||'').trim(),
+    sender:String(c.sender||'').trim(),
+    apiUrl:String(c.apiUrl||'').trim()
   };
 }
 async function saveSmsPanelCfg(){
