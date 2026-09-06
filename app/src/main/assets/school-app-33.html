@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>سامانه مدرسه</title>
+<title>سامانه نیکان | پنل مدرسه</title>
 <style>
 :root{--primary:#0d47a1;--primary-light:#1565c0;--success:#2e7d32;--warning:#f9a825;--danger:#c62828;--bg:#f0f2f5;--card:#fff;--text:#212121;--muted:#757575;--border:#e0e0e0;--radius:12px;--font-scale:1}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -65,6 +65,66 @@ textarea.form-control{min-height:72px;resize:vertical}
 .divider{height:1px;background:var(--border);margin:16px 0}
 .linkish{background:none;border:none;color:var(--primary);font-family:inherit;cursor:pointer;font-size:.88em;text-decoration:underline}
 .status-p{color:#f57f17;font-weight:700;font-size:.8em}.status-ok{color:var(--success);font-weight:700;font-size:.8em}
+
+/* سامانه نیکان — ظاهر تخصصی */
+:root {
+  --primary: #0f1c4d;
+  --primary-light: #1a2f6e;
+  --accent: #c9a84c;
+  --success: #1b7a4e;
+  --warning: #c47f00;
+  --danger: #b3261e;
+  --bg: #eef1f6;
+  --card: #ffffff;
+  --text: #1a1d26;
+  --muted: #6b7280;
+  --border: #e2e6ef;
+  --radius: 14px;
+  --shadow: 0 4px 20px rgba(15,28,77,.08);
+}
+body {
+  background: linear-gradient(180deg, #e8ecf5 0%, var(--bg) 120px);
+}
+.topbar {
+  background: linear-gradient(135deg, #0f1c4d 0%, #1a2f6e 55%, #243b7a 100%);
+  box-shadow: 0 4px 18px rgba(15,28,77,.25);
+}
+.topbar h1 { letter-spacing: -0.2px; }
+.card {
+  border: 1px solid rgba(15,28,77,.06);
+  box-shadow: var(--shadow);
+}
+.card-title { color: var(--primary); }
+.btn-primary {
+  background: linear-gradient(135deg, #0f1c4d, #1a2f6e);
+  box-shadow: 0 2px 8px rgba(15,28,77,.2);
+}
+.btn-success { background: linear-gradient(135deg, #1b7a4e, #259d64); }
+.stat {
+  border: 1px solid rgba(15,28,77,.06);
+  background: linear-gradient(180deg, #fff, #f8f9fc);
+}
+.stat .n { color: var(--primary); }
+.badge-ok { background: #e6f5ed; color: var(--success); }
+.badge-trial { background: #fff6e0; color: #9a6b00; }
+.list-item { border-radius: 12px; transition: background .15s; }
+.list-item:hover { background: #f5f7fb; }
+#gate, #login-role-screen, .gate-screen {
+  background: linear-gradient(160deg, #0f1c4d 0%, #1a2f6e 50%, #0d47a1 100%) !important;
+}
+.brand-mark {
+  width: 64px; height: 64px; margin: 0 auto 12px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #c9a84c, #a88b2f);
+  display: flex; align-items: center; justify-content: center;
+  color: #0f1c4d; font-weight: 800; font-size: 1.4rem;
+  box-shadow: 0 8px 24px rgba(201,168,76,.35);
+}
+.footer-credit {
+  text-align: center; font-size: .72rem; color: var(--muted);
+  padding: 16px 8px 80px;
+}
+
 </style>
 </head>
 <body>
@@ -368,6 +428,31 @@ textarea.form-control{min-height:72px;resize:vertical}
       <div id="disc-type-list"></div>
     </div>
 
+    <div class="card" id="set-sms-panel">
+      <div class="card-title">پنل پیامک (API)</div>
+      <p class="hint">سامانه قالب و شماره را آماده می‌کند؛ ارسال از پنل پیامک مدرسه انجام می‌شود. شارژ پنل با خود مدرسه است.</p>
+      <div class="form-group"><label>روش ارسال</label>
+        <select class="form-control" id="sms-mode">
+          <option value="sim">فقط سیم‌کارت گوشی</option>
+          <option value="panel">فقط پنل پیامک</option>
+          <option value="both">هر دو (سیم‌کارت + پنل)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>نوع پنل</label>
+        <select class="form-control" id="sms-provider">
+          <option value="melipayamak">ملی‌پیامک (پیشنهادی)</option>
+          <option value="kavenegar">کاوه‌نگار</option>
+          <option value="faraz">فراز / IPPanel</option>
+          <option value="generic">عمومی (JSON)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>نام کاربری</label><input class="form-control" id="sms-user" placeholder="username" /></div>
+      <div class="form-group"><label>رمز / API Key</label><input class="form-control" id="sms-pass" placeholder="password یا api key" /></div>
+      <div class="form-group"><label>شماره خط فرستنده</label><input class="form-control" id="sms-sender" placeholder="5000..." /></div>
+      <div class="form-group"><label>آدرس API (اختیاری)</label><input class="form-control" id="sms-url" placeholder="خالی = پیش‌فرض همان پنل" /></div>
+      <button class="btn btn-primary btn-block" onclick="saveSmsPanelCfg()">ذخیره تنظیمات پیامک</button>
+      <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="testSmsPanel()">ارسال تست به مدیر</button>
+    </div>
     <div class="card" id="set-sms-tpl">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="card-title" style="margin:0">قالب‌های پیامک</div>
@@ -556,6 +641,8 @@ async function cloudPushAppData(force){
       submissions:schoolData.submissions||[],
       disciplineTypes:schoolData.disciplineTypes||[],
       smsTemplates:schoolData.smsTemplates||[],
+      smsConfig:schoolData.smsConfig||null,
+      theme:schoolData.theme||{},
       rules:schoolData.rules||{},
       managerUser:schoolData.managerUser||'',
       managerPass:schoolData.managerPass||'',
@@ -582,6 +669,8 @@ function applyRemoteAppData(d,remoteTs){
   if(Array.isArray(d.submissions)&&(d.submissions.length||!(schoolData.submissions||[]).length))schoolData.submissions=d.submissions;
   if(Array.isArray(d.disciplineTypes)&&d.disciplineTypes.length)schoolData.disciplineTypes=d.disciplineTypes;
   if(Array.isArray(d.smsTemplates)&&d.smsTemplates.length)schoolData.smsTemplates=d.smsTemplates;
+  if(d.smsConfig&&typeof d.smsConfig==='object')schoolData.smsConfig=d.smsConfig;
+  if(d.theme&&typeof d.theme==='object')schoolData.theme=d.theme;
   if(d.rules)schoolData.rules=d.rules;
   if(d.managerUser)schoolData.managerUser=d.managerUser;
   if(d.managerPass)schoolData.managerPass=d.managerPass;
@@ -701,6 +790,51 @@ function fixPhone(p){p=(p||'').toString().replace(/\s|-/g,'').replace(/^\+98/,'0
 function pickRole(el){document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');loginRole=el.getAttribute('data-role')}
 function isManager(){return userSession&&userSession.role==='manager'}
 function isDeputy(){return userSession&&userSession.role==='deputy'}
+
+function shiftLabel(s){
+  s=parseInt(s,10);
+  if(s===2)return 'عصر';
+  if(s===1)return 'صبح';
+  return '';
+}
+/** شیفت معاون؛ مدیر = null (همه) */
+function myShift(){
+  if(isManager())return null;
+  if(isDeputy()&&userSession&&userSession.shift)return parseInt(userSession.shift,10)||null;
+  return null;
+}
+/** کلاس‌های قابل‌مشاهده برای نقش فعلی */
+function classesForRole(){
+  let list=(schoolData.classes||[]).slice();
+  const sh=myShift();
+  if(sh)list=list.filter(c=>{
+    const cs=parseInt(c.shift,10);
+    if(!cs)return true;
+    return cs===sh;
+  });
+  return list;
+}
+function classTitle(c){
+  if(!c)return '';
+  const sl=shiftLabel(c.shift);
+  return c.name+(sl&&dualShift()?' ('+sl+')':'');
+}
+function canAccessClass(classId){
+  if(isManager())return true;
+  if(isTeacher()){
+    return (schoolData.assignments||[]).some(a=>a.teacherId===userSession.staffId&&a.classId===classId);
+  }
+  const c=(schoolData.classes||[]).find(x=>x.id===classId);
+  if(!c)return false;
+  const sh=myShift();
+  if(sh){
+    const cs=parseInt(c.shift,10);
+    if(cs&&cs!==sh)return false;
+  }
+  return true;
+}
+
+
 function isTeacher(){return userSession&&userSession.role==='teacher'}
 function canManage(){return isManager()||isDeputy()}
 function dualShift(){return (session&&session.shifts===2)||schoolData.shifts===2||(session&&(session.modules||[]).includes('dual_shift'))}
@@ -1075,8 +1209,8 @@ function showAppPage(name){
 function daysLeft(){if(!session?.expireDate)return 0;return Math.ceil((new Date(session.expireDate+'T12:00:00')-new Date(todayStr()+'T12:00:00'))/86400000)}
 
 function renderHome(){
-  document.getElementById('st-classes').textContent=schoolData.classes.length;
-  document.getElementById('st-students').textContent=schoolData.students.length;
+  const _vc=classesForRole();document.getElementById('st-classes').textContent=_vc.length;
+  const _vids=_vc.map(c=>c.id);document.getElementById('st-students').textContent=schoolData.students.filter(s=>_vids.includes(s.classId)).length;
   document.getElementById('st-days').textContent=isTeacher()?'—':daysLeft();
   document.getElementById('st-days-label').textContent=isTeacher()?'نقش':'روز مانده';
   const badge=session.plan==='trial'?'<span class="badge badge-trial">آزمایشی</span>':'<span class="badge badge-ok">فعال</span>';
@@ -1095,8 +1229,8 @@ function renderHome(){
   const pend=document.getElementById('home-pending');
   if(canManage()){
     ensureAllSubmissionsInAttendance();
-    const pending=(schoolData.submissions||[]).filter(s=>s.status==='pending').slice().reverse();
-    const done=(schoolData.submissions||[]).filter(s=>s.status==='done').slice().sort((a,b)=>(b.reviewedAt||b.createdAt||0)-(a.reviewedAt||a.createdAt||0)).slice(0,30);
+    const pending=(schoolData.submissions||[]).filter(s=>s.status==='pending'&&canAccessClass(s.classId)).slice().reverse();
+    const done=(schoolData.submissions||[]).filter(s=>s.status!=='pending'&&canAccessClass(s.classId)).slice().sort((a,b)=>(b.reviewedAt||b.createdAt||0)-(a.reviewedAt||a.createdAt||0)).slice(0,30);
     let html='';
     if(pending.length){
       html+='<div class="card-title">در انتظار بررسی</div><p class="hint">روی مورد بزنید — غایب‌ها را ببینید و پیامک بفرستید.</p>';
@@ -1246,12 +1380,13 @@ function notifyManagers(title,body){
 function renderClasses(){
   document.getElementById('class-actions').style.display=canManage()?'':'none';
   const list=document.getElementById('classes-list');
-  if(!schoolData.classes.length){list.innerHTML='<p class="hint">کلاسی نیست.</p>';return}
-  list.innerHTML=schoolData.classes.map(c=>{const n=schoolData.students.filter(s=>s.classId===c.id).length;return '<div class="list-item"><div class="clickable" style="flex:1" onclick="openClassStudents(\''+c.id+'\')"><div class="name">'+c.name+'</div><div class="meta">'+n+' دانش‌آموز'+(c.shift?' · شیفت '+c.shift:'')+'</div></div>'+(isManager()?'<button class="btn btn-outline btn-sm" onclick="openClassModal(\''+c.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delClass(\''+c.id+'\')">حذف</button>':'')+'</div>'}).join('');
+  const visible=classesForRole();
+  if(!visible.length){list.innerHTML='<p class="hint">کلاسی نیست'+(isDeputy()&&myShift()?' (برای شیفت '+shiftLabel(myShift())+')':'')+'.</p>';return}
+  list.innerHTML=visible.map(c=>{const n=schoolData.students.filter(s=>s.classId===c.id).length;const sl=shiftLabel(c.shift);return '<div class="list-item"><div class="clickable" style="flex:1" onclick="openClassStudents(\''+c.id+'\')"><div class="name">'+c.name+(sl&&dualShift()?' <span class="badge badge-ok">'+sl+'</span>':'')+'</div><div class="meta">'+n+' دانش‌آموز</div></div>'+(isManager()?'<button class="btn btn-outline btn-sm" onclick="openClassModal(\''+c.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delClass(\''+c.id+'\')">حذف</button>':'')+'</div>'}).join('');
 }
 function openClassModal(id){if(!isManager())return toast('فقط مدیر');const c=id?schoolData.classes.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=c?'ویرایش کلاس':'کلاس جدید';
   let shiftHtml='';
-  if(dualShift())shiftHtml='<div class="form-group"><label>شیفت</label><select class="form-control" id="c-shift"><option value="1"'+(c&&c.shift===2?'':' selected')+'>شیفت ۱</option><option value="2"'+(c&&c.shift===2?' selected':'')+'>شیفت ۲</option></select></div>';
+  if(dualShift())shiftHtml='<div class="form-group"><label>شیفت کلاس</label><select class="form-control" id="c-shift"><option value="1"'+(c&&parseInt(c.shift)===2?'':' selected')+'>صبح</option><option value="2"'+(c&&parseInt(c.shift)===2?' selected':'')+'>عصر</option></select></div><p class="hint">مدیر هر دو شیفت را می‌بیند؛ معاون فقط کلاس‌های شیفت خودش را.</p>';
   document.getElementById('modal-body').innerHTML=
     '<div class="form-group"><label>نام کلاس *</label><input class="form-control" id="c-name" value="'+(c?.name||'')+'" placeholder="مثلاً ۱۰۱" /></div>'+
     shiftHtml+
@@ -1260,7 +1395,7 @@ function openClassModal(id){if(!isManager())return toast('فقط مدیر');cons
 }
 function saveClass(id){const name=document.getElementById('c-name').value.trim();if(!name)return toast('نام کلاس لازم است');const shift=document.getElementById('c-shift')?parseInt(document.getElementById('c-shift').value):1;if(id){const c=schoolData.classes.find(x=>x.id===id);if(c){c.name=name;c.shift=shift}}else schoolData.classes.push({id:uid(),name,shift});saveSchoolData();closeModal();renderClasses();renderHome();toast('ذخیره شد')}
 function delClass(id){if(!confirm('حذف کلاس؟'))return;schoolData.classes=schoolData.classes.filter(c=>c.id!==id);schoolData.students=schoolData.students.filter(s=>s.classId!==id);schoolData.assignments=(schoolData.assignments||[]).filter(a=>a.classId!==id);saveSchoolData();renderClasses();renderHome()}
-function openClassStudents(id){currentClassId=id;const c=schoolData.classes.find(x=>x.id===id);document.getElementById('students-title').textContent='دانش‌آموزان '+(c?.name||'');document.getElementById('btn-add-stu').style.display=canManage()?'':'none';showAppPage('students');renderStudents()}
+function openClassStudents(id){if(!canAccessClass(id))return toast('به این کلاس دسترسی ندارید');currentClassId=id;const c=schoolData.classes.find(x=>x.id===id);document.getElementById('students-title').textContent='دانش‌آموزان '+classTitle(c);document.getElementById('btn-add-stu').style.display=canManage()?'':'none';showAppPage('students');renderStudents()}
 function renderStudents(){const list=document.getElementById('students-list');const st=schoolData.students.filter(s=>s.classId===currentClassId);if(!st.length){list.innerHTML='<p class="hint">خالی</p>';return}list.innerHTML=st.map(s=>'<div class="list-item"><div class="clickable" style="flex:1" onclick="'+(canManage()?'openPerformance(\''+s.id+'\')':'')+'"><div class="name">'+s.name+'</div><div class="meta">'+(s.phones||[]).join(' | ')+(s.note?' — '+s.note:'')+'</div></div>'+(canManage()?'<button class="btn btn-outline btn-sm" onclick="openStudentModal(\''+s.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStudent(\''+s.id+'\')">حذف</button>':'')+'</div>').join('')}
 function openStudentModal(id){if(!canManage())return;const s=id?schoolData.students.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=s?'ویرایش':'دانش‌آموز جدید';document.getElementById('modal-body').innerHTML='<div class="form-group"><label>نام</label><input class="form-control" id="s-name" value="'+(s?.name||'')+'" /></div><div class="form-group"><label>شماره پدر</label><input class="form-control" id="s-p1" value="'+((s?.phones||[])[0]||'')+'" /></div><div class="form-group"><label>شماره مادر</label><input class="form-control" id="s-p2" value="'+((s?.phones||[])[1]||'')+'" /></div><div class="form-group"><label>توضیحات</label><textarea class="form-control" id="s-note">'+(s?.note||'')+'</textarea></div><button class="btn btn-primary btn-block" onclick="saveStudent(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
 function saveStudent(id){const name=document.getElementById('s-name').value.trim(),p1=fixPhone(document.getElementById('s-p1').value),p2=fixPhone(document.getElementById('s-p2').value),note=document.getElementById('s-note').value.trim();if(!name)return toast('نام لازم است');const phones=[p1,p2].filter(Boolean);if(id){const s=schoolData.students.find(x=>x.id===id);if(s){s.name=name;s.phones=phones;s.note=note}}else schoolData.students.push({id:uid(),classId:currentClassId,name,phones,note});saveSchoolData();closeModal();renderStudents();renderHome();toast('ذخیره شد')}
@@ -1312,7 +1447,7 @@ function teamTab(t){document.getElementById('tab-staff').classList.toggle('activ
 function renderTeam(){
   const sl=document.getElementById('staff-list');
   if(!schoolData.staff.length)sl.innerHTML='<p class="hint">معاون/معلمی نیست.</p>';
-  else sl.innerHTML=schoolData.staff.map(u=>'<div class="list-item"><div><div class="name">'+u.name+'</div><div class="meta">'+(u.role==='deputy'?'معاون':'معلم')+(u.role==='deputy'&&u.shift?' · شیفت '+u.shift:'')+' · '+u.username+(u.phone?' · '+u.phone:'')+'</div></div><button class="btn btn-outline btn-sm" onclick="openStaffModal(\''+u.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStaff(\''+u.id+'\')">حذف</button></div>').join('');
+  else sl.innerHTML=schoolData.staff.map(u=>'<div class="list-item"><div><div class="name">'+u.name+'</div><div class="meta">'+(u.role==='deputy'?'معاون':'معلم')+(u.role==='deputy'&&u.shift?' · '+shiftLabel(u.shift):'')+(u.role==='teacher'?' · کلاس‌ها از برنامه':'')+' · '+u.username+(u.phone?' · '+u.phone:'')+'</div></div><button class="btn btn-outline btn-sm" onclick="openStaffModal(\''+u.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStaff(\''+u.id+'\')">حذف</button></div>').join('');
   const cl=document.getElementById('col-list');
   if(!schoolData.colleagues.length)cl.innerHTML='<p class="hint">همکاری نیست</p>';
   else cl.innerHTML=schoolData.colleagues.map(c=>'<div class="list-item"><div><div class="name">'+c.name+'</div><div class="meta">'+(c.role||'')+' · '+c.phone+'</div></div><button class="btn btn-outline btn-sm" onclick="openColleagueModal(\''+c.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delColleague(\''+c.id+'\')">حذف</button></div>').join('');
@@ -1320,7 +1455,7 @@ function renderTeam(){
 function openStaffModal(id){
   const u=id?schoolData.staff.find(x=>x.id===id):null;
   document.getElementById('modal-title').textContent=u?'ویرایش کاربر':'کاربر جدید';
-  let shiftHtml='<div class="form-group" id="st-shift-wrap" style="display:none"><label>شیفت معاون</label><select class="form-control" id="st-shift"><option value="1">شیفت ۱ (مثلاً صبح)</option><option value="2">شیفت ۲ (مثلاً عصر)</option></select></div>';
+  let shiftHtml='<div class="form-group" id="st-shift-wrap" style="display:none"><label>شیفت معاون</label><select class="form-control" id="st-shift"><option value="1">صبح</option><option value="2">عصر</option></select></div>';
   document.getElementById('modal-body').innerHTML=
     '<div class="form-group"><label>نام</label><input class="form-control" id="st-name" value="'+(u?.name||'')+'" /></div>'+
     '<div class="form-group"><label>نقش</label><select class="form-control" id="st-role" onchange="toggleStaffShift()"><option value="deputy"'+(u&&u.role==='deputy'?' selected':'')+'>معاون</option><option value="teacher"'+(u&&u.role==='teacher'?' selected':'')+'>معلم</option></select></div>'+
@@ -1367,7 +1502,7 @@ function renderAssignments(){
   if(!arr.length){list.innerHTML='<p class="hint">هنوز کلاسی به معلمی اختصاص داده نشده.</p>';return}
   list.innerHTML=arr.map(a=>{
     const t=(schoolData.staff||[]).find(x=>x.id===a.teacherId);
-    const c=(schoolData.classes||[]).find(x=>x.id===a.classId);
+    const c=(schoolData.classes||[]).find(x=>x.id===a.classId);/*shiftaware*/
     return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(a.subject?' · '+a.subject:'')+' → '+(t?t.name:'معلم')+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button class="btn btn-outline btn-sm" onclick="openAssignModal(\''+a.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delAssign(\''+a.id+'\')">حذف</button></div>';
   }).join('');
 }
@@ -1379,7 +1514,7 @@ function openAssignModal(id){
   document.getElementById('modal-title').textContent=a?'ویرایش اختصاص':'اختصاص کلاس به معلم';
   document.getElementById('modal-body').innerHTML=
     '<div class="form-group"><label>معلم</label><select class="form-control" id="as-teacher">'+teachers.map(t=>'<option value="'+t.id+'"'+(a&&a.teacherId===t.id?' selected':'')+'>'+t.name+'</option>').join('')+'</select></div>'+
-    '<div class="form-group"><label>کلاس</label><select class="form-control" id="as-class">'+schoolData.classes.map(c=>'<option value="'+c.id+'"'+(a&&a.classId===c.id?' selected':'')+'>'+c.name+'</option>').join('')+'</select></div>'+
+    '<div class="form-group"><label>کلاس (شیفت از روی کلاس)</label><select class="form-control" id="as-class">'+schoolData.classes.map(c=>'<option value="'+c.id+'"'+(a&&a.classId===c.id?' selected':'')+'>'+classTitle(c)+'</option>').join('')+'</select></div>'+
     '<div class="form-group"><label>نام درس *</label><input class="form-control" id="as-subject" value="'+(a?.subject||'')+'" placeholder="مثلاً ریاضی" /></div>'+
     '<div class="form-group"><label>روز هفته</label><select class="form-control" id="as-day">'+DAYS.map((d,i)=>'<option value="'+i+'"'+(a&&a.dayOfWeek===i?' selected':'')+'>'+d+'</option>').join('')+'</select></div>'+
     '<div class="form-group"><label>عنوان زنگ / جلسه</label><input class="form-control" id="as-period" value="'+(a?.periodName||'زنگ ۱')+'" placeholder="مثلاً زنگ ۱" /></div>'+
@@ -1562,7 +1697,7 @@ async function submitAttendance(){
 }
 
 /* SMS parents */
-function prepareSend(){fillSendTemplates();document.getElementById('send-class').innerHTML='<option value="">—</option>'+schoolData.classes.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');document.getElementById('send-students').innerHTML='';document.getElementById('send-out').innerHTML='';document.getElementById('sel-all').checked=false;updateSelCount()}
+function prepareSend(){fillSendTemplates();document.getElementById('send-class').innerHTML='<option value="">—</option>'+classesForRole().map(c=>'<option value="'+c.id+'">'+classTitle(c)+'</option>').join('');document.getElementById('send-students').innerHTML='';document.getElementById('send-out').innerHTML='';document.getElementById('sel-all').checked=false;updateSelCount()}
 function loadSendStudents(){const cid=document.getElementById('send-class').value;const st=schoolData.students.filter(s=>s.classId===cid);document.getElementById('sel-all').checked=false;document.getElementById('send-students').innerHTML=st.map(s=>'<label class="checkbox-row"><input type="checkbox" class="sc" value="'+s.id+'" onchange="updateSelCount()" /> '+s.name+'</label>').join('')||'<p class="hint">خالی</p>';updateSelCount()}
 function toggleSelectAll(on){document.querySelectorAll('.sc').forEach(c=>c.checked=on);updateSelCount()}
 function updateSelCount(){document.getElementById('sel-count').textContent=document.querySelectorAll('.sc:checked').length+' انتخاب'}
@@ -1608,10 +1743,69 @@ function delSmsTpl(id){
 }
 
 function applyVars(t,n){return t.replace(/\{نام\}/g,n).replace(/\{تاریخ\}/g,persianToday())}
-function prepareSms(){const msg=document.getElementById('send-msg').value.trim();const ids=[...document.querySelectorAll('.sc:checked')].map(c=>c.value);if(!ids.length)return toast('انتخاب کنید');if(!msg)return toast('متن؟');const alsoAbs=document.getElementById('send-absent').checked,both=document.getElementById('send-both').checked;let html='';const allPhones=[];ids.forEach(id=>{const st=schoolData.students.find(s=>s.id===id);if(!st)return;const phones=(st.phones||[]).filter(Boolean);const use=both?phones:(phones[0]?[phones[0]]:[]);const finalText=applyVars(msg,st.name);if(alsoAbs){if(!schoolData.attendance.some(a=>a.studentId===id&&a.date===todayStr()&&a.type==='absent'))schoolData.attendance.push({id:uid(),studentId:id,classId:st.classId,date:todayStr(),type:'absent',note:'همراه پیامک',scoreDeduct:schoolData.rules.absent||0.5})}use.forEach(ph=>allPhones.push(ph));html+='<div class="card"><div class="name">'+st.name+'</div>';use.forEach((ph,i)=>{html+='<div class="meta">'+ph+'</div><a class="btn btn-primary btn-block btn-sm" style="margin:4px 0" href="sms:'+ph+'?body='+encodeURIComponent(finalText)+'">پیامک '+(i+1)+'</a>'});html+='<div class="preview-box">'+finalText+'</div></div>'});if(allPhones.length>1){const g=applyVars(msg,'فرزند شما');html='<div class="card" style="border-right:4px solid var(--success)"><div class="card-title">گروهی</div><a class="btn btn-success btn-block" href="sms:'+[...new Set(allPhones)].join(',')+'?body='+encodeURIComponent(g)+'">ارسال گروهی</a></div>'+html}saveSchoolData();document.getElementById('send-out').innerHTML=html;toast('آماده')}
+function prepareSms(){
+  const msg=document.getElementById('send-msg').value.trim();
+  const ids=[...document.querySelectorAll('.sc:checked')].map(c=>c.value);
+  if(!ids.length)return toast('انتخاب کنید');
+  if(!msg)return toast('متن؟');
+  const alsoAbs=document.getElementById('send-absent').checked,both=document.getElementById('send-both').checked;
+  let html='';
+  const allPhones=[];
+  const jobs=[];
+  ids.forEach(id=>{
+    const stu=schoolData.students.find(s=>s.id===id);if(!stu)return;
+    const phones=(stu.phones||[]).filter(Boolean);
+    const use=both?phones:(phones[0]?[phones[0]]:[]);
+    const finalText=applyVars(msg,stu.name);
+    if(alsoAbs){
+      if(!schoolData.attendance.some(a=>a.studentId===id&&a.date===todayStr()&&a.type==='absent'))
+        schoolData.attendance.push({id:uid(),studentId:id,classId:stu.classId,date:todayStr(),type:'absent',note:'همراه پیامک',scoreDeduct:(schoolData.rules&&schoolData.rules.absent)||0.5});
+    }
+    use.forEach(ph=>{allPhones.push(ph);jobs.push({phone:ph,text:finalText,name:stu.name})});
+    html+='<div class="card"><div class="name">'+stu.name+'</div>';
+    use.forEach((ph,i)=>{
+      html+='<div class="meta">'+ph+'</div>';
+      if(smsModeAllowsSim())html+='<a class="btn btn-primary btn-block btn-sm" style="margin:4px 0" href="sms:'+ph+'?body='+encodeURIComponent(finalText)+'">سیم‌کارت '+(i+1)+'</a>';
+    });
+    html+='<div class="preview-box">'+finalText+'</div></div>';
+  });
+  const uniq=[...new Set(allPhones)];
+  const gText=applyVars(msg,'فرزند شما');
+  let top='';
+  if(smsModeAllowsPanel()&&uniq.length){
+    window._smsJobs=jobs;
+    window._smsGroupText=gText;
+    window._smsGroupPhones=uniq;
+    top+='<div class="card" style="border-right:4px solid var(--success)"><div class="card-title">ارسال از پنل پیامک</div>';
+    top+='<button class="btn btn-success btn-block" onclick="doPanelSendAll()">ارسال همه از پنل ('+uniq.length+' شماره)</button>';
+    top+='<p class="hint">شماره‌ها و متن از سامانه؛ فقط ارسال با پنل پیامک مدرسه</p></div>';
+  }
+  if(smsModeAllowsSim()&&uniq.length>1){
+    top+='<div class="card" style="border-right:4px solid var(--primary)"><div class="card-title">گروهی سیم‌کارت</div><a class="btn btn-primary btn-block" href="sms:'+uniq.join(',')+'?body='+encodeURIComponent(gText)+'">باز کردن پیامک گروهی</a></div>';
+  }
+  saveSchoolData();
+  document.getElementById('send-out').innerHTML=top+html;
+  toast('آماده شد');
+}
+async function doPanelSendAll(){
+  const jobs=window._smsJobs||[];
+  if(!jobs.length)return toast('ابتدا آماده‌سازی کنید');
+  if(!confirm('ارسال '+jobs.length+' پیامک از پنل؟'))return;
+  toast('در حال ارسال از پنل...');
+  // گروه با متن یکسان
+  const byText={};
+  jobs.forEach(j=>{const k=j.text;if(!byText[k])byText[k]=[];byText[k].push(j.phone)});
+  let sent=0,fail=0;
+  for(const text of Object.keys(byText)){
+    const r=await sendViaSmsPanel(byText[text],text);
+    if(r&&r.ok)sent+=(r.sent||byText[text].length);else fail+=byText[text].length;
+  }
+  toast('نتیجه پنل: موفق '+sent+(fail?' / ناموفق '+fail:''));
+}
+
 
 /* Reports & discipline */
-function prepareReports(){document.getElementById('rep-class').innerHTML='<option value="">—</option>'+schoolData.classes.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');document.getElementById('rep-out').innerHTML=''}
+function prepareReports(){document.getElementById('rep-class').innerHTML='<option value="">—</option>'+classesForRole().map(c=>'<option value="'+c.id+'">'+classTitle(c)+'</option>').join('');document.getElementById('rep-out').innerHTML=''}
 function calcScore(sid){let score=20;schoolData.attendance.filter(a=>a.studentId===sid).forEach(a=>{score-=parseFloat(a.scoreDeduct)||0});return Math.max(0,Math.round(score*100)/100)}
 function genReport(){const cid=document.getElementById('rep-class').value;if(!cid)return toast('کلاس؟');const st=schoolData.students.filter(s=>s.classId===cid);let html='';st.forEach(s=>{const att=schoolData.attendance.filter(a=>a.studentId===s.id);html+='<div class="list-item clickable" onclick="openPerformance(\''+s.id+'\')"><div><div class="name">'+s.name+'</div><div class="meta">موارد: '+att.length+'</div></div><strong style="color:var(--primary)">'+calcScore(s.id)+'</strong></div>'});document.getElementById('rep-out').innerHTML=html||'<p class="hint">خالی</p>'}
 function fillDiscTypeSelect(){const sel=document.getElementById('d-type');if(!sel)return;sel.innerHTML=(schoolData.disciplineTypes||[]).map(t=>'<option value="'+t.id+'" data-score="'+(t.scoreDeduct||0)+'">'+t.name+'</option>').join('')}
@@ -1626,6 +1820,91 @@ function saveRules(){schoolData.rules.absent=parseFloat(document.getElementById(
 function applyTheme(){const t=schoolData.theme||{};if(t.color){document.documentElement.style.setProperty('--primary',t.color);document.documentElement.style.setProperty('--primary-light',t.color)}if(t.fontSize)document.documentElement.style.setProperty('--font-scale',t.fontSize)}
 function setColor(el){document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));el.classList.add('active');schoolData.theme.color=el.getAttribute('data-c');saveSchoolData();applyTheme()}
 function setFontSize(v){schoolData.theme.fontSize=v;saveSchoolData();applyTheme()}
+
+function getSmsCfg(){
+  const c=schoolData.smsConfig||{};
+  // از لایسنس مادر هم بخوان اگر خالی بود
+  if(!c.mode&&session&&session.smsMode)c.mode=session.smsMode;
+  if(!c.username&&session&&session.smsApiUser)c.username=session.smsApiUser;
+  if(!c.password&&session&&session.smsApiKey)c.password=session.smsApiKey;
+  if(!c.apiUrl&&session&&session.smsApiUrl)c.apiUrl=session.smsApiUrl;
+  if(!c.sender&&session&&session.smsSender)c.sender=session.smsSender;
+  return {
+    mode:c.mode||'sim',
+    provider:c.provider||'melipayamak',
+    username:c.username||'',
+    password:c.password||'',
+    sender:c.sender||'',
+    apiUrl:c.apiUrl||''
+  };
+}
+async function saveSmsPanelCfg(){
+  if(isTeacher())return toast('دسترسی ندارید');
+  schoolData.smsConfig={
+    mode:document.getElementById('sms-mode').value,
+    provider:document.getElementById('sms-provider').value,
+    username:document.getElementById('sms-user').value.trim(),
+    password:document.getElementById('sms-pass').value.trim(),
+    sender:document.getElementById('sms-sender').value.trim(),
+    apiUrl:document.getElementById('sms-url').value.trim()
+  };
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  toast('در حال ارسال تنظیمات پیامک به سرور...');
+  try{
+    await cloudPushAppData(true);
+    toast('تنظیمات پیامک ذخیره و روی سرور آمد — روی بقیه دستگاه‌ها هم می‌آید');
+  }catch(e){
+    toast('محلی ذخیره شد؛ ارسال سرور ناموفق — دکمه ارسال به سرور را بزنید');
+  }
+}
+function fillSmsPanelForm(){
+  const el=document.getElementById('sms-mode');
+  if(!el)return;
+  const c=getSmsCfg();
+  document.getElementById('sms-mode').value=c.mode||'sim';
+  document.getElementById('sms-provider').value=c.provider||'melipayamak';
+  document.getElementById('sms-user').value=c.username||'';
+  document.getElementById('sms-pass').value=c.password||'';
+  document.getElementById('sms-sender').value=c.sender||'';
+  document.getElementById('sms-url').value=c.apiUrl||'';
+}
+async function sendViaSmsPanel(phones,text){
+  const c=getSmsCfg();
+  if(c.mode==='sim')return {ok:false,error:'حالت فقط سیم‌کارت است'};
+  if(!c.username&&!c.password)return {ok:false,error:'اطلاعات پنل پیامک کامل نیست'};
+  if(!SYNC_API)return {ok:false,error:'آدرس سرور تنظیم نیست'};
+  const list=(phones||[]).map(p=>String(p).replace(/\D/g,'')).filter(p=>p.length>=10);
+  if(!list.length)return {ok:false,error:'شماره معتبر نیست'};
+  try{
+    const data=await apiFetch('/api/sms/send',{method:'POST',body:{
+      provider:c.provider,
+      username:c.username,
+      password:c.password,
+      apiKey:c.password,
+      sender:c.sender,
+      apiUrl:c.apiUrl,
+      phones:list,
+      text:text
+    },retries:1});
+    return data||{ok:false};
+  }catch(e){
+    return {ok:false,error:(e&&e.message)||String(e)};
+  }
+}
+async function testSmsPanel(){
+  saveSmsPanelCfg();
+  const phone=(session&&session.phone)||'';
+  if(!phone)return toast('شماره مدیر در مشخصات مدرسه نیست');
+  toast('در حال ارسال تست...');
+  const r=await sendViaSmsPanel([phone],'تست سامانه مدارس نیکان');
+  if(r&&r.ok)toast('ارسال تست موفق ('+(r.sent||1)+')');
+  else toast('ناموفق: '+(r&&r.error?r.error:(r&&r.results&&r.results[0]&&r.results[0].detail)||'خطا'));
+}
+function smsModeAllowsPanel(){const m=getSmsCfg().mode;return m==='panel'||m==='both'}
+function smsModeAllowsSim(){const m=getSmsCfg().mode;return m==='sim'||m==='both'||!m}
+
+
 function renderSettings(){
   if(isTeacher()){document.getElementById('set-disc-types').style.display='none'}else{document.getElementById('set-disc-types').style.display='block'}
   const tplBox=document.getElementById('set-sms-tpl');
@@ -1635,7 +1914,7 @@ function renderSettings(){
 
   const r=schoolData.rules||{};document.getElementById('rule-absent').value=r.absent??0.5;document.getElementById('rule-late').value=r.late??0.25;document.getElementById('rule-other').value=r.other??1;
   const t=schoolData.theme||{};if(t.fontSize)document.getElementById('set-fsize').value=t.fontSize;
-  document.getElementById('set-license').innerHTML='<div class="hint">'+(session?.name||'')+'</div><div class="hint">انقضا: '+formatDateFa(session?.expireDate)+'</div>';
+  document.getElementById('set-license').innerHTML='<div class="hint" style="margin-bottom:6px">سامانه نیکان · طراحی سید مجتبی موسوی</div><div class="hint">'+(session?.name||'')+'</div><div class="hint">انقضا: '+formatDateFa(session?.expireDate)+'</div>';
   const dl=document.getElementById('disc-type-list');
   dl.innerHTML=(schoolData.disciplineTypes||[]).map(d=>'<div class="list-item"><div><div class="name">'+d.name+'</div><div class="meta">کسر پیش‌فرض: '+(d.scoreDeduct??0)+'</div></div><button class="btn btn-outline btn-sm" onclick="openDiscTypeModal(\''+d.id+'\')">ویرایش</button>'+(['absent','late','other'].includes(d.id)?'':'<button class="btn btn-danger btn-sm" onclick="delDiscType(\''+d.id+'\')">حذف</button>')+'</div>').join('');
 }
