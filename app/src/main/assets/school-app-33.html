@@ -895,8 +895,7 @@ const SYNC_API=(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API).repla
 function setSyncApi(url){url=String(url||'').trim().replace(/\/$/,'');localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
 async function apiFetch(path,options){
   const opts=options||{};
-  const maxTry=opts.retries!=null?opts.retries:1;
-  const timeoutMs=opts.timeoutMs!=null?opts.timeoutMs:8000;
+  const maxTry=opts.retries!=null?opts.retries:2;
   let lastErr=null;
   const bases=[];
   const primary=(typeof SYNC_API!=='undefined'&&SYNC_API)?SYNC_API:'';
@@ -907,7 +906,7 @@ async function apiFetch(path,options){
     for(let i=1;i<=maxTry;i++){
       try{
         const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},timeoutMs):null;
+        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},14000):null;
         const res=await fetch(base+path,{
           method:opts.method||'GET',
           headers:{'Content-Type':'application/json',...(opts.headers||{})},
@@ -918,11 +917,12 @@ async function apiFetch(path,options){
         let data=null;
         try{data=await res.json()}catch(e){data=null}
         if(!res.ok)throw new Error((data&&data.error)||('HTTP '+res.status));
+        // اگر با fallback جواب گرفت، همان را ترجیح بده برای دفعات بعد
         try{if(base!==primary)localStorage.setItem('school_sync_api',base)}catch(e){}
         return data;
       }catch(e){
         lastErr=e;
-        if(i<maxTry)await new Promise(r=>setTimeout(r,200*i));
+        if(i<maxTry)await new Promise(r=>setTimeout(r,300*i));
       }
     }
   }
@@ -1114,7 +1114,7 @@ async function cloudPullAppData(force){
     // همیشه برای همگام‌سازی چنددستگاهی full بکش اگر force یا معلم
     const needFull=!!force||(userSession&&userSession.role==='teacher');
     const since=(!needFull&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
-    const data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:1,timeoutMs:25000});
+    const data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:2});
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
@@ -1176,7 +1176,7 @@ let _pullTick=0,_pullBusy=false;
 function startAutoSync(){
   clearInterval(_pullTimer);
   // هر ۴۵ ثانیه + وقتی تب فعال شد فوری
-  const base=90000;
+  const base=45000;
   const jitter=Math.floor(Math.random()*15000);
   try{
     document.removeEventListener('visibilitychange',_onVisSync);
@@ -1235,10 +1235,25 @@ async function autoPullAll(checkSchool){
 }
 function dataKey(){return DATA_PREFIX+(session?.schoolId||session?.code||'local')}
 function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,other:1},theme:{},shifts:1,messages:[]}}
-function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
+function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
 function saveSchoolData(){localStorage.setItem(dataKey(),JSON.stringify(schoolData));scheduleCloudPush()}
 function isExpired(exp){return exp&&exp<todayStr()}
 function toEnDigits(s){s=String(s||'');const fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩';let o='';for(const ch of s){let i=fa.indexOf(ch);if(i>=0){o+=i;continue}i=ar.indexOf(ch);if(i>=0){o+=i;continue}o+=ch}return o}
+function fixPhone(s){
+  s=toEnDigits(String(s||'').trim());
+  // فقط رقم‌ها
+  s=s.replace(/[^0-9+]/g,'');
+  if(!s)return '';
+  // 0098... → 0...
+  if(s.indexOf('0098')===0)s='0'+s.slice(4);
+  if(s.indexOf('+98')===0)s='0'+s.slice(3);
+  if(s.indexOf('98')===0 && s.length===12)s='0'+s.slice(2);
+  // 9xxxxxxxxx → 09xxxxxxxxx
+  if(/^9\d{9}$/.test(s))s='0'+s;
+  return s;
+}
+function formatPhone(s){return fixPhone(s)}
+
 
 function compressPhoto(file, maxW, cb){
   maxW=maxW||160;
@@ -1259,7 +1274,7 @@ function compressPhoto(file, maxW, cb){
         const c=document.createElement('canvas');
         c.width=w;c.height=h;
         c.getContext('2d').drawImage(img,0,0,w,h);
-        done(c.toDataURL('image/jpeg',0.55));
+        done(c.toDataURL('image/jpeg',0.65));
       }catch(e){done(typeof reader.result==='string'?reader.result:'')}
     };
     img.src=reader.result;
@@ -1288,32 +1303,44 @@ function onPhotoPick(inputId, previewId){
 }
 function handlePhotoFile(file, previewId){
   if(!file){toast('فایلی انتخاب نشد');return}
-  if(!String(file.type||'').match(/^image\//i) && !(file.name||'').match(/\.(jpe?g|png|gif|webp)$/i)){
+  var t=String(file.type||'');
+  var n=String(file.name||'');
+  if(t && !/^image\//i.test(t) && !/\.(jpe?g|png|gif|webp|heic|heif)$/i.test(n)){
     toast('لطفاً یک تصویر انتخاب کنید');
     return;
   }
   window._photoPreviewId = previewId || window._photoPreviewId || '';
   toast('در حال آماده‌سازی عکس...');
-  compressPhoto(file, 120, function(url){
-    if(!url){toast('پردازش عکس ناموفق بود');return}
-    applyPickedPhoto(url, window._photoPreviewId || previewId);
-  });
+  try{
+    compressPhoto(file, 280, function(url){
+      if(!url){toast('پردازش عکس ناموفق بود — فرمت دیگری امتحان کنید');return}
+      applyPickedPhoto(url, window._photoPreviewId || previewId);
+    });
+  }catch(e){
+    console.error(e);
+    toast('خطا در خواندن عکس');
+  }
 }
 function photoButtons(fileId, prevId){
   const gid = fileId + '-gal';
   const cid = fileId + '-cam';
+  const uid = fileId + '-user';
   // input با opacity روی دکمه — روش پایدار اندروید/کروم/وب‌ویو
   return '<div class="photo-actions" style="display:flex;flex-direction:column;gap:10px;width:100%">'+
     '<div class="photo-file-btn">'+
-      '<div class="btn btn-primary btn-sm btn-face">📷 دوربین یا انتخاب عکس</div>'+
+      '<div class="btn btn-primary btn-sm btn-face">📷 دوربین (پشت)</div>'+
       '<input type="file" id="'+cid+'" accept="image/*" capture="environment" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\');this.value=\'\';" />'+
     '</div>'+
     '<div class="photo-file-btn">'+
-      '<div class="btn btn-outline btn-sm btn-face">📁 فقط از گالری</div>'+
+      '<div class="btn btn-primary btn-sm btn-face">🤳 دوربین سلفی</div>'+
+      '<input type="file" id="'+uid+'" accept="image/*" capture="user" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\');this.value=\'\';" />'+
+    '</div>'+
+    '<div class="photo-file-btn">'+
+      '<div class="btn btn-outline btn-sm btn-face">📁 از گالری</div>'+
       '<input type="file" id="'+gid+'" accept="image/*" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\');this.value=\'\';" />'+
     '</div>'+
     '<button type="button" class="btn btn-outline btn-sm" onclick="openLiveCamera(\''+prevId+'\')">🎥 دوربین زنده داخل صفحه</button>'+
-    '<p class="hint" style="margin:0">اگر دوربین گوشی باز نشد، «گالری» یا «دوربین زنده» را بزنید.</p>'+
+    '<p class="hint" style="margin:0">اگر دوربین باز نشد از «گالری» استفاده کنید. برای دوربین زنده سایت باید https باشد.</p>'+
     '<input type="file" id="'+fileId+'" accept="image/*" style="display:none" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\')" />'+
   '</div>';
 }
@@ -1590,6 +1617,18 @@ function fillRememberedLogin(){
   }catch(e){}
 }
 
+
+function pickRole(btn){
+  try{
+    document.querySelectorAll('.role-btn').forEach(function(b){ b.classList.remove('active'); });
+    if(btn) btn.classList.add('active');
+    var role = (btn && btn.getAttribute('data-role')) || 'manager';
+    if(role!=='manager' && role!=='deputy' && role!=='teacher') role='manager';
+    loginRole = role;
+    try{ window.loginRole = role; }catch(e){}
+  }catch(e){ console.warn('pickRole', e); }
+}
+
 async function doLogin(){
   const code=toEnDigits(document.getElementById('l-code').value).trim();
   let user=toEnDigits(document.getElementById('l-user').value).trim();
@@ -1629,7 +1668,7 @@ async function doLogin(){
       if(SYNC_API&&sc.id){
         toast('در حال تأیید مدرسه روی سرور...');
         try{
-          const chk=await apiFetch('/api/schools/'+encodeURIComponent(sc.id),{retries:1,timeoutMs:6000});
+          const chk=await apiFetch('/api/schools/'+encodeURIComponent(sc.id),{retries:2});
           if(!chk||!chk.school){
             wipeSchoolLocal(sc.id,sc.code);
             return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
@@ -1693,6 +1732,8 @@ async function doLogin(){
     if(exists==='inactive')return toast('مدرسه خاموش است');
   }
   await cloudPullStaff(session.schoolId);
+  try{ await cloudPullAppData(true); }catch(e){}
+  if(!Array.isArray(schoolData.staff))schoolData.staff=[];
   const staffList=schoolData.staff||[];
   if(!staffList.length)return toast('هنوز معلم/معاونی ثبت نشده یا به سرور ارسال نشده. اول با مدیر وارد شوید و تیم را ذخیره کنید');
   const st=staffList.find(u=>String(u.username||'')===String(user)&&String(u.pass||'')===String(pass)&&u.role===loginRole&&u.active!==false);
@@ -1771,14 +1812,10 @@ async function recheckLicense(){
 }
 async function enterApp(){
   session=loadSession();userSession=loadUserSession();
+  try{if(canManage){/*delay*/}}catch(e){}
   if(!session||!userSession){showScreen('gate');return}
-  // لایسنس را بلاک نکن — حداکثر ۲ ثانیه صبر، بعد با داده محلی ادامه بده
-  try{
-    await Promise.race([
-      syncLicenseFromServer().catch(function(){}),
-      new Promise(function(r){setTimeout(r,2000)})
-    ]);
-  }catch(e){}
+  // اول لایسنس از سرور (تمدید از مادر)
+  await syncLicenseFromServer();
   session=loadSession();
   if(session.active===false||(session.expireDate&&isExpired(session.expireDate))){
     document.getElementById('locked-info').innerHTML='<div><strong>'+(session.name||'')+'</strong></div><div>انقضا: '+formatDateFa(session.expireDate)+'</div><p class="hint" style="margin-top:8px">در صورت خرید لایسنس، از پنل پشتیبانی تمدید می‌شود. یک‌بار خارج و دوباره وارد شوید.</p><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="recheckLicense()">بررسی مجدد لایسنس</button>';
@@ -1786,6 +1823,7 @@ async function enterApp(){
     return;
   }
   loadSchoolData();
+  // هم‌تراز کردن شیفت با لایسنس/مادر
   if(session&&Number(session.shifts)===2)schoolData.shifts=2;
   else if(session&&session.modules&&session.modules.indexOf('dual_shift')>=0)schoolData.shifts=2;
   try{ensureAllSubmissionsInAttendance()}catch(e){}
@@ -1810,14 +1848,27 @@ async function enterApp(){
   }catch(e){}
   buildNav();
   showScreen('app');
-  showAppPage(isTeacher()?'teacher':'home');
-  const nLocal=(schoolData.classes||[]).length;
-  if(nLocal)toast('ورود سریع با داده محلی · در حال همگام با سرور...');
-  else toast('ورود · در حال دریافت از سرور...');
+  if(canManage()&&typeof Notification!=='undefined'&&Notification.permission==='default'){
+    try{Notification.requestPermission()}catch(e){}
+  }
+  // دریافت اجباری از سرور برای دستگاه جدید
+  const afterSync=function(pulled){
+    if(canManage()&&session.schoolId){
+      cloudPullSubmissions(session.schoolId).then(()=>{try{renderHome()}catch(e){}});
+    }
+    // فقط اگر داده محلی پر است به سرور بفرست — دستگاه خالی سرور را پاک نکند
+    if(isManager()&&session.schoolId&&_dataRichness(schoolData)>0){
+      cloudPushStaff(session.schoolId,schoolData.staff||[]);
+      scheduleCloudPush();
+    }
+    showAppPage(isTeacher()?'teacher':'home');
+    const nC=(schoolData.classes||[]).length,nS=(schoolData.students||[]).length,nT=(schoolData.staff||[]).length;
+    if(nC||nS||nT)toast('اطلاعات مدرسه: '+nC+' کلاس · '+nS+' دانش‌آموز · '+nT+' کاربر');
+    else if(pulled===false)toast('روی سرور هنوز داده‌ای نیست — از دستگاه قبلی «ارسال به سرور» بزنید');
+  };
   startAutoSync();
-  // همگام پس‌زمینه — UI را معطل نکن
-  if(!session.schoolId)return;
-  setTimeout(function(){
+  if(session.schoolId){
+    toast('در حال دریافت اطلاعات از سرور...');
     assertSchoolExistsOnServer(session.schoolId).then(async function(st){
       if(st===false){
         forceKickDeletedSchool('این مدرسه از پنل مادر حذف شده است');
@@ -1828,27 +1879,20 @@ async function enterApp(){
         showScreen('locked');
         return;
       }
-      // فقط یک‌بار بکش (نه ۳ بار)
       let ok=false;
-      try{ok=await cloudPullAppData(true)}catch(e){ok=false}
-      try{
-        if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}
-        else renderHome();
-      }catch(e){}
-      if(canManage()&&session.schoolId){
-        cloudPullSubmissions(session.schoolId).then(function(){try{renderHome()}catch(e){}}).catch(function(){});
+      for(let i=0;i<3&&!ok;i++){
+        try{ok=await cloudPullAppData(true)}catch(e){ok=false}
+        if(!ok&&i<2)await new Promise(r=>setTimeout(r,700));
       }
-      if(isManager()&&_dataRichness(schoolData)>0){
-        cloudPushStaff(session.schoolId,schoolData.staff||[]).catch(function(){});
+      if(!ok&&_dataRichness(schoolData)>0&&canManage()){
+        try{await cloudPushAppData(true)}catch(e){}
       }
-      const nC=(schoolData.classes||[]).length,nS=(schoolData.students||[]).length;
-      if(ok)toast('همگام شد: '+nC+' کلاس · '+nS+' دانش‌آموز');
-      else if(!nC)toast('داده سرور نیامد — اینترنت را چک کنید یا بعداً «ارسال به سرور» بزنید');
+      try{if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}}catch(e){}
+      afterSync(ok);
     }).catch(function(){
-      // قطع شبکه = بیرون نکن؛ با داده محلی کار کند
-      toast('سرور در دسترس نبود — با داده همین دستگاه ادامه می‌دهید');
+      forceKickDeletedSchool('امکان تأیید مدرسه روی سرور نیست — دوباره وارد شوید');
     });
-  },50);
+  }else afterSync(false);
 }
 function clearSession(){try{localStorage.removeItem('school_session_v1');session=null}catch(e){}}
 function wipeSchoolLocal(schoolId,code){
@@ -2162,12 +2206,64 @@ function openClassModal(id){if(!isManager())return toast('فقط مدیر');cons
     '<button class="btn btn-primary btn-block" onclick="saveClass(\''+(id||'')+'\')">ذخیره</button>';
   document.getElementById('modal').classList.add('show');
 }
-function saveClass(id){const name=document.getElementById('c-name').value.trim();if(!name)return toast('نام کلاس لازم است');const shift=document.getElementById('c-shift')?parseInt(document.getElementById('c-shift').value):1;if(id){const c=schoolData.classes.find(x=>x.id===id);if(c){c.name=name;c.shift=shift}}else schoolData.classes.push({id:uid(),name,shift});saveSchoolData();closeModal();renderClasses();renderHome();toast('ذخیره شد')}
+function saveClass(id){
+  try{
+    const nameEl=document.getElementById('c-name');
+    if(!nameEl)return toast('فرم کلاس آماده نیست');
+    const name=nameEl.value.trim();
+    if(!name)return toast('نام کلاس لازم است');
+    const shift=document.getElementById('c-shift')?parseInt(document.getElementById('c-shift').value,10)||1:1;
+    if(!schoolData)loadSchoolData();
+    if(!Array.isArray(schoolData.classes))schoolData.classes=[];
+    if(id){
+      const cl=schoolData.classes.find(x=>x.id===id);
+      if(cl){cl.name=name;cl.shift=shift}
+    }else schoolData.classes.push({id:uid(),name:name,shift:shift});
+    if(shift===1||shift===2)schoolData.shifts=2;
+    schoolData._cloudUpdatedAtMs=Date.now();
+    saveSchoolData();
+    if(canManage())cloudPushAppData(true).catch(function(){});
+    closeModal();
+    try{renderClasses();renderHome();}catch(e){}
+    toast('ذخیره شد');
+  }catch(err){console.error(err);toast('خطا در ذخیره کلاس')}
+}
 function delClass(id){if(!confirm('حذف کلاس؟'))return;schoolData.classes=schoolData.classes.filter(c=>c.id!==id);schoolData.students=schoolData.students.filter(s=>s.classId!==id);schoolData.assignments=(schoolData.assignments||[]).filter(a=>a.classId!==id);saveSchoolData();renderClasses();renderHome()}
 function openClassStudents(id){if(!canAccessClass(id))return toast('به این کلاس دسترسی ندارید');currentClassId=id;const c=schoolData.classes.find(x=>x.id===id);document.getElementById('students-title').textContent='دانش‌آموزان '+classTitle(c);document.getElementById('btn-add-stu').style.display=canManage()?'':'none';showAppPage('students');renderStudents()}
 function renderStudents(){const list=document.getElementById('students-list');const st=schoolData.students.filter(s=>s.classId===currentClassId);if(!st.length){list.innerHTML='<p class="hint">خالی</p>';return}list.innerHTML=st.map(s=>'<div class="list-item"><div class="who clickable" onclick="'+(canManage()?'openPerformance(\''+s.id+'\')':'')+'">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">'+(s.phones||[]).join(' | ')+(s.note?' — '+s.note:'')+'</div></div></div>'+(canManage()?'<button class="btn btn-outline btn-sm" onclick="openStudentModal(\''+s.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStudent(\''+s.id+'\')">حذف</button>':'')+'</div>').join('')}
 function openStudentModal(id){if(!canManage())return;const s=id?schoolData.students.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=s?'ویرایش':'دانش‌آموز جدید';window._pendingPhoto=(s&&s.photo)||'';document.getElementById('modal-body').innerHTML='<div class="photo-pick"><div id="s-photo-prev">'+avatarHtml(s&&s.photo,s&&s.name,'avatar-lg')+'</div>'+photoButtons('s-photo','s-photo-prev')+'</div><p class="hint">عکس همگام با سرور می‌شود</p><div class="form-group"><label>نام</label><input class="form-control" id="s-name" value="'+(s?.name||'')+'" /></div><div class="form-group"><label>شماره پدر</label><input class="form-control" id="s-p1" value="'+((s?.phones||[])[0]||'')+'" /></div><div class="form-group"><label>شماره مادر</label><input class="form-control" id="s-p2" value="'+((s?.phones||[])[1]||'')+'" /></div><div class="form-group"><label>توضیحات</label><textarea class="form-control" id="s-note">'+(s?.note||'')+'</textarea></div><button class="btn btn-primary btn-block" onclick="saveStudent(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
-function saveStudent(id){const name=document.getElementById('s-name').value.trim(),p1=fixPhone(document.getElementById('s-p1').value),p2=fixPhone(document.getElementById('s-p2').value),note=document.getElementById('s-note').value.trim();if(!name)return toast('نام لازم است');const phones=[p1,p2].filter(Boolean);const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';if(id){const s=schoolData.students.find(x=>x.id===id);if(s){s.name=name;s.phones=phones;s.note=note;if(photo!==null&&photo!==undefined)s.photo=photo}}else schoolData.students.push({id:uid(),classId:currentClassId,name,phones,note,photo:photo||''});schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();if(canManage())cloudPushAppData(true).catch(function(){});closeModal();renderStudents();renderHome();toast('ذخیره شد — در حال ارسال به سرور')}
+function saveStudent(id){
+  try{
+    const nameEl=document.getElementById('s-name');
+    if(!nameEl)return toast('فرم دانش‌آموز آماده نیست');
+    const name=nameEl.value.trim();
+    const p1=fixPhone((document.getElementById('s-p1')||{}).value||'');
+    const p2=fixPhone((document.getElementById('s-p2')||{}).value||'');
+    const note=((document.getElementById('s-note')||{}).value||'').trim();
+    if(!name)return toast('نام لازم است');
+    if(!schoolData)loadSchoolData();
+    if(!Array.isArray(schoolData.students))schoolData.students=[];
+    if(!id && !currentClassId)return toast('ابتدا وارد یک کلاس شوید');
+    const phones=[p1,p2].filter(Boolean);
+    const photo=(typeof window._pendingPhoto!=='undefined'&&window._pendingPhoto!==null)?window._pendingPhoto:'';
+    if(id){
+      const s=schoolData.students.find(x=>x.id===id);
+      if(s){s.name=name;s.phones=phones;s.note=note;s.photo=photo||'';}
+      else return toast('دانش‌آموز یافت نشد');
+    }else{
+      schoolData.students.push({id:uid(),classId:currentClassId,name:name,phones:phones,note:note,photo:photo||''});
+    }
+    schoolData._cloudUpdatedAtMs=Date.now();
+    saveSchoolData();
+    if(canManage())cloudPushAppData(true).catch(function(){});
+    closeModal();
+    try{renderStudents();renderHome();}catch(e){}
+    toast('ذخیره شد');
+  }catch(err){
+    console.error('saveStudent',err);
+    toast('خطا در ذخیره دانش‌آموز: '+(err&&err.message?err.message:err));
+  }
+}
 function delStudent(id){if(!confirm('حذف؟'))return;schoolData.students=schoolData.students.filter(s=>s.id!==id);saveSchoolData();renderStudents();renderHome()}
 function importExcel(ev){
   const file=ev.target.files[0];if(!file)return;
@@ -2214,12 +2310,17 @@ function importExcel(ev){
 /* Staff & colleagues */
 function teamTab(t){document.getElementById('tab-staff').classList.toggle('active',t==='staff');document.getElementById('tab-col').classList.toggle('active',t==='col');document.getElementById('tab-col-sms').classList.toggle('active',t==='colsms');document.getElementById('team-staff').style.display=t==='staff'?'block':'none';document.getElementById('team-col').style.display=t==='col'?'block':'none';document.getElementById('team-colsms').style.display=t==='colsms'?'block':'none';if(t==='colsms')renderColSmsPick()}
 function renderTeam(){
+  if(!schoolData)return;
+  if(!Array.isArray(schoolData.staff))schoolData.staff=[];
+  if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];
   const sl=document.getElementById('staff-list');
-  if(!schoolData.staff.length)sl.innerHTML='<p class="hint">معاون/معلمی نیست.</p>';
+  if(!sl)return;
+  if(!schoolData.staff.length)sl.innerHTML='<p class="hint">معاون/معلمی نیست. با «+ کاربر» اضافه کنید.</p>';
   else sl.innerHTML=schoolData.staff.map(u=>'<div class="list-item"><div class="who">'+avatarHtml(u.photo,u.name)+'<div><div class="name">'+u.name+'</div><div class="meta">'+(u.role==='deputy'?'معاون':'معلم')+(u.shift?(' · '+shiftLabel(u.shift)):' · هر دو شیفت')+' · '+u.username+(u.phone?' · '+u.phone:'')+'</div></div></div><button class="btn btn-outline btn-sm" onclick="openStaffModal(\''+u.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStaff(\''+u.id+'\')">حذف</button></div>').join('');
   const cl=document.getElementById('col-list');
+  if(!cl)return;
   if(!schoolData.colleagues.length)cl.innerHTML='<p class="hint">همکاری نیست</p>';
-  else cl.innerHTML=schoolData.colleagues.map(c=>'<div class="list-item"><div><div class="name">'+c.name+'</div><div class="meta">'+(c.role||'')+' · '+c.phone+'</div></div><button class="btn btn-outline btn-sm" onclick="openColleagueModal(\''+c.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delColleague(\''+c.id+'\')">حذف</button></div>').join('');
+  else cl.innerHTML=schoolData.colleagues.map(function(c){return '<div class="list-item"><div><div class="name">'+c.name+'</div><div class="meta">'+(c.role||'')+' · '+c.phone+'</div></div><button class="btn btn-outline btn-sm" onclick="openColleagueModal(\''+c.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delColleague(\''+c.id+'\')">حذف</button></div>';}).join('');
 }
 function openStaffModal(id){
   const u=id?schoolData.staff.find(x=>x.id===id):null;
@@ -2249,26 +2350,78 @@ function openStaffModal(id){
 }
 function toggleStaffShift(){/* شیفت همیشه نمایش داده می‌شود */}
 function saveStaff(id){
-  const name=document.getElementById('st-name').value.trim(),role=document.getElementById('st-role').value,username=document.getElementById('st-user').value.trim(),pass=document.getElementById('st-pass').value,phone=fixPhone(document.getElementById('st-phone').value);
-  const shiftRaw=document.getElementById('st-shift')?document.getElementById('st-shift').value:'';
-  const shift=shiftRaw===''?null:parseInt(shiftRaw,10);
-  if(!name||!username||!pass)return toast('نام، کاربری و رمز لازم است');
-  // اگر شیفت تعیین شد، حالت دو شیفت مدرسه را هم فعال کن
-  if(shift===1||shift===2){schoolData.shifts=2}
-  const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:(null);
-  if(id){const u=schoolData.staff.find(x=>x.id===id);if(u){u.name=name;u.role=role;u.username=username;u.pass=pass;u.phone=phone;u.shift=shift;if(photo!==null&&photo!==undefined)u.photo=photo;if(userSession&&userSession.staffId===u.id){userSession.photo=u.photo||'';userSession.name=u.name;saveUserSession(userSession)}}}
-  else schoolData.staff.push({id:uid(),name,role,username,pass,phone,shift,photo:photo||'',active:true});
-  schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData();
-  if(session&&session.schoolId){
-    cloudPushStaff(session.schoolId,schoolData.staff);
-    cloudPushAppData(true).catch(function(){});
+  try{
+    const nameEl=document.getElementById('st-name');
+    const roleEl=document.getElementById('st-role');
+    const userEl=document.getElementById('st-user');
+    const passEl=document.getElementById('st-pass');
+    const phoneEl=document.getElementById('st-phone');
+    if(!nameEl||!roleEl||!userEl||!passEl){
+      return toast('فرم کاربر آماده نیست — صفحه را رفرش کنید');
+    }
+    const name=nameEl.value.trim();
+    const role=roleEl.value||'teacher';
+    const username=normLoginUser(userEl.value.trim());
+    const pass=String(passEl.value||'');
+    const phone=fixPhone(phoneEl?phoneEl.value:'');
+    const shiftRaw=document.getElementById('st-shift')?document.getElementById('st-shift').value:'';
+    const shift=shiftRaw===''?null:parseInt(shiftRaw,10);
+    if(!name||!username||!pass)return toast('نام، کاربری و رمز لازم است');
+    if(pass.length<4)return toast('رمز حداقل ۴ کاراکتر باشد');
+    if(!schoolData)loadSchoolData();
+    if(!Array.isArray(schoolData.staff))schoolData.staff=[];
+    // جلوگیری از نام کاربری تکراری
+    const dup=schoolData.staff.find(function(x){return x && String(x.username||'')===String(username) && (!id || x.id!==id);});
+    if(dup)return toast('این نام کاربری قبلاً برای «'+(dup.name||'')+'» ثبت شده');
+    // اگر شیفت تعیین شد، حالت دو شیفت مدرسه را هم فعال کن
+    if(shift===1||shift===2){schoolData.shifts=2}
+    const photo=(typeof window._pendingPhoto!=='undefined' && window._pendingPhoto!==null)?window._pendingPhoto:'';
+    if(id){
+      const u=schoolData.staff.find(x=>x.id===id);
+      if(u){
+        u.name=name;u.role=role;u.username=username;u.pass=pass;u.phone=phone;u.shift=shift;u.active=true;
+        if(photo!==''||photo==='')u.photo=photo||'';
+        if(userSession&&userSession.staffId===u.id){userSession.photo=u.photo||'';userSession.name=u.name;saveUserSession(userSession)}
+      }else{
+        return toast('کاربر برای ویرایش یافت نشد');
+      }
+    }else{
+      schoolData.staff.push({id:uid(),name:name,role:role,username:username,pass:pass,phone:phone,shift:shift,photo:photo||'',active:true});
+    }
+    schoolData._cloudUpdatedAtMs=Date.now();
+    saveSchoolData();
+    if(session&&session.schoolId){
+      try{cloudPushStaff(session.schoolId,schoolData.staff);}catch(e){}
+      cloudPushAppData(true).catch(function(){});
+    }
+    closeModal();
+    try{renderTeam();}catch(e){}
+    toast('ذخیره شد — برای ورود با نقش '+(role==='deputy'?'معاون':'معلم')+' از همین نام کاربری استفاده کنید');
+  }catch(err){
+    console.error('saveStaff',err);
+    toast('خطا در ذخیره کاربر: '+(err&&err.message?err.message:err));
   }
-  closeModal();renderTeam();toast('ذخیره شد');
 }
 function delStaff(id){if(!confirm('حذف؟'))return;schoolData.staff=schoolData.staff.filter(x=>x.id!==id);schoolData.assignments=(schoolData.assignments||[]).filter(a=>a.teacherId!==id);schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();if(session&&session.schoolId){cloudPushStaff(session.schoolId,schoolData.staff);cloudPushAppData(true).catch(function(){})}renderTeam()}
 function openColleagueModal(id){const c=id?schoolData.colleagues.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=c?'ویرایش همکار':'همکار جدید';document.getElementById('modal-body').innerHTML='<div class="form-group"><label>نام</label><input class="form-control" id="co-name" value="'+(c?.name||'')+'" /></div><div class="form-group"><label>سمت</label><input class="form-control" id="co-role" value="'+(c?.role||'')+'" /></div><div class="form-group"><label>شماره</label><input class="form-control" id="co-phone" value="'+(c?.phone||'')+'" /></div><button class="btn btn-primary btn-block" onclick="saveColleague(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
-function saveColleague(id){const name=document.getElementById('co-name').value.trim(),role=document.getElementById('co-role').value.trim(),phone=fixPhone(document.getElementById('co-phone').value);if(!name||!phone)return toast('نام و شماره');if(id){const c=schoolData.colleagues.find(x=>x.id===id);if(c){c.name=name;c.role=role;c.phone=phone}}else schoolData.colleagues.push({id:uid(),name,role,phone});saveSchoolData();closeModal();renderTeam();toast('ذخیره شد')}
+function saveColleague(id){
+  try{
+    const name=(document.getElementById('co-name')||{}).value.trim();
+    const role=(document.getElementById('co-role')||{}).value.trim();
+    const phone=fixPhone((document.getElementById('co-phone')||{}).value||'');
+    if(!name||!phone)return toast('نام و شماره لازم است');
+    if(!schoolData)loadSchoolData();
+    if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];
+    if(id){
+      const x=schoolData.colleagues.find(z=>z.id===id);
+      if(x){x.name=name;x.role=role;x.phone=phone}
+    }else schoolData.colleagues.push({id:uid(),name:name,role:role,phone:phone});
+    schoolData._cloudUpdatedAtMs=Date.now();
+    saveSchoolData();
+    if(canManage())cloudPushAppData(true).catch(function(){});
+    closeModal();renderTeam();toast('ذخیره شد');
+  }catch(err){console.error(err);toast('خطا در ذخیره همکار')}
+}
 function delColleague(id){schoolData.colleagues=schoolData.colleagues.filter(x=>x.id!==id);saveSchoolData();renderTeam()}
 function renderColSmsPick(){const box=document.getElementById('col-sms-list');if(!schoolData.colleagues.length){box.innerHTML='<p class="hint">همکاری نیست</p>';return}box.innerHTML=schoolData.colleagues.map(c=>'<label class="checkbox-row"><input type="checkbox" class="col-sc" value="'+c.id+'" /> '+c.name+' — '+c.phone+'</label>').join('');document.getElementById('col-sel-all').checked=false;document.getElementById('col-sms-out').innerHTML=''}
 function toggleColAll(on){document.querySelectorAll('.col-sc').forEach(c=>c.checked=on)}
