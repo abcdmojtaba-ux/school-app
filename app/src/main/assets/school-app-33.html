@@ -3430,14 +3430,14 @@ async function tryAutoEnterFromMother(){
     if(!json)return false;
     var payload=JSON.parse(json);
     if(!payload||!payload.schoolId)return false;
-    // انقضا توکن ۵ دقیقه
-    if(payload.ts&&(Date.now()-payload.ts)>5*60*1000){
+    // انقضا توکن ۱۵ دقیقه
+    if(payload.ts&&(Date.now()-payload.ts)>15*60*1000){
       toast('لینک ورود منقضی شده — دوباره از پنل مادر بزنید');
       history.replaceState(null,'',location.pathname);
       return false;
     }
     toast('ورود مستقیم مدیر از پنل مادر...');
-    // session مدرسه
+    // session مدرسه — کامل از مادر
     saveSession({
       schoolId:payload.schoolId,
       code:payload.code||'',
@@ -3450,7 +3450,13 @@ async function tryAutoEnterFromMother(){
       plan:payload.plan||'paid',
       active:payload.active!==false,
       shifts:payload.shifts||1,
-      modules:payload.modules||[]
+      modules:payload.modules||[],
+      smsMode:payload.smsMode||'sim',
+      smsApiUrl:payload.smsApiUrl||'',
+      smsApiUser:payload.smsApiUser||'',
+      smsApiKey:payload.smsApiKey||'',
+      smsSender:payload.smsSender||'',
+      maxUsers:payload.maxUsers||20
     });
     saveUserSession({
       role:'manager',
