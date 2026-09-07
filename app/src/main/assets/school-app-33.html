@@ -6,7 +6,7 @@
 <title>سامانه نیکان | پنل مدرسه</title>
 <style>
 /* سامانه نیکان — قالب داشبورد حرفه‌ای (نزدیک نمونه ۳) */
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap');
+/* بدون فونت خارجی — برای کروم و اینترنت ایران سریع‌تر باز می‌شود */
 
 :root, body.theme-dark {
   --bg: #070b14;
@@ -63,7 +63,7 @@ body.theme-light {
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
-  font-family:'Vazirmatn',Tahoma,'Segoe UI',sans-serif;
+  font-family:Tahoma,'Segoe UI',Tahoma,'Segoe UI',sans-serif;
   background:var(--bg);
   color:var(--text);
   min-height:100vh;
@@ -349,6 +349,47 @@ body.theme-light .role-btn.active{background:#dbeafe!important;color:#1d4ed8!imp
 body.theme-light .dash-hello .hi{color:#0f172a!important}
 body.theme-light .dash-hello .sub{color:#475569!important}
 
+
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.contact-item{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  padding:14px 10px;border-radius:14px;text-decoration:none!important;
+  border:1px solid var(--border);background:var(--card);color:var(--text)!important;
+  min-height:88px;transition:.15s;
+}
+.contact-item:active{transform:scale(.97)}
+.contact-item .ci{font-size:1.6rem;line-height:1}
+.contact-item .cl{font-size:.82rem;font-weight:700;text-align:center}
+.contact-item .cs{font-size:.72rem;opacity:.75;text-align:center;word-break:break-all}
+.contact-item.tel{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.08)}
+.contact-item.sms{border-color:rgba(59,130,246,.45);background:rgba(59,130,246,.08)}
+.contact-item.eitaa{border-color:rgba(249,115,22,.45);background:rgba(249,115,22,.08)}
+.contact-item.rubika{border-color:rgba(168,85,247,.45);background:rgba(168,85,247,.08)}
+.contact-item.shad{border-color:rgba(14,165,233,.45);background:rgba(14,165,233,.08)}
+.contact-item.bale{border-color:rgba(34,197,94,.5);background:rgba(16,185,129,.1)}
+.contact-item.tg{border-color:rgba(56,189,248,.5);background:rgba(14,165,233,.1)}
+body.theme-light .contact-item{background:#fff;color:#0f172a!important}
+
+
+.msg-bubble{border-radius:14px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--border);background:var(--card)}
+.msg-bubble.mine{border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.1)}
+.msg-bubble.unread{border-right:4px solid var(--primary)}
+.msg-meta{font-size:.78rem;opacity:.8;margin-top:4px}
+.msg-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+
+
+.photo-file-btn{position:relative;display:block;width:100%;overflow:hidden;border-radius:12px;margin:0}
+.photo-file-btn .btn-face{pointer-events:none;width:100%;text-align:center}
+.photo-file-btn input[type=file]{
+  position:absolute;inset:0;width:100%;height:100%;
+  opacity:0;cursor:pointer;font-size:100px; /* اندروید: ناحیه لمس بزرگ */
+  z-index:2;
+}
+#live-cam-box{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+#live-cam-box.show{display:flex}
+#live-cam-box video{width:min(100%,360px);max-height:50vh;background:#000;border-radius:12px}
+#live-cam-box .row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+
 </style>
 
 </head>
@@ -369,6 +410,7 @@ body.theme-light .dash-hello .sub{color:#475569!important}
       <p class="hint" style="text-align:center;margin-top:8px">مدیر / معاون / معلم</p>
       <div class="divider"></div>
       <button class="btn btn-outline btn-block" onclick="showScreen('activate')">فعال‌سازی با کد پشتیبانی</button>
+      <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="openContactSalesModal()">ارتباط با واحد فروش و کارشناسی</button>
       <p class="hint" style="text-align:center;margin-top:14px">سامانه نیکان · طراحی سید مجتبی موسوی</p>
     </div>
   </div>
@@ -393,18 +435,23 @@ body.theme-light .dash-hello .sub{color:#475569!important}
 
 <div id="screen-login" class="screen">
   <div class="auth-bg">
-    <div class="auth-logo"><div class="brand-orb" style="width:56px;height:56px;font-size:1.3rem;border-radius:16px;margin:0 auto 10px" style="width:56px;height:56px;margin:0 auto 10px;border-radius:16px;background:linear-gradient(145deg,#e0c36a,#c9a84c);display:flex;align-items:center;justify-content:center;color:#0f1c4d;font-weight:800;font-size:1.3rem">ن</div><h1>ورود به سامانه نیکان</h1><p>نقش خود را انتخاب کنید</p></div>
+    <div class="auth-logo"><div class="brand-orb" style="width:56px;height:56px;margin:0 auto 10px;border-radius:16px;background:linear-gradient(145deg,#e0c36a,#c9a84c);display:flex;align-items:center;justify-content:center;color:#0f1c4d;font-weight:800;font-size:1.3rem">ن</div><h1>ورود به سامانه نیکان</h1><p>نقش خود را انتخاب کنید</p></div>
     <div class="auth-card">
       <div class="role-grid">
         <button type="button" class="role-btn active" data-role="manager" onclick="pickRole(this)"><span>👔</span>مدیر</button>
         <button type="button" class="role-btn" data-role="deputy" onclick="pickRole(this)"><span>📋</span>معاون</button>
         <button type="button" class="role-btn" data-role="teacher" onclick="pickRole(this)"><span>📚</span>معلم</button>
       </div>
-      <div class="form-group"><label>کد مدرسه (اختیاری)</label><input class="form-control" id="l-code" placeholder="SCH-...." /></div>
-      <div class="form-group"><label>نام کاربری *</label><input class="form-control" id="l-user" /></div>
-      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="l-pass" type="password" /></div>
+      <div class="form-group"><label>کد مدرسه</label><input class="form-control" id="l-code" placeholder="SCH-...." autocomplete="organization" inputmode="text" /></div>
+      <div class="form-group"><label>نام کاربری *</label><input class="form-control" id="l-user" autocomplete="username" inputmode="text" /></div>
+      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="l-pass" type="password" autocomplete="current-password" /></div>
+      <label style="display:flex;align-items:center;gap:8px;margin:10px 0 14px;cursor:pointer;user-select:none">
+        <input type="checkbox" id="l-remember" checked style="width:18px;height:18px" />
+        <span>ذخیره کد مدرسه و نام کاربری روی این دستگاه</span>
+      </label>
+      <p class="hint" style="margin-top:-8px;margin-bottom:10px">دفعه بعد لازم نیست دوباره کد و نام کاربری را بنویسید. رمز ذخیره نمی‌شود.</p>
       <button class="btn btn-primary btn-block" onclick="doLogin()">ورود</button>
-      <p class="hint" id="hint-vpn-login" style="margin-top:8px">اگر وارد نشدید، چند لحظه بعد دوباره تلاش کنید.</p>
+      <p class="hint" id="hint-vpn-login" style="margin-top:8px">اگر با کروم باز نشد، یک‌بار صفحه را رفرش کنید یا از مرورگر دیگری امتحان کنید.</p>
       <p class="hint" style="margin-top:10px">اگر دو فایل جدا باز شده، پشتیبان پنل مادر را بارگذاری کنید:</p>
       <button class="btn btn-outline btn-block" onclick="document.getElementById('import-mother-login').click()">بارگذاری پشتیبان پنل مادر</button>
       <input type="file" id="import-mother-login" accept=".json" style="display:none" onchange="importMotherBackup(event)" />
@@ -673,6 +720,22 @@ body.theme-light .dash-hello .sub{color:#475569!important}
     </div>
   </div>
 
+
+  <!-- INTERNAL MESSAGES -->
+  <div id="page-messages" class="page">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="card-title" style="margin:0">اتوماسیون پیام داخلی</div>
+        <button class="btn btn-primary btn-sm" onclick="openComposeMessage()">+ پیام جدید</button>
+      </div>
+      <p class="hint">مدیر، معاون و معلم می‌توانند برای هم پیام بگذارند و پاسخ دهند. پیام‌ها با سرور همگام می‌شوند.</p>
+      <div class="tabs">
+        <button class="active" id="msg-tab-in" onclick="msgTab('in')">دریافتی</button>
+        <button id="msg-tab-out" onclick="msgTab('out')">ارسالی</button>
+      </div>
+      <div id="msg-list"></div>
+    </div>
+  </div>
   <div id="page-settings" class="page">
     <div class="card" id="set-disc-types">
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -756,27 +819,28 @@ body.theme-light .dash-hello .sub{color:#475569!important}
       <p class="hint">این عکس در داشبورد و برای شناسایی مدیر استفاده می‌شود و با سرور همگام می‌شود.</p>
       <button class="btn btn-primary btn-block" onclick="saveManagerPhoto()">ذخیره عکس مدیر</button>
     </div>
-    <div class="card"><div class="card-title">لایسنس</div><div id="set-license"></div></div>
-    <div class="card" id="set-contact-us" style="display:none">
-      <div class="card-title">ارتباط با ما</div>
-      <p class="hint">کارشناس فروش و پشتیبانی سامانه نیکان</p>
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="font-weight:700;flex:1">۰۹۳۳۴۴۴۳۳۵۸</div>
-        <a class="btn btn-outline btn-sm" href="tel:09334443358">تماس</a>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-        <a class="btn btn-outline btn-block" href="https://eitaa.com/Mosavi1008" target="_blank" rel="noopener">پیام در ایتا</a>
-        <a class="btn btn-outline btn-block" href="https://rubika.ir/mojtaba_mousavi77" target="_blank" rel="noopener">پیام در روبیکا</a>
-        <a class="btn btn-outline btn-block" href="https://shad.ir/Mousavi_1399_80" target="_blank" rel="noopener">پیام در شاد</a>
-        <a class="btn btn-outline btn-block" href="https://ble.ir/Mousavi3358" target="_blank" rel="noopener">پیام در بله</a>
-        <a class="btn btn-outline btn-block" href="https://t.me/Mojtaba13779980" target="_blank" rel="noopener">پیام در تلگرام</a>
-      </div>
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
-        <div style="flex:1;font-size:.85rem">abcd.mojtaba@gmail.com</div>
-        <a class="btn btn-outline btn-sm" href="mailto:abcd.mojtaba@gmail.com">ایمیل</a>
+    
+    <div class="card" id="contact-sales-card">
+      <div class="card-title">ارتباط با واحد فروش و کارشناسی</div>
+      <p class="hint">پشتیبانی، فروش و مشاوره سامانه نیکان — طراحی سید مجتبی موسوی</p>
+      <div class="contact-grid">
+        <a class="contact-item tel" href="tel:09334443358"><span class="ci">📞</span><span class="cl">تماس</span><span class="cs">09334443358</span></a>
+        <a class="contact-item sms" href="sms:09334443358"><span class="ci">💬</span><span class="cl">پیامک</span><span class="cs">09334443358</span></a>
+        <a class="contact-item eitaa" href="https://eitaa.com/Mosavi1008" target="_blank" rel="noopener"><span class="ci">🟠</span><span class="cl">ایتا</span><span class="cs">@Mosavi1008</span></a>
+        <a class="contact-item rubika" href="https://rubika.ir/mojtaba_mousavi77" target="_blank" rel="noopener"><span class="ci">🟣</span><span class="cl">روبیکا</span><span class="cs">@mojtaba_mousavi77</span></a>
+        <a class="contact-item shad" href="https://web.shad.ir" target="_blank" rel="noopener"><span class="ci">🔵</span><span class="cl">شاد</span><span class="cs">@Mousavi_1399_80</span></a>
+        <a class="contact-item bale" href="https://ble.ir/Mousavi3358" target="_blank" rel="noopener"><span class="ci">🟢</span><span class="cl">بله</span><span class="cs">@Mousavi3358</span></a>
+        <a class="contact-item tg" href="https://t.me/Mojtaba13779980" target="_blank" rel="noopener"><span class="ci">✈️</span><span class="cl">تلگرام</span><span class="cs">@Mojtaba13779980</span></a>
       </div>
     </div>
-
+    <div class="card" id="set-full-backup-card">
+      <div class="card-title">پشتیبان کامل این مدرسه (صفر تا صد)</div>
+      <p class="hint">کلاس، دانش‌آموز، تیم، برنامه، حضور، امتحان، پیام داخلی، تنظیمات پیامک و همه داده‌ها در یک فایل.</p>
+      <button class="btn btn-primary btn-block" style="margin-bottom:8px" onclick="exportFullSchoolBackupLocal()">دانلود پشتیبان کامل مدرسه</button>
+      <button class="btn btn-outline btn-block" onclick="document.getElementById('import-school-full').click()">بازیابی از فایل پشتیبان کامل</button>
+      <input type="file" id="import-school-full" accept=".json" style="display:none" onchange="importFullSchoolBackupLocal(event)" />
+    </div>
+    <div class="card"><div class="card-title">لایسنس</div><div id="set-license"></div></div>
     <div class="card"><p class="hint">طراحی: سید مجتبی موسوی</p></div>
   </div>
 
@@ -787,6 +851,15 @@ body.theme-light .dash-hello .sub{color:#475569!important}
   <div class="modal-header"><h2 id="modal-title">عنوان</h2><button class="modal-close" onclick="closeModal()">×</button></div>
   <div id="modal-body"></div>
 </div></div>
+<div id="live-cam-box">
+  <p style="color:#fff;margin-bottom:8px">دوربین زنده — قاب را تنظیم کنید</p>
+  <video id="live-cam-video" autoplay playsinline muted></video>
+  <canvas id="live-cam-canvas" style="display:none"></canvas>
+  <div class="row">
+    <button type="button" class="btn btn-primary" onclick="captureLiveCamera()">ثبت عکس</button>
+    <button type="button" class="btn btn-outline" style="background:#fff" onclick="closeLiveCamera()">بستن</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -805,7 +878,7 @@ function formatDateFa(iso){if(!iso)return'—';try{var p=String(iso).slice(0,10)
 function persianToday(){return formatDateFa(todayStr())}
 function jsDay(){return new Date().getDay()} // 0=Sun
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600)}
-function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active')}
+function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');if(n==='login'){try{fillRememberedLogin()}catch(e){}}}
 function loadSession(){try{return JSON.parse(localStorage.getItem(APP_KEY)||'null')}catch(e){return null}}
 function saveSession(d){localStorage.setItem(APP_KEY,JSON.stringify(d));session=d}
 function loadUserSession(){try{return JSON.parse(localStorage.getItem(SESSION_USER)||'null')}catch(e){return null}}
@@ -822,7 +895,8 @@ const SYNC_API=(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API).repla
 function setSyncApi(url){url=String(url||'').trim().replace(/\/$/,'');localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
 async function apiFetch(path,options){
   const opts=options||{};
-  const maxTry=opts.retries!=null?opts.retries:2;
+  const maxTry=opts.retries!=null?opts.retries:1;
+  const timeoutMs=opts.timeoutMs!=null?opts.timeoutMs:8000;
   let lastErr=null;
   const bases=[];
   const primary=(typeof SYNC_API!=='undefined'&&SYNC_API)?SYNC_API:'';
@@ -833,7 +907,7 @@ async function apiFetch(path,options){
     for(let i=1;i<=maxTry;i++){
       try{
         const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},14000):null;
+        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},timeoutMs):null;
         const res=await fetch(base+path,{
           method:opts.method||'GET',
           headers:{'Content-Type':'application/json',...(opts.headers||{})},
@@ -844,12 +918,11 @@ async function apiFetch(path,options){
         let data=null;
         try{data=await res.json()}catch(e){data=null}
         if(!res.ok)throw new Error((data&&data.error)||('HTTP '+res.status));
-        // اگر با fallback جواب گرفت، همان را ترجیح بده برای دفعات بعد
         try{if(base!==primary)localStorage.setItem('school_sync_api',base)}catch(e){}
         return data;
       }catch(e){
         lastErr=e;
-        if(i<maxTry)await new Promise(r=>setTimeout(r,300*i));
+        if(i<maxTry)await new Promise(r=>setTimeout(r,200*i));
       }
     }
   }
@@ -939,8 +1012,8 @@ async function cloudPullStaff(schoolId){
 }
 async function cloudPushAppData(force){
   if(!SYNC_API||!session||!session.schoolId||!schoolData)return;
-  // معلم هرگز appData کامل را نمی‌فرستد (ممکن است ناقص باشد و داده مدرسه را خراب کند)
-  if(userSession&&userSession.role==='teacher')return;
+  // معلم فقط اگر داده مدرسه را از سرور دارد (غنای کافی) بتواند برای پیام همگام کند
+  if(userSession&&userSession.role==='teacher'&&_dataRichness(schoolData)<30)return;
   // دستگاه خالی هرگز سرور پر را پاک نکند
   if(_dataRichness(schoolData)===0){
     console.warn('skip empty push');
@@ -958,6 +1031,7 @@ async function cloudPushAppData(force){
       disciplineTypes:schoolData.disciplineTypes||[],
       smsTemplates:schoolData.smsTemplates||[],
       exams:schoolData.exams||[],
+      messages:schoolData.messages||[],
       smsConfig:schoolData.smsConfig||null,
       theme:schoolData.theme||{},
       rules:schoolData.rules||{},
@@ -999,6 +1073,16 @@ function applyRemoteAppData(d,remoteTs,forceAll){
   if(Array.isArray(d.disciplineTypes)&&d.disciplineTypes.length)schoolData.disciplineTypes=d.disciplineTypes;
   if(Array.isArray(d.smsTemplates)&&d.smsTemplates.length)schoolData.smsTemplates=d.smsTemplates;
   schoolData.exams=take(schoolData.exams,d.exams);
+  schoolData.messages=(function(){
+    const loc=Array.isArray(schoolData.messages)?schoolData.messages:[];
+    const rem=Array.isArray(d.messages)?d.messages:[];
+    if(!rem.length)return loc;
+    if(!loc.length)return rem;
+    const map={};
+    loc.forEach(function(m){if(m&&m.id)map[m.id]=m});
+    rem.forEach(function(m){if(m&&m.id)map[m.id]=m});
+    return Object.keys(map).map(function(k){return map[k]});
+  })();
   // smsConfig همیشه از سرور اولویت دارد تا بین دستگاه‌ها یکی بماند
   if(d.smsConfig&&typeof d.smsConfig==='object'){
     const rem=d.smsConfig;
@@ -1030,7 +1114,7 @@ async function cloudPullAppData(force){
     // همیشه برای همگام‌سازی چنددستگاهی full بکش اگر force یا معلم
     const needFull=!!force||(userSession&&userSession.role==='teacher');
     const since=(!needFull&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
-    const data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:2});
+    const data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:1,timeoutMs:25000});
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
@@ -1084,7 +1168,7 @@ async function cloudPullAppData(force){
 let _pushTimer=null,_pullTimer=null;
 function scheduleCloudPush(){
   if(!SYNC_API||!session||!session.schoolId)return;
-  if(userSession&&userSession.role==='teacher')return;
+  if(userSession&&userSession.role==='teacher'&&_dataRichness(schoolData)<30)return;
   clearTimeout(_pushTimer);
   _pushTimer=setTimeout(function(){cloudPushAppData(true).catch(function(){})},500);
 }
@@ -1092,7 +1176,7 @@ let _pullTick=0,_pullBusy=false;
 function startAutoSync(){
   clearInterval(_pullTimer);
   // هر ۴۵ ثانیه + وقتی تب فعال شد فوری
-  const base=45000;
+  const base=90000;
   const jitter=Math.floor(Math.random()*15000);
   try{
     document.removeEventListener('visibilitychange',_onVisSync);
@@ -1150,72 +1234,168 @@ async function autoPullAll(checkSchool){
   finally{_pullBusy=false}
 }
 function dataKey(){return DATA_PREFIX+(session?.schoolId||session?.code||'local')}
-function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,other:1},theme:{},shifts:1}}
-function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
+function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,other:1},theme:{},shifts:1,messages:[]}}
+function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
 function saveSchoolData(){localStorage.setItem(dataKey(),JSON.stringify(schoolData));scheduleCloudPush()}
 function isExpired(exp){return exp&&exp<todayStr()}
 function toEnDigits(s){s=String(s||'');const fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩';let o='';for(const ch of s){let i=fa.indexOf(ch);if(i>=0){o+=i;continue}i=ar.indexOf(ch);if(i>=0){o+=i;continue}o+=ch}return o}
 
 function compressPhoto(file, maxW, cb){
   maxW=maxW||160;
+  if(!file){if(cb)cb('');return}
+  const done=function(url){try{cb(url)}catch(e){}};
   const reader=new FileReader();
+  reader.onerror=function(){toast('خواندن عکس ناموفق');done('')};
   reader.onload=function(){
     const img=new Image();
+    img.onerror=function(){done(typeof reader.result==='string'?reader.result:'')};
     img.onload=function(){
-      const r=Math.min(1, maxW/img.width);
-      const w=Math.round(img.width*r), h=Math.round(img.height*r);
-      const c=document.createElement('canvas');
-      c.width=w;c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      cb(c.toDataURL('image/jpeg',0.62));
+      try{
+        let w=img.width||maxW,h=img.height||maxW;
+        if(!w||!h){done(reader.result);return}
+        const r=Math.min(1, maxW/w);
+        w=Math.max(1,Math.round(w*r));
+        h=Math.max(1,Math.round(h*r));
+        const c=document.createElement('canvas');
+        c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        done(c.toDataURL('image/jpeg',0.55));
+      }catch(e){done(typeof reader.result==='string'?reader.result:'')}
     };
     img.src=reader.result;
   };
-  reader.readAsDataURL(file);
+  try{reader.readAsDataURL(file)}catch(e){toast('انتخاب عکس ممکن نشد');done('')}
 }
 function avatarHtml(photo, name, cls){
   const ch=(name||'؟').trim().charAt(0)||'؟';
   if(photo)return '<img class="avatar '+(cls||'')+'" src="'+photo+'" alt="" />';
   return '<div class="avatar '+(cls||'')+'">'+ch+'</div>';
 }
+function applyPickedPhoto(url, previewId){
+  window._pendingPhoto=url||'';
+  const prev=document.getElementById(previewId);
+  if(prev){
+    if(url)prev.innerHTML='<img class="avatar avatar-lg" src="'+url+'" alt="" />';
+    else prev.innerHTML=avatarHtml('','؟','avatar-lg');
+  }
+  if(url)toast('عکس آماده شد — ذخیره را بزنید');
+}
 function onPhotoPick(inputId, previewId){
   const inp=document.getElementById(inputId);
   if(!inp||!inp.files||!inp.files[0])return;
-  compressPhoto(inp.files[0], 160, function(url){
-    window._pendingPhoto=url;
-    const prev=document.getElementById(previewId);
-    if(prev)prev.innerHTML='<img class="avatar avatar-lg" src="'+url+'" />';
+  toast('در حال آماده‌سازی عکس...');
+  compressPhoto(inp.files[0], 160, function(url){applyPickedPhoto(url, previewId)});
+}
+function handlePhotoFile(file, previewId){
+  if(!file){toast('فایلی انتخاب نشد');return}
+  if(!String(file.type||'').match(/^image\//i) && !(file.name||'').match(/\.(jpe?g|png|gif|webp)$/i)){
+    toast('لطفاً یک تصویر انتخاب کنید');
+    return;
+  }
+  window._photoPreviewId = previewId || window._photoPreviewId || '';
+  toast('در حال آماده‌سازی عکس...');
+  compressPhoto(file, 120, function(url){
+    if(!url){toast('پردازش عکس ناموفق بود');return}
+    applyPickedPhoto(url, window._photoPreviewId || previewId);
   });
 }
 function photoButtons(fileId, prevId){
-  return '<div style="display:flex;flex-direction:column;gap:6px">'+
-    '<label class="btn btn-outline btn-sm">از گالری / فایل<input type="file" id="'+fileId+'-gal" accept="image/*" style="display:none" onchange="copyPhotoInput(this,\''+fileId+'\',\''+prevId+'\')" /></label>'+
-    '<label class="btn btn-outline btn-sm">از دوربین<input type="file" id="'+fileId+'-cam" accept="image/*" capture style="display:none" onchange="copyPhotoInput(this,\''+fileId+'\',\''+prevId+'\')" /></label>'+
-    '<input type="file" id="'+fileId+'" accept="image/*" style="display:none" onchange="onPhotoPick(\''+fileId+'\',\''+prevId+'\')" />'+
-    '</div>';
+  const gid = fileId + '-gal';
+  const cid = fileId + '-cam';
+  // input با opacity روی دکمه — روش پایدار اندروید/کروم/وب‌ویو
+  return '<div class="photo-actions" style="display:flex;flex-direction:column;gap:10px;width:100%">'+
+    '<div class="photo-file-btn">'+
+      '<div class="btn btn-primary btn-sm btn-face">📷 دوربین یا انتخاب عکس</div>'+
+      '<input type="file" id="'+cid+'" accept="image/*" capture="environment" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\');this.value=\'\';" />'+
+    '</div>'+
+    '<div class="photo-file-btn">'+
+      '<div class="btn btn-outline btn-sm btn-face">📁 فقط از گالری</div>'+
+      '<input type="file" id="'+gid+'" accept="image/*" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\');this.value=\'\';" />'+
+    '</div>'+
+    '<button type="button" class="btn btn-outline btn-sm" onclick="openLiveCamera(\''+prevId+'\')">🎥 دوربین زنده داخل صفحه</button>'+
+    '<p class="hint" style="margin:0">اگر دوربین گوشی باز نشد، «گالری» یا «دوربین زنده» را بزنید.</p>'+
+    '<input type="file" id="'+fileId+'" accept="image/*" style="display:none" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\')" />'+
+  '</div>';
+}
+function triggerPhotoInput(id){
+  const el=document.getElementById(id);
+  if(!el){toast('ورودی عکس پیدا نشد');return}
+  try{el.value=''}catch(e){}
+  el.click();
 }
 function copyPhotoInput(src, fileId, prevId){
-  const dest=document.getElementById(fileId);
-  if(!dest||!src.files||!src.files[0])return;
-  try{
-    const dt=new DataTransfer();
-    dt.items.add(src.files[0]);
-    dest.files=dt.files;
-  }catch(e){
-    // fallback: compress directly
-    compressPhoto(src.files[0],160,function(url){
-      window._pendingPhoto=url;
-      const prev=document.getElementById(prevId);
-      if(prev)prev.innerHTML='<img class="avatar avatar-lg" src="'+url+'" />';
-    });
+  if(src&&src.files&&src.files[0])handlePhotoFile(src.files[0], prevId);
+}
+let _liveStream=null;
+function openLiveCamera(prevId){
+  window._photoPreviewId = prevId || '';
+  const box=document.getElementById('live-cam-box');
+  const video=document.getElementById('live-cam-video');
+  if(!box||!video){toast('بخش دوربین آماده نیست');return}
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    toast('این مرورگر دوربین زنده ندارد — از دکمه گالری/دوربین بالا استفاده کنید');
     return;
   }
-  onPhotoPick(fileId, prevId);
+  // HTTPS لازم است
+  if(location.protocol!=='https:' && location.hostname!=='localhost'){
+    toast('برای دوربین زنده باید سایت با https باز شود');
+  }
+  closeLiveCamera(true);
+  box.classList.add('show');
+  const tryConstraints=[
+    {video:{facingMode:{ideal:'environment'}},audio:false},
+    {video:{facingMode:'user'},audio:false},
+    {video:true,audio:false}
+  ];
+  let i=0;
+  function attempt(){
+    if(i>=tryConstraints.length){
+      toast('دسترسی دوربین داده نشد — از گالری استفاده کنید');
+      closeLiveCamera();
+      return;
+    }
+    navigator.mediaDevices.getUserMedia(tryConstraints[i++]).then(function(stream){
+      _liveStream=stream;
+      video.srcObject=stream;
+      video.play().catch(function(){});
+      toast('دوربین باز شد — ثبت عکس را بزنید');
+    }).catch(function(){attempt()});
+  }
+  attempt();
+}
+function closeLiveCamera(silent){
+  try{
+    if(_liveStream){
+      _liveStream.getTracks().forEach(function(t){try{t.stop()}catch(e){}});
+      _liveStream=null;
+    }
+  }catch(e){}
+  const video=document.getElementById('live-cam-video');
+  if(video){try{video.srcObject=null}catch(e){}}
+  const box=document.getElementById('live-cam-box');
+  if(box)box.classList.remove('show');
+}
+function captureLiveCamera(){
+  const video=document.getElementById('live-cam-video');
+  const canvas=document.getElementById('live-cam-canvas');
+  if(!video||!canvas)return;
+  try{
+    const w=video.videoWidth||640,h=video.videoHeight||480;
+    if(!w||!h){toast('هنوز تصویر دوربین نیامده — چند لحظه صبر کنید');return}
+    const maxW=400;
+    const r=Math.min(1,maxW/w);
+    canvas.width=Math.round(w*r);
+    canvas.height=Math.round(h*r);
+    canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+    const url=canvas.toDataURL('image/jpeg',0.7);
+    applyPickedPhoto(url, window._photoPreviewId||'');
+    closeLiveCamera();
+    toast('عکس گرفته شد — ذخیره را بزنید');
+  }catch(e){
+    toast('ثبت عکس ناموفق بود');
+  }
 }
 
-
-function fixPhone(p){p=(p||'').toString().replace(/\s|-/g,'').replace(/^\+98/,'0');if(p&&!p.startsWith('0')&&p.length>=10)p='0'+p;return p}
-function pickRole(el){document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');loginRole=el.getAttribute('data-role')}
 function isManager(){return userSession&&userSession.role==='manager'}
 function isDeputy(){return userSession&&userSession.role==='deputy'}
 
@@ -1367,12 +1547,58 @@ function matchManagerCred(s,user,pass){
   const mp=normLoginUser(s.managerPhone||'');
   return mu===u||mp===u;
 }
+
+const REMEMBER_LOGIN_KEY='nikan_remember_login_v1';
+function loadRememberedLogin(){
+  try{
+    const raw=localStorage.getItem(REMEMBER_LOGIN_KEY);
+    if(!raw)return null;
+    return JSON.parse(raw);
+  }catch(e){return null}
+}
+function saveRememberedLogin(code,user,role,remember){
+  try{
+    if(!remember){
+      localStorage.removeItem(REMEMBER_LOGIN_KEY);
+      return;
+    }
+    localStorage.setItem(REMEMBER_LOGIN_KEY,JSON.stringify({
+      code:code||'',
+      user:user||'',
+      role:role||'manager',
+      savedAt:Date.now()
+    }));
+  }catch(e){}
+}
+function fillRememberedLogin(){
+  const mem=loadRememberedLogin();
+  if(!mem)return;
+  try{
+    const c=document.getElementById('l-code');
+    const u=document.getElementById('l-user');
+    const r=document.getElementById('l-remember');
+    if(c&&mem.code)c.value=mem.code;
+    if(u&&mem.user)u.value=mem.user;
+    if(r)r.checked=true;
+    if(mem.role){
+      document.querySelectorAll('.role-btn').forEach(function(b){
+        b.classList.toggle('active',b.getAttribute('data-role')===mem.role);
+      });
+      try{if(typeof loginRole!=='undefined')loginRole=mem.role}catch(e){}
+      try{window.loginRole=mem.role}catch(e){}
+    }
+  }catch(e){}
+}
+
 async function doLogin(){
   const code=toEnDigits(document.getElementById('l-code').value).trim();
   let user=toEnDigits(document.getElementById('l-user').value).trim();
   const pass=toEnDigits(document.getElementById('l-pass').value);
   user=normLoginUser(user);
   if(!user||!pass)return toast('نام کاربری و رمز را وارد کنید');
+  const rememberEl=document.getElementById('l-remember');
+  const remember=rememberEl?!!rememberEl.checked:true;
+  saveRememberedLogin(code,user,(typeof loginRole!=='undefined'?loginRole:'manager'),remember);
   try{if(localStorage.getItem('school_sync_api')==='')localStorage.removeItem('school_sync_api')}catch(e){}
   const mother=loadMother(),schools=mother.schools||[];
   if(loginRole==='manager'){
@@ -1403,7 +1629,7 @@ async function doLogin(){
       if(SYNC_API&&sc.id){
         toast('در حال تأیید مدرسه روی سرور...');
         try{
-          const chk=await apiFetch('/api/schools/'+encodeURIComponent(sc.id),{retries:2});
+          const chk=await apiFetch('/api/schools/'+encodeURIComponent(sc.id),{retries:1,timeoutMs:6000});
           if(!chk||!chk.school){
             wipeSchoolLocal(sc.id,sc.code);
             return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
@@ -1545,10 +1771,14 @@ async function recheckLicense(){
 }
 async function enterApp(){
   session=loadSession();userSession=loadUserSession();
-  try{if(canManage){/*delay*/}}catch(e){}
   if(!session||!userSession){showScreen('gate');return}
-  // اول لایسنس از سرور (تمدید از مادر)
-  await syncLicenseFromServer();
+  // لایسنس را بلاک نکن — حداکثر ۲ ثانیه صبر، بعد با داده محلی ادامه بده
+  try{
+    await Promise.race([
+      syncLicenseFromServer().catch(function(){}),
+      new Promise(function(r){setTimeout(r,2000)})
+    ]);
+  }catch(e){}
   session=loadSession();
   if(session.active===false||(session.expireDate&&isExpired(session.expireDate))){
     document.getElementById('locked-info').innerHTML='<div><strong>'+(session.name||'')+'</strong></div><div>انقضا: '+formatDateFa(session.expireDate)+'</div><p class="hint" style="margin-top:8px">در صورت خرید لایسنس، از پنل پشتیبانی تمدید می‌شود. یک‌بار خارج و دوباره وارد شوید.</p><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="recheckLicense()">بررسی مجدد لایسنس</button>';
@@ -1556,7 +1786,6 @@ async function enterApp(){
     return;
   }
   loadSchoolData();
-  // هم‌تراز کردن شیفت با لایسنس/مادر
   if(session&&Number(session.shifts)===2)schoolData.shifts=2;
   else if(session&&session.modules&&session.modules.indexOf('dual_shift')>=0)schoolData.shifts=2;
   try{ensureAllSubmissionsInAttendance()}catch(e){}
@@ -1581,27 +1810,14 @@ async function enterApp(){
   }catch(e){}
   buildNav();
   showScreen('app');
-  if(canManage()&&typeof Notification!=='undefined'&&Notification.permission==='default'){
-    try{Notification.requestPermission()}catch(e){}
-  }
-  // دریافت اجباری از سرور برای دستگاه جدید
-  const afterSync=function(pulled){
-    if(canManage()&&session.schoolId){
-      cloudPullSubmissions(session.schoolId).then(()=>{try{renderHome()}catch(e){}});
-    }
-    // فقط اگر داده محلی پر است به سرور بفرست — دستگاه خالی سرور را پاک نکند
-    if(isManager()&&session.schoolId&&_dataRichness(schoolData)>0){
-      cloudPushStaff(session.schoolId,schoolData.staff||[]);
-      scheduleCloudPush();
-    }
-    showAppPage(isTeacher()?'teacher':'home');
-    const nC=(schoolData.classes||[]).length,nS=(schoolData.students||[]).length,nT=(schoolData.staff||[]).length;
-    if(nC||nS||nT)toast('اطلاعات مدرسه: '+nC+' کلاس · '+nS+' دانش‌آموز · '+nT+' کاربر');
-    else if(pulled===false)toast('روی سرور هنوز داده‌ای نیست — از دستگاه قبلی «ارسال به سرور» بزنید');
-  };
+  showAppPage(isTeacher()?'teacher':'home');
+  const nLocal=(schoolData.classes||[]).length;
+  if(nLocal)toast('ورود سریع با داده محلی · در حال همگام با سرور...');
+  else toast('ورود · در حال دریافت از سرور...');
   startAutoSync();
-  if(session.schoolId){
-    toast('در حال دریافت اطلاعات از سرور...');
+  // همگام پس‌زمینه — UI را معطل نکن
+  if(!session.schoolId)return;
+  setTimeout(function(){
     assertSchoolExistsOnServer(session.schoolId).then(async function(st){
       if(st===false){
         forceKickDeletedSchool('این مدرسه از پنل مادر حذف شده است');
@@ -1612,20 +1828,27 @@ async function enterApp(){
         showScreen('locked');
         return;
       }
+      // فقط یک‌بار بکش (نه ۳ بار)
       let ok=false;
-      for(let i=0;i<3&&!ok;i++){
-        try{ok=await cloudPullAppData(true)}catch(e){ok=false}
-        if(!ok&&i<2)await new Promise(r=>setTimeout(r,700));
+      try{ok=await cloudPullAppData(true)}catch(e){ok=false}
+      try{
+        if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}
+        else renderHome();
+      }catch(e){}
+      if(canManage()&&session.schoolId){
+        cloudPullSubmissions(session.schoolId).then(function(){try{renderHome()}catch(e){}}).catch(function(){});
       }
-      if(!ok&&_dataRichness(schoolData)>0&&canManage()){
-        try{await cloudPushAppData(true)}catch(e){}
+      if(isManager()&&_dataRichness(schoolData)>0){
+        cloudPushStaff(session.schoolId,schoolData.staff||[]).catch(function(){});
       }
-      try{if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}}catch(e){}
-      afterSync(ok);
+      const nC=(schoolData.classes||[]).length,nS=(schoolData.students||[]).length;
+      if(ok)toast('همگام شد: '+nC+' کلاس · '+nS+' دانش‌آموز');
+      else if(!nC)toast('داده سرور نیامد — اینترنت را چک کنید یا بعداً «ارسال به سرور» بزنید');
     }).catch(function(){
-      forceKickDeletedSchool('امکان تأیید مدرسه روی سرور نیست — دوباره وارد شوید');
+      // قطع شبکه = بیرون نکن؛ با داده محلی کار کند
+      toast('سرور در دسترس نبود — با داده همین دستگاه ادامه می‌دهید');
     });
-  }else afterSync(false);
+  },50);
 }
 function clearSession(){try{localStorage.removeItem('school_session_v1');session=null}catch(e){}}
 function wipeSchoolLocal(schoolId,code){
@@ -1687,16 +1910,16 @@ function doLogout(){
 function buildNav(){
   const nav=document.getElementById('bottom-nav');
   if(isTeacher()){
-    nav.innerHTML='<button class="active" data-p="teacher" onclick="showAppPage(\'teacher\')">کلاس‌های من</button><button data-p="exams" onclick="showAppPage(\'exams\')">امتحان</button><button data-p="home" onclick="showAppPage(\'home\')">خانه</button>';
+    nav.innerHTML='<button class="active" data-p="teacher" onclick="showAppPage(\'teacher\')">کلاس‌های من</button><button data-p="messages" onclick="showAppPage(\'messages\')">پیام</button><button data-p="exams" onclick="showAppPage(\'exams\')">امتحان</button><button data-p="home" onclick="showAppPage(\'home\')">خانه</button>';
     return;
   }
   let html='<button data-p="home" onclick="showAppPage(\'home\')">خانه</button><button data-p="classes" onclick="showAppPage(\'classes\')">کلاس</button>';
   if(isManager())html+='<button data-p="schedule" onclick="showAppPage(\'schedule\')">برنامه</button><button data-p="team" onclick="showAppPage(\'team\')">تیم</button>';
-  html+='<button data-p="reports" onclick="showAppPage(\'reports\')">گزارش</button><button data-p="send" onclick="showAppPage(\'send\')">پیامک</button><button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
+  html+='<button data-p="messages" onclick="showAppPage(\'messages\')">پیام</button><button data-p="reports" onclick="showAppPage(\'reports\')">گزارش</button><button data-p="send" onclick="showAppPage(\'send\')">پیامک</button><button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
   nav.innerHTML=html;
 }
 function showAppPage(name){
-  if(isTeacher()&&['send','team','schedule','settings','team'].includes(name))return toast('دسترسی ندارید');
+  if(isTeacher()&&['send','team','schedule','settings'].includes(name))return toast('دسترسی ندارید');
   if(!isManager()&&name==='schedule')return toast('فقط مدیر برنامه را تنظیم می‌کند');
   document.querySelectorAll('#screen-app .page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#bottom-nav button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-p')===name||(name==='students'&&b.getAttribute('data-p')==='classes')||(name==='performance'&&b.getAttribute('data-p')==='reports')||(name==='take-att'&&b.getAttribute('data-p')==='teacher')||(name==='submission'&&b.getAttribute('data-p')==='home')));
@@ -1710,6 +1933,7 @@ function showAppPage(name){
   if(name==='teacher')renderTeacherDay();
   if(name==='schedule')renderAssignments();
   if(name==='exams')renderExams();
+  if(name==='messages')renderMessages();
 
   if(name==='teacher'){try{renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}catch(e){}}
 }
@@ -1739,6 +1963,9 @@ function renderHome(){
     act.innerHTML='<div class="card-title">دسترسی سریع</div><div class="qa-grid">'+
       '<button type="button" class="qa-item accent" onclick="showAppPage(\'teacher\')"><span class="ic">📋</span><span class="lb">حضور و غیاب</span><span class="ds">کلاس‌های امروز</span></button>'+
       '<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">امتحانات</span><span class="ds">ثبت نمرات</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">پیام داخلی</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'اتوماسیون')+'</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">پیام داخلی</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'صندوق پیام')+'</span></button>'+
+      '<button type="button" class="qa-item" onclick="openContactSalesModal()"><span class="ic">🤝</span><span class="lb">واحد فروش</span><span class="ds">پشتیبانی و کارشناسی</span></button>'+
       '</div>';
   }else{
     act.innerHTML='<div class="card-title">دسترسی سریع</div><div class="qa-grid">'+
@@ -1750,6 +1977,7 @@ function renderHome(){
         ?'<button type="button" class="qa-item" onclick="showAppPage(\'schedule\')"><span class="ic">📅</span><span class="lb">برنامه معلمان</span><span class="ds">زنگ و کلاس</span></button>'+
          '<button type="button" class="qa-item" onclick="showAppPage(\'team\')"><span class="ic">👥</span><span class="lb">تیم و همکاران</span><span class="ds">معاون و معلم</span></button>'
         :'')+
+      '<button type="button" class="qa-item" onclick="openContactSalesModal()"><span class="ic">🤝</span><span class="lb">واحد فروش</span><span class="ds">پشتیبانی و کارشناسی</span></button>'+
       '</div>';
   }
   // pending + reviewed submissions
@@ -1939,7 +2167,7 @@ function delClass(id){if(!confirm('حذف کلاس؟'))return;schoolData.classes
 function openClassStudents(id){if(!canAccessClass(id))return toast('به این کلاس دسترسی ندارید');currentClassId=id;const c=schoolData.classes.find(x=>x.id===id);document.getElementById('students-title').textContent='دانش‌آموزان '+classTitle(c);document.getElementById('btn-add-stu').style.display=canManage()?'':'none';showAppPage('students');renderStudents()}
 function renderStudents(){const list=document.getElementById('students-list');const st=schoolData.students.filter(s=>s.classId===currentClassId);if(!st.length){list.innerHTML='<p class="hint">خالی</p>';return}list.innerHTML=st.map(s=>'<div class="list-item"><div class="who clickable" onclick="'+(canManage()?'openPerformance(\''+s.id+'\')':'')+'">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">'+(s.phones||[]).join(' | ')+(s.note?' — '+s.note:'')+'</div></div></div>'+(canManage()?'<button class="btn btn-outline btn-sm" onclick="openStudentModal(\''+s.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStudent(\''+s.id+'\')">حذف</button>':'')+'</div>').join('')}
 function openStudentModal(id){if(!canManage())return;const s=id?schoolData.students.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=s?'ویرایش':'دانش‌آموز جدید';window._pendingPhoto=(s&&s.photo)||'';document.getElementById('modal-body').innerHTML='<div class="photo-pick"><div id="s-photo-prev">'+avatarHtml(s&&s.photo,s&&s.name,'avatar-lg')+'</div>'+photoButtons('s-photo','s-photo-prev')+'</div><p class="hint">عکس همگام با سرور می‌شود</p><div class="form-group"><label>نام</label><input class="form-control" id="s-name" value="'+(s?.name||'')+'" /></div><div class="form-group"><label>شماره پدر</label><input class="form-control" id="s-p1" value="'+((s?.phones||[])[0]||'')+'" /></div><div class="form-group"><label>شماره مادر</label><input class="form-control" id="s-p2" value="'+((s?.phones||[])[1]||'')+'" /></div><div class="form-group"><label>توضیحات</label><textarea class="form-control" id="s-note">'+(s?.note||'')+'</textarea></div><button class="btn btn-primary btn-block" onclick="saveStudent(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
-function saveStudent(id){const name=document.getElementById('s-name').value.trim(),p1=fixPhone(document.getElementById('s-p1').value),p2=fixPhone(document.getElementById('s-p2').value),note=document.getElementById('s-note').value.trim();if(!name)return toast('نام لازم است');const phones=[p1,p2].filter(Boolean);const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';if(id){const s=schoolData.students.find(x=>x.id===id);if(s){s.name=name;s.phones=phones;s.note=note;if(photo!==null&&photo!==undefined)s.photo=photo}}else schoolData.students.push({id:uid(),classId:currentClassId,name,phones,note,photo:photo||''});saveSchoolData();closeModal();renderStudents();renderHome();toast('ذخیره شد')}
+function saveStudent(id){const name=document.getElementById('s-name').value.trim(),p1=fixPhone(document.getElementById('s-p1').value),p2=fixPhone(document.getElementById('s-p2').value),note=document.getElementById('s-note').value.trim();if(!name)return toast('نام لازم است');const phones=[p1,p2].filter(Boolean);const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';if(id){const s=schoolData.students.find(x=>x.id===id);if(s){s.name=name;s.phones=phones;s.note=note;if(photo!==null&&photo!==undefined)s.photo=photo}}else schoolData.students.push({id:uid(),classId:currentClassId,name,phones,note,photo:photo||''});schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();if(canManage())cloudPushAppData(true).catch(function(){});closeModal();renderStudents();renderHome();toast('ذخیره شد — در حال ارسال به سرور')}
 function delStudent(id){if(!confirm('حذف؟'))return;schoolData.students=schoolData.students.filter(s=>s.id!==id);saveSchoolData();renderStudents();renderHome()}
 function importExcel(ev){
   const file=ev.target.files[0];if(!file)return;
@@ -2692,8 +2920,6 @@ function saveExamScores(){
 
 function renderSettings(){
   if(isTeacher()){document.getElementById('set-disc-types').style.display='none'}else{document.getElementById('set-disc-types').style.display='block'}
-  const cu=document.getElementById('set-contact-us');
-  if(cu)cu.style.display=canManage()?'block':'none';
   const tplBox=document.getElementById('set-sms-tpl');
   if(tplBox)tplBox.style.display=isTeacher()?'none':'block';
   const tl=document.getElementById('sms-tpl-list');
@@ -2709,6 +2935,7 @@ function renderSettings(){
     window._pendingPhoto=mp;
     const card=document.getElementById('set-manager-photo-card');
     if(card)card.style.display=isManager()?'block':'none';
+  var bc=document.getElementById('set-full-backup-card');if(bc)bc.style.display=canManage()?'block':'none';
   }
   document.getElementById('set-license').innerHTML='<div class="hint" style="margin-bottom:6px">سامانه نیکان · طراحی سید مجتبی موسوی</div><div class="hint">'+(session?.name||'')+'</div><div class="hint">انقضا: '+formatDateFa(session?.expireDate)+'</div>';
   const dl=document.getElementById('disc-type-list');
@@ -2733,9 +2960,367 @@ function renderSettings(){
     }
   }catch(e){}
 }
+
+function contactSalesHtml(){
+  return '<div class="contact-grid">'+
+    '<a class="contact-item tel" href="tel:09334443358"><span class="ci">📞</span><span class="cl">تماس</span><span class="cs">09334443358</span></a>'+
+    '<a class="contact-item sms" href="sms:09334443358"><span class="ci">💬</span><span class="cl">پیامک</span><span class="cs">09334443358</span></a>'+
+    '<a class="contact-item eitaa" href="https://eitaa.com/Mosavi1008" target="_blank" rel="noopener"><span class="ci">🟠</span><span class="cl">ایتا</span><span class="cs">@Mosavi1008</span></a>'+
+    '<a class="contact-item rubika" href="https://rubika.ir/mojtaba_mousavi77" target="_blank" rel="noopener"><span class="ci">🟣</span><span class="cl">روبیکا</span><span class="cs">@mojtaba_mousavi77</span></a>'+
+    '<a class="contact-item shad" href="https://web.shad.ir" target="_blank" rel="noopener"><span class="ci">🔵</span><span class="cl">شاد</span><span class="cs">@Mousavi_1399_80</span></a>'+
+    '<a class="contact-item bale" href="https://ble.ir/Mousavi3358" target="_blank" rel="noopener"><span class="ci">🟢</span><span class="cl">بله</span><span class="cs">@Mousavi3358</span></a>'+
+    '<a class="contact-item tg" href="https://t.me/Mojtaba13779980" target="_blank" rel="noopener"><span class="ci">✈️</span><span class="cl">تلگرام</span><span class="cs">@Mojtaba13779980</span></a>'+
+    '</div><p class="hint" style="margin-top:10px">پشتیبانی و فروش سامانه نیکان · طراحی سید مجتبی موسوی</p>';
+}
+function openContactSalesModal(){
+  document.getElementById('modal-title').textContent='ارتباط با واحد فروش و کارشناسی';
+  document.getElementById('modal-body').innerHTML=contactSalesHtml();
+  document.getElementById('modal').classList.add('show');
+}
+
+
+/* —— اتوماسیون پیام داخلی —— */
+let _msgTab='in';
+function myMsgKey(){
+  if(!userSession)return '';
+  if(isManager())return 'manager';
+  return (userSession.role||'')+':'+(userSession.staffId||userSession.username||'');
+}
+function msgUserLabel(role,id,name){
+  const rf={manager:'مدیر',deputy:'معاون',teacher:'معلم'};
+  return (name||'')+' ('+(rf[role]||role)+')';
+}
+function listMessageTargets(){
+  const targets=[];
+  if(!isManager()){
+    targets.push({id:'manager',role:'manager',name:(session&&session.managerName)||'مدیر'});
+  }
+  (schoolData.staff||[]).forEach(function(u){
+    if(isManager()){
+      targets.push({id:u.id,role:u.role,name:u.name});
+    }else if(isDeputy()){
+      if(u.role==='teacher')targets.push({id:u.id,role:u.role,name:u.name});
+      if(u.role==='deputy'&&u.id!==userSession.staffId)targets.push({id:u.id,role:u.role,name:u.name});
+    }else if(isTeacher()){
+      if(u.role==='deputy')targets.push({id:u.id,role:u.role,name:u.name});
+    }
+  });
+  if(isManager()){
+    targets.unshift({id:'all_teachers',role:'teacher',name:'همه معلمان'});
+    targets.unshift({id:'all_deputies',role:'deputy',name:'همه معاونان'});
+  }
+  if(isDeputy()){
+    targets.unshift({id:'all_teachers',role:'teacher',name:'همه معلمان'});
+  }
+  return targets;
+}
+function messageVisibleToMe(m){
+  if(!m||!userSession)return false;
+  const k=myMsgKey();
+  // فرستنده
+  if(m.fromKey===k)return true;
+  // گیرنده مستقیم
+  if(m.toKey===k)return true;
+  // گروهی
+  if(m.toId==='all_deputies'&&isDeputy())return true;
+  if(m.toId==='all_teachers'&&isTeacher())return true;
+  // مدیر همه را می‌بیند؟ فقط مرتبط
+  if(isManager()&&(m.toKey==='manager'||m.fromKey==='manager'))return true;
+  return false;
+}
+function isMsgUnread(m){
+  const k=myMsgKey();
+  if(m.fromKey===k)return false;
+  const rb=m.readBy||[];
+  return rb.indexOf(k)<0;
+}
+function markMsgRead(m){
+  const k=myMsgKey();
+  if(!m.readBy)m.readBy=[];
+  if(m.readBy.indexOf(k)<0){
+    m.readBy.push(k);
+    schoolData._cloudUpdatedAtMs=Date.now();
+    saveSchoolData();
+  }
+}
+function unreadMsgCount(){
+  return (schoolData.messages||[]).filter(function(m){return messageVisibleToMe(m)&&isMsgUnread(m)}).length;
+}
+function msgTab(t){
+  _msgTab=t;
+  const a=document.getElementById('msg-tab-in'),b=document.getElementById('msg-tab-out');
+  if(a)a.classList.toggle('active',t==='in');
+  if(b)b.classList.toggle('active',t==='out');
+  renderMessages();
+}
+function renderMessages(){
+  const list=document.getElementById('msg-list');
+  if(!list)return;
+  if(session&&session.schoolId&&!window._msgPullOnce){
+    window._msgPullOnce=true;
+    cloudPullAppData(true).then(function(ok){
+      window._msgPullOnce=false;
+      if(ok)paintMessages();
+    }).catch(function(){window._msgPullOnce=false});
+  }
+  paintMessages();
+}
+function paintMessages(){
+  const list=document.getElementById('msg-list');
+  if(!list)return;
+  const k=myMsgKey();
+  let arr=(schoolData.messages||[]).filter(messageVisibleToMe);
+  if(_msgTab==='in')arr=arr.filter(function(m){return m.fromKey!==k});
+  else arr=arr.filter(function(m){return m.fromKey===k});
+  arr=arr.slice().sort(function(a,b){return (b.createdAtMs||0)-(a.createdAtMs||0)});
+  if(!arr.length){list.innerHTML='<p class="hint">پیامی نیست.</p>';return}
+  list.innerHTML=arr.map(function(m){
+    const mine=m.fromKey===k;
+    const unread=!mine&&isMsgUnread(m);
+    const when=m.createdAtMs?new Date(m.createdAtMs).toLocaleString('fa-IR'):'';
+    let html='<div class="msg-bubble'+(mine?' mine':'')+(unread?' unread':'')+'">';
+    html+='<div class="name">'+(mine?('به: '+(m.toName||'')):('از: '+(m.fromName||'')))+'</div>';
+    html+='<div style="margin-top:6px;white-space:pre-wrap">'+escapeHtml(m.text||'')+'</div>';
+    html+='<div class="msg-meta">'+when+(unread?' · خوانده‌نشده':'')+(m.parentId?' · پاسخ':'')+'</div>';
+    html+='<div class="msg-actions">';
+    if(!mine)html+='<button class="btn btn-primary btn-sm" onclick="replyMessage(\''+m.id+'\')">پاسخ</button>';
+    if(unread)html+='<button class="btn btn-outline btn-sm" onclick="markOneRead(\''+m.id+'\')">خواندم</button>';
+    if(mine||isManager())html+='<button class="btn btn-danger btn-sm" onclick="delMessage(\''+m.id+'\')">حذف</button>';
+    html+='</div></div>';
+    return html;
+  }).join('');
+}
+function escapeHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function openComposeMessage(replyToId){
+  const targets=listMessageTargets();
+  if(!targets.length)return toast('گیرنده‌ای تعریف نشده');
+  const reply=replyToId?(schoolData.messages||[]).find(function(x){return x.id===replyToId}):null;
+  document.getElementById('modal-title').textContent=reply?'پاسخ پیام':'پیام جدید';
+  let opts=targets.map(function(t){
+    const val=t.role+':'+t.id;
+    const sel=reply&&reply.fromKey===(t.role==='manager'?'manager':t.role+':'+t.id)?' selected':'';
+    return '<option value="'+val+'" data-role="'+t.role+'" data-id="'+t.id+'" data-name="'+escapeHtml(t.name)+'"'+sel+'>'+escapeHtml(msgUserLabel(t.role,t.id,t.name))+'</option>';
+  }).join('');
+  document.getElementById('modal-body').innerHTML=
+    '<div class="form-group"><label>گیرنده</label><select class="form-control" id="msg-to">'+opts+'</select></div>'+
+    '<div class="form-group"><label>متن پیام</label><textarea class="form-control" id="msg-text" rows="4" placeholder="پیام خود را بنویسید...">'+(reply?('در پاسخ به: '+(reply.text||'').slice(0,80)+'\n\n'):'')+'</textarea></div>'+
+    '<button class="btn btn-primary btn-block" onclick="sendInternalMessage(\''+(replyToId||'')+'\')">ارسال پیام</button>';
+  document.getElementById('modal').classList.add('show');
+}
+function replyMessage(id){
+  const m=(schoolData.messages||[]).find(function(x){return x.id===id});
+  if(m)markMsgRead(m);
+  openComposeMessage(id);
+}
+function markOneRead(id){
+  const m=(schoolData.messages||[]).find(function(x){return x.id===id});
+  if(m){markMsgRead(m);renderMessages();try{renderHome()}catch(e){}}
+}
+function sendInternalMessage(parentId){
+  const sel=document.getElementById('msg-to');
+  const text=(document.getElementById('msg-text').value||'').trim();
+  if(!text)return toast('متن پیام خالی است');
+  if(!sel||!sel.value)return toast('گیرنده را انتخاب کنید');
+  const opt=sel.options[sel.selectedIndex];
+  const toRole=opt.getAttribute('data-role');
+  const toId=opt.getAttribute('data-id');
+  const toName=opt.getAttribute('data-name')||opt.textContent;
+  const fromKey=myMsgKey();
+  const fromRole=userSession.role;
+  const fromName=userSession.name||userSession.username||(isManager()?'مدیر':'');
+  const toKey=(toId==='all_deputies'||toId==='all_teachers')?(toId):(toRole==='manager'?'manager':(toRole+':'+toId));
+  if(!schoolData.messages)schoolData.messages=[];
+  schoolData.messages.push({
+    id:uid(),
+    fromKey:fromKey,
+    fromRole:fromRole,
+    fromId:isManager()?'manager':(userSession.staffId||''),
+    fromName:fromName,
+    toKey:toKey,
+    toRole:toRole,
+    toId:toId,
+    toName:toName,
+    text:text,
+    parentId:parentId||null,
+    createdAtMs:Date.now(),
+    readBy:[fromKey]
+  });
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  pushMessagesNow();
+  closeModal();
+  _msgTab='out';
+  renderMessages();
+  toast('پیام ارسال شد');
+}
+function pushMessagesNow(){
+  if(!SYNC_API||!session||!session.schoolId)return;
+  cloudPushAppData(true).catch(function(){});
+}
+function delMessage(id){
+  if(!confirm('حذف این پیام؟'))return;
+  schoolData.messages=(schoolData.messages||[]).filter(function(m){return m.id!==id});
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  if(canManage())cloudPushAppData(true).catch(function(){});
+  renderMessages();
+}
+
+
+function exportFullSchoolBackupLocal(){
+  if(!isManager()&&!isDeputy())return toast('فقط مدیر یا معاون');
+  if(!session||!schoolData)return toast('ابتدا وارد شوید');
+  toast('در حال آماده‌سازی پشتیبان کامل...');
+  var after=function(){
+    var payload={
+      type:'nikan-school-backup',
+      version:2,
+      complete:true,
+      source:'school-panel-local',
+      exportedAt:new Date().toISOString(),
+      school:{
+        id:session.schoolId,
+        code:session.code,
+        name:session.name,
+        managerName:session.managerName,
+        phone:session.phone,
+        city:session.city,
+        startDate:session.startDate,
+        expireDate:session.expireDate,
+        plan:session.plan,
+        active:session.active,
+        shifts:session.shifts||schoolData.shifts||1,
+        modules:session.modules||[],
+        managerUsername:schoolData.managerUser||'',
+        managerPassword:schoolData.managerPass||'',
+        managerPhone:session.phone||''
+      },
+      appData:schoolData,
+      submissions:schoolData.submissions||[],
+      summary:{
+        classes:(schoolData.classes||[]).length,
+        students:(schoolData.students||[]).length,
+        staff:(schoolData.staff||[]).length,
+        attendance:(schoolData.attendance||[]).length,
+        assignments:(schoolData.assignments||[]).length,
+        exams:(schoolData.exams||[]).length,
+        messages:(schoolData.messages||[]).length,
+        submissions:(schoolData.submissions||[]).length,
+        colleagues:(schoolData.colleagues||[]).length
+      },
+      note:'پشتیبان کامل صفر تا صد از پنل مدرسه'
+    };
+    var blob=new Blob([JSON.stringify(payload)],{type:'application/json;charset=utf-8'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    var safe=String(session.code||session.name||'school').replace(/[^\w\u0600-\u06FF\-]+/g,'_');
+    a.download='school-FULL-backup-'+safe+'-'+todayStr()+'.json';
+    a.click();
+    toast('پشتیبان کامل · کلاس: '+payload.summary.classes+' · دانش‌آموز: '+payload.summary.students);
+  };
+  if(canManage()){
+    cloudPushAppData(true).then(after).catch(after);
+  }else after();
+}
+function importFullSchoolBackupLocal(ev){
+  if(!isManager())return toast('فقط مدیر می‌تواند بازیابی کند');
+  var file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(){
+    try{
+      var data=JSON.parse(reader.result);
+      var app=null;
+      if(data.type==='nikan-school-backup'&&data.appData)app=data.appData;
+      else if(data.classes||data.students)app=data;
+      else throw new Error('bad');
+      if(!confirm('همه داده‌های فعلی این مدرسه با فایل پشتیبان جایگزین می‌شود. ادامه؟'))return;
+      var keepTheme=schoolData.theme;
+      schoolData=Object.assign(defaultData(),app);
+      if(!schoolData.theme)schoolData.theme=keepTheme||{};
+      if(data.submissions&&data.submissions.length){
+        schoolData.submissions=data.submissions;
+      }
+      schoolData._cloudUpdatedAtMs=Date.now();
+      saveSchoolData();
+      cloudPushAppData(true).then(function(){
+        toast('بازیابی کامل شد و روی سرور ارسال شد');
+        try{renderHome();renderSettings()}catch(e){}
+      }).catch(function(){
+        toast('محلی بازیابی شد؛ ارسال به سرور را بزنید');
+      });
+    }catch(e){toast('فایل پشتیبان نامعتبر است')}
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+
 function closeModal(){document.getElementById('modal').classList.remove('show')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+async function tryAutoEnterFromMother(){
+  try{
+    var hash=location.hash||'';
+    var q=location.search||'';
+    var raw='';
+    if(hash.indexOf('autoenter=')>=0)raw=hash.split('autoenter=')[1].split('&')[0];
+    else if(q.indexOf('autoenter=')>=0)raw=q.split('autoenter=')[1].split('&')[0];
+    if(!raw)return false;
+    raw=decodeURIComponent(raw);
+    // base64
+    var json='';
+    try{json=decodeURIComponent(escape(atob(raw)))}catch(e){
+      try{json=atob(raw)}catch(e2){json=''}
+    }
+    if(!json)return false;
+    var payload=JSON.parse(json);
+    if(!payload||!payload.schoolId)return false;
+    // انقضا توکن ۵ دقیقه
+    if(payload.ts&&(Date.now()-payload.ts)>5*60*1000){
+      toast('لینک ورود منقضی شده — دوباره از پنل مادر بزنید');
+      history.replaceState(null,'',location.pathname);
+      return false;
+    }
+    toast('ورود مستقیم مدیر از پنل مادر...');
+    // session مدرسه
+    saveSession({
+      schoolId:payload.schoolId,
+      code:payload.code||'',
+      name:payload.name||'',
+      managerName:payload.managerName||'',
+      phone:payload.phone||'',
+      city:payload.city||'',
+      startDate:payload.startDate||'',
+      expireDate:payload.expireDate||'',
+      plan:payload.plan||'paid',
+      active:payload.active!==false,
+      shifts:payload.shifts||1,
+      modules:payload.modules||[]
+    });
+    saveUserSession({
+      role:'manager',
+      username:payload.managerUsername||'manager',
+      name:payload.managerName||'مدیر',
+      schoolId:payload.schoolId,
+      staffId:null,
+      shift:null,
+      photo:''
+    });
+    // پاک کردن hash
+    history.replaceState(null,'',location.pathname);
+    session=loadSession();userSession=loadUserSession();
+    await enterApp();
+    return true;
+  }catch(e){
+    console.warn('autoenter',e);
+    return false;
+  }
+}
+
 (async function(){
+  if(await tryAutoEnterFromMother())return;
   session=loadSession();userSession=loadUserSession();
   if(session&&userSession){
     if(typeof SYNC_API!=='undefined'&&SYNC_API&&session.schoolId){
