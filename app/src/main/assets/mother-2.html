@@ -480,11 +480,13 @@ td{color:#e2e8f0!important}
           <button class="btn btn-primary" onclick="changeMotherAccount()">ذخیره تغییرات حساب</button>
         </div>
         <div class="card">
-          <div class="card-title">پشتیبان‌گیری داده پنل</div>
-          <p class="hint" style="margin-bottom:10px">از لیست مدارس و تنظیمات پنل مادر نسخه پشتیبان بگیرید.</p>
-          <button class="btn btn-primary btn-block" style="margin-bottom:8px" onclick="exportMotherData()">دانلود پشتیبان JSON</button>
-          <button class="btn btn-outline btn-block" onclick="document.getElementById('import-mother').click()">بازیابی از فایل</button>
+          <div class="card-title">پشتیبان‌گیری مدارس</div>
+          <p class="hint" style="margin-bottom:10px">از مدارس روی سرور و پنل مادر نسخه پشتیبان بگیرید. فایل را در جای امن نگه دارید.</p>
+          <button class="btn btn-primary btn-block" style="margin-bottom:8px" onclick="exportAllSchoolsFullBackup()">دانلود پشتیبان کامل همه مدارس (لایسنس + داده سرور)</button>
+          <button class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="exportMotherData()">دانلود فقط لیست مدارس / لایسنس‌ها</button>
+          <button class="btn btn-success btn-block" style="margin-bottom:8px" onclick="document.getElementById('import-mother').click()">بازیابی از فایل پشتیبان (لایسنس + داده سرور)</button>
           <input type="file" id="import-mother" accept=".json" style="display:none" onchange="importMotherData(event)" />
+          <p class="hint" style="margin-top:10px">اگر مدرسه پرید: همان فایل پشتیبان کامل یا تک‌مدرسه را اینجا بارگذاری کنید تا لایسنس و داده عملیاتی به سرور برگردد. برای پشتیبان یک مدرسه از لیست مدارس «پشتیبان» را بزنید.</p>
         </div>
         <div class="card">
           <div class="card-title">درباره</div>
@@ -963,7 +965,9 @@ function renderSchools() {
         <td style="white-space:nowrap">
           <button class="btn btn-sm btn-outline" onclick="openSchoolModal('${s.id}')">ویرایش</button>
           <button class="btn btn-sm ${s.active ? 'btn-warning' : 'btn-success'}" onclick="toggleSchool('${s.id}')">${s.active ? 'خاموش' : 'روشن'}</button>
+          <button class="btn btn-sm btn-success" onclick="enterSchoolAsManager('${s.id}')">ورود به مدرسه</button>
           <button class="btn btn-sm btn-primary" onclick="showActivation('${s.id}')">کد فعال‌سازی</button>
+          <button class="btn btn-sm btn-outline" onclick="exportOneSchoolFullBackup('${s.id}')">پشتیبان</button>
         </td>
       </tr>`;
     }).join('')}
@@ -981,6 +985,49 @@ function toggleSchool(id) {
   cloudSyncSchools().catch(function(){});
 }
 
+
+function getSchoolPanelBase(){
+  try{
+    if(location.hostname==='admin.nikan-school.top')return 'https://panel.nikan-school.top';
+    if(location.hostname.indexOf('nikan-school')>=0)return location.origin.replace('admin.','panel.');
+  }catch(e){}
+  return 'https://panel.nikan-school.top';
+}
+function enterSchoolAsManager(id){
+  const s = (state.schools || []).find(function(x){ return x.id === id; });
+  if(!s) return toast('مدرسه یافت نشد');
+  const payload = {
+    schoolId: s.id,
+    code: s.code || '',
+    name: s.name || '',
+    managerName: s.managerName || '',
+    phone: s.managerPhone || s.phone || '',
+    city: s.city || '',
+    startDate: s.startDate || '',
+    expireDate: s.expireDate || '',
+    plan: s.plan || 'paid',
+    active: s.active !== false,
+    shifts: s.shifts || 1,
+    modules: s.modules || [],
+    managerUsername: s.managerUsername || s.managerUser || 'manager',
+    managerPassword: s.managerPassword || s.managerPass || '',
+    ts: Date.now()
+  };
+  let b64 = '';
+  try {
+    b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  } catch (e) {
+    b64 = btoa(JSON.stringify(payload));
+  }
+  const url = getSchoolPanelBase() + '/#autoenter=' + encodeURIComponent(b64);
+  cloudPushOneSchool(s).then(function(){
+    toast('در حال ورود به پنل مدیر مدرسه...');
+    window.open(url, '_blank');
+  }).catch(function(){
+    window.open(url, '_blank');
+  });
+}
+
 function showActivation(id) {
   const s = state.schools.find(x => x.id === id);
   if (!s) return;
@@ -995,6 +1042,7 @@ function showActivation(id) {
     <div class="code-box">${s.managerUsername || '—'}</div>
     <label>رمز عبور مدیر</label>
     <div class="code-box">${s.managerPassword || '—'}</div>
+    <button class="btn btn-success btn-block" style="margin-bottom:8px" onclick="enterSchoolAsManager('${s.id}')">ورود مستقیم به پنل مدیر مدرسه</button>
     <button class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="regenerateActivation('${s.id}')">صدور مجدد کد فعال‌سازی</button>
     <button class="btn btn-primary btn-block" onclick="copyActivation('${s.id}')">کپی همه</button>
   `;
@@ -1296,33 +1344,201 @@ function fillMotherAccountForm(){
   if (disp) disp.value = state.motherUser || 'admin';
 }
 
+function downloadJsonFile(obj, filename) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(function () { try { URL.revokeObjectURL(a.href); } catch (e) {} }, 2000);
+}
+async function fetchSchoolAppData(schoolId) {
+  if (!SYNC_API || !schoolId) return null;
+  try {
+    const data = await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/appData', { retries: 1 });
+    return (data && data.data) ? data.data : null;
+  } catch (e) {
+    return null;
+  }
+}
+async function fetchSchoolSubmissions(schoolId) {
+  if (!SYNC_API || !schoolId) return [];
+  try {
+    const data = await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/submissions', { retries: 1 });
+    return (data && Array.isArray(data.submissions)) ? data.submissions : [];
+  } catch (e) {
+    return [];
+  }
+}
+async function fetchCompleteSchoolPackage(school) {
+  if (!school || !school.id) return { school: school, appData: null, submissions: [] };
+  const appData = await fetchSchoolAppData(school.id);
+  const submissions = await fetchSchoolSubmissions(school.id);
+  let full = appData ? Object.assign({}, appData) : null;
+  if (submissions && submissions.length) {
+    if (!full) full = {};
+    const map = {};
+    (full.submissions || []).forEach(function (s) { if (s && s.id) map[s.id] = s; });
+    submissions.forEach(function (s) { if (s && s.id) map[s.id] = s; });
+    full.submissions = Object.keys(map).map(function (k) { return map[k]; });
+  }
+  return { school: school, appData: full, submissions: submissions || [] };
+}
+async function exportOneSchoolFullBackup(id) {
+  const s = (state.schools || []).find(function (x) { return x.id === id; });
+  if (!s) return toast('مدرسه یافت نشد');
+  toast('در حال دریافت پشتیبان کامل مدرسه از سرور...');
+  const pack = await fetchCompleteSchoolPackage(s);
+  const appData = pack.appData;
+  const payload = {
+    type: 'nikan-school-backup',
+    version: 2,
+    complete: true,
+    exportedAt: new Date().toISOString(),
+    school: s,
+    appData: appData,
+    submissions: pack.submissions || [],
+    summary: {
+      classes: appData && appData.classes ? appData.classes.length : 0,
+      students: appData && appData.students ? appData.students.length : 0,
+      staff: appData && appData.staff ? appData.staff.length : 0,
+      attendance: appData && appData.attendance ? appData.attendance.length : 0,
+      assignments: appData && appData.assignments ? appData.assignments.length : 0,
+      exams: appData && appData.exams ? appData.exams.length : 0,
+      messages: appData && appData.messages ? appData.messages.length : 0,
+      submissions: (pack.submissions || []).length
+    },
+    note: appData ? 'پشتیبان کامل صفر تا صد' : 'فقط لایسنس — از پنل مدرسه هم پشتیبان کامل بگیرید'
+  };
+  const safeName = String(s.code || s.name || id).replace(/[^\w\u0600-\u06FF\-]+/g, '_');
+  downloadJsonFile(payload, 'school-FULL-backup-' + safeName + '-' + todayStr() + '.json');
+  toast(appData ? ('پشتیبان کامل · دانش‌آموز: ' + payload.summary.students) : 'فقط لایسنس ذخیره شد');
+}
+async function exportAllSchoolsFullBackup() {
+  const list = state.schools || [];
+  if (!list.length) return toast('مدرسه‌ای نیست');
+  toast('در حال تهیه پشتیبان کامل همه مدارس...');
+  const items = [];
+  for (let i = 0; i < list.length; i++) {
+    items.push(await fetchCompleteSchoolPackage(list[i]));
+  }
+  const payload = {
+    type: 'nikan-mother-schools-full-backup',
+    version: 2,
+    complete: true,
+    exportedAt: new Date().toISOString(),
+    schoolsCount: items.length,
+    withAppData: items.filter(function (x) { return !!x.appData; }).length,
+    motherUser: state.motherUser || 'admin',
+    items: items
+  };
+  downloadJsonFile(payload, 'nikan-ALL-schools-FULL-backup-' + todayStr() + '.json');
+  toast('پشتیبان کامل: ' + payload.schoolsCount + ' مدرسه · با داده: ' + payload.withAppData);
+}
 function exportMotherData() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'mother-panel-backup-' + todayStr() + '.json';
+  a.download = 'nikan-mother-licenses-backup-' + todayStr() + '.json';
   a.click();
   toast('دانلود شد');
+}
+
+async function cloudPushAppDataForSchool(schoolId, appData) {
+  if (!SYNC_API || !schoolId || !appData || typeof appData !== 'object') return false;
+  try {
+    const payload = Object.assign({}, appData, { updatedAtMs: Date.now() });
+    await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/appData', {
+      method: 'PUT',
+      body: payload,
+      retries: 2
+    });
+    return true;
+  } catch (e) {
+    console.warn('cloudPushAppDataForSchool', e);
+    return false;
+  }
+}
+
+function mergeSchoolIntoState(school) {
+  if (!school || !school.id) return;
+  if (!state.schools) state.schools = [];
+  const i = state.schools.findIndex(function (x) { return x.id === school.id || (school.code && x.code === school.code); });
+  if (i >= 0) state.schools[i] = Object.assign({}, state.schools[i], school);
+  else state.schools.push(school);
+}
+
+async function restoreBackupItems(items) {
+  let okSchool = 0, okData = 0, fail = 0;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const school = it.school || it;
+    const appData = it.appData || null;
+    if (!school || !school.id) { fail++; continue; }
+    mergeSchoolIntoState(school);
+    const pushed = await cloudPushOneSchool(school);
+    if (pushed) okSchool++;
+    else fail++;
+    if (appData || (it.submissions && it.submissions.length)) {
+      if (!appData) appData = {};
+      if (it.submissions && it.submissions.length) {
+        if (!appData.submissions) appData.submissions = [];
+        const map = {};
+        appData.submissions.forEach(function (s) { if (s && s.id) map[s.id] = s; });
+        it.submissions.forEach(function (s) { if (s && s.id) map[s.id] = s; });
+        appData.submissions = Object.keys(map).map(function (k) { return map[k]; });
+      }
+      const dOk = await cloudPushAppDataForSchool(school.id, appData);
+      if (dOk) okData++;
+      if (appData.submissions && appData.submissions.length && SYNC_API) {
+        for (let j = 0; j < Math.min(appData.submissions.length, 150); j++) {
+          try {
+            await apiFetch('/api/schools/' + encodeURIComponent(school.id) + '/submissions', {
+              method: 'POST',
+              body: appData.submissions[j],
+              retries: 1
+            });
+          } catch (e) {}
+        }
+      }
+    }
+  }
+  save();
+  renderDashboard();
+  renderSchools();
+  return { okSchool: okSchool, okData: okData, fail: fail };
 }
 
 function importMotherData(ev) {
   const file = ev.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async function () {
     try {
       const data = JSON.parse(reader.result);
-      if (!data.schools) throw new Error('invalid');
-      if (!confirm('داده فعلی پنل مادر جایگزین می‌شود. ادامه؟')) return;
-      state.motherUser = data.motherUser || state.motherUser;
-      state.motherPass = data.motherPass || state.motherPass;
-      state.schools = data.schools || [];
-      save();
-      renderDashboard();
-      renderSchools();
-      toast('بازیابی شد');
-    } catch {
-      toast('فایل نامعتبر است');
+      let items = [];
+      // پشتیبان کامل همه مدارس
+      if (data.type === 'nikan-mother-schools-full-backup' && Array.isArray(data.items)) {
+        items = data.items;
+      }
+      // پشتیبان تک‌مدرسه
+      else if (data.type === 'nikan-school-backup' && data.school) {
+        items = [{ school: data.school, appData: data.appData || null, submissions: data.submissions || [] }];
+      }
+      // فرمت قدیمی فقط لیست لایسنس
+      else if (Array.isArray(data.schools)) {
+        items = data.schools.map(function (s) { return { school: s, appData: null }; });
+      } else {
+        throw new Error('invalid');
+      }
+      if (!items.length) throw new Error('empty');
+      const msg = 'تعداد ' + items.length + ' مورد از فایل خوانده شد.\nلایسنس‌ها در پنل مادر ادغام و روی سرور ارسال می‌شوند.\nاگر فایل پشتیبان کامل باشد، داده کلاس/دانش‌آموز هم برمی‌گردد.\nادامه؟';
+      if (!confirm(msg)) return;
+      toast('در حال بازیابی روی سرور...');
+      const r = await restoreBackupItems(items);
+      toast('بازیابی: لایسنس ' + r.okSchool + ' · داده سرور ' + r.okData + (r.fail ? ' · خطا ' + r.fail : ''));
+    } catch (e) {
+      toast('فایل نامعتبر است یا خوانده نشد');
     }
   };
   reader.readAsText(file);
