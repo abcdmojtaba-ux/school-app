@@ -1011,17 +1011,24 @@ function enterSchoolAsManager(id){
     modules: s.modules || [],
     managerUsername: s.managerUsername || s.managerUser || 'manager',
     managerPassword: s.managerPassword || s.managerPass || '',
+    smsMode: s.smsMode || 'sim',
+    smsApiUrl: s.smsApiUrl || '',
+    smsApiUser: s.smsApiUser || '',
+    smsApiKey: s.smsApiKey || '',
+    smsSender: s.smsSender || '',
+    maxUsers: s.maxUsers || 20,
     ts: Date.now()
   };
   let b64 = '';
   try {
     b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
   } catch (e) {
-    b64 = btoa(JSON.stringify(payload));
+    try { b64 = btoa(JSON.stringify(payload)); } catch (e2) { return toast('خطا در ساخت لینک ورود'); }
   }
   const url = getSchoolPanelBase() + '/#autoenter=' + encodeURIComponent(b64);
-  cloudPushOneSchool(s).then(function(){
-    toast('در حال ورود به پنل مدیر مدرسه...');
+  toast('همگام‌سازی لایسنس و ورود به پنل مدرسه...');
+  cloudPushOneSchool(s).then(function(ok){
+    if(!ok) toast('لایسنس محلی است — ورود انجام می‌شود');
     window.open(url, '_blank');
   }).catch(function(){
     window.open(url, '_blank');
@@ -1412,7 +1419,7 @@ async function exportOneSchoolFullBackup(id) {
   };
   const safeName = String(s.code || s.name || id).replace(/[^\w\u0600-\u06FF\-]+/g, '_');
   downloadJsonFile(payload, 'school-FULL-backup-' + safeName + '-' + todayStr() + '.json');
-  toast(appData ? ('پشتیبان کامل · دانش‌آموز: ' + payload.summary.students) : 'فقط لایسنس ذخیره شد');
+  toast(appData ? ('پشتیبان کامل · کلاس: ' + payload.summary.classes + ' · دانش‌آموز: ' + payload.summary.students) : 'لایسنس ذخیره شد (داده سرور خالی/قطع بود)');
 }
 async function exportAllSchoolsFullBackup() {
   const list = state.schools || [];
@@ -1469,44 +1476,49 @@ function mergeSchoolIntoState(school) {
 }
 
 async function restoreBackupItems(items) {
-  let okSchool = 0, okData = 0, fail = 0;
+  let okSchool = 0, okData = 0, fail = 0, localOnly = 0;
   for (let i = 0; i < items.length; i++) {
-    const it = items[i];
-    const school = it.school || it;
-    const appData = it.appData || null;
-    if (!school || !school.id) { fail++; continue; }
-    mergeSchoolIntoState(school);
-    const pushed = await cloudPushOneSchool(school);
-    if (pushed) okSchool++;
-    else fail++;
-    if (appData || (it.submissions && it.submissions.length)) {
-      if (!appData) appData = {};
-      if (it.submissions && it.submissions.length) {
-        if (!appData.submissions) appData.submissions = [];
-        const map = {};
-        appData.submissions.forEach(function (s) { if (s && s.id) map[s.id] = s; });
-        it.submissions.forEach(function (s) { if (s && s.id) map[s.id] = s; });
-        appData.submissions = Object.keys(map).map(function (k) { return map[k]; });
-      }
-      const dOk = await cloudPushAppDataForSchool(school.id, appData);
-      if (dOk) okData++;
-      if (appData.submissions && appData.submissions.length && SYNC_API) {
-        for (let j = 0; j < Math.min(appData.submissions.length, 150); j++) {
-          try {
-            await apiFetch('/api/schools/' + encodeURIComponent(school.id) + '/submissions', {
-              method: 'POST',
-              body: appData.submissions[j],
-              retries: 1
-            });
-          } catch (e) {}
+    try {
+      const it = items[i] || {};
+      const school = it.school || it;
+      let appData = it.appData ? Object.assign({}, it.appData) : null;
+      if (!school || !school.id) { fail++; continue; }
+      // ادغام لایسنس در پنل مادر (حتی اگر سرور قطع باشد)
+      mergeSchoolIntoState(school);
+      const pushed = await cloudPushOneSchool(school);
+      if (pushed) okSchool++;
+      else { localOnly++; }
+      if (appData || (it.submissions && it.submissions.length)) {
+        if (!appData) appData = {};
+        if (it.submissions && it.submissions.length) {
+          if (!appData.submissions) appData.submissions = [];
+          const map = {};
+          appData.submissions.forEach(function (s) { if (s && s.id) map[s.id] = s; });
+          it.submissions.forEach(function (s) { if (s && s.id) map[s.id] = s; });
+          appData.submissions = Object.keys(map).map(function (k) { return map[k]; });
+        }
+        const dOk = await cloudPushAppDataForSchool(school.id, appData);
+        if (dOk) okData++;
+        if (appData.submissions && appData.submissions.length && SYNC_API) {
+          for (let j = 0; j < Math.min(appData.submissions.length, 200); j++) {
+            try {
+              await apiFetch('/api/schools/' + encodeURIComponent(school.id) + '/submissions', {
+                method: 'POST',
+                body: appData.submissions[j],
+                retries: 1
+              });
+            } catch (e) {}
+          }
         }
       }
+    } catch (e) {
+      console.error('restore item', e);
+      fail++;
     }
   }
   save();
-  renderDashboard();
-  renderSchools();
-  return { okSchool: okSchool, okData: okData, fail: fail };
+  try { renderDashboard(); renderSchools(); } catch (e) {}
+  return { okSchool: okSchool, okData: okData, fail: fail, localOnly: localOnly };
 }
 
 function importMotherData(ev) {
@@ -1536,7 +1548,7 @@ function importMotherData(ev) {
       if (!confirm(msg)) return;
       toast('در حال بازیابی روی سرور...');
       const r = await restoreBackupItems(items);
-      toast('بازیابی: لایسنس ' + r.okSchool + ' · داده سرور ' + r.okData + (r.fail ? ' · خطا ' + r.fail : ''));
+      toast('بازیابی: لایسنس سرور ' + r.okSchool + ' · داده ' + r.okData + (r.localOnly ? ' · فقط محلی ' + r.localOnly : '') + (r.fail ? ' · خطا ' + r.fail : ''));
     } catch (e) {
       toast('فایل نامعتبر است یا خوانده نشد');
     }
