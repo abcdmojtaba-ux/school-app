@@ -1,100 +1,167 @@
 package com.mojtaba.madrese
-
-import android.annotation.SuppressLint
+import android.Manifest
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.webkit.JsPromptResult
-import android.webkit.JsResult
+import android.provider.MediaStore
+import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.EditText
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import java.io.File
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private var fileCallback: ValueCallback<Array<Uri>>? = null
-    private val FILE_REQ = 1001
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
+    private var cameraImageUri: Uri? = null
 
-    @SuppressLint("SetJavaScriptEnabled")
+    // آدرس پنل مدرسه — اگر آدرس دیگری داری همین را عوض کن
+    private val startUrl = "https://panel.nikan-school.top/"
+
+    private val fileChooserLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val cb = filePathCallback
+            filePathCallback = null
+            if (cb == null) return@registerForActivityResult
+
+            if (result.resultCode != Activity.RESULT_OK) {
+                cb.onReceiveValue(null)
+                return@registerForActivityResult
+            }
+
+            val data = result.data
+            val uris: Array<Uri>? = when {
+                data?.clipData != null -> {
+                    val clip = data.clipData!!
+                    Array(clip.itemCount) { i -> clip.getItemAt(i).uri }
+                }
+                data?.data != null -> arrayOf(data.data!!)
+                cameraImageUri != null -> arrayOf(cameraImageUri!!)
+                else -> null
+            }
+            cb.onReceiveValue(uris)
+        }
+
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { /* ادامه می‌دهد */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         webView = WebView(this)
         setContentView(webView)
 
-        val st = webView.settings
-        st.javaScriptEnabled = true
-        st.domStorageEnabled = true
-        st.databaseEnabled = true
-        st.allowFileAccess = true
-        st.loadWithOverviewMode = true
-        st.useWideViewPort = true
+        requestNeededPermissions()
 
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val url = request?.url?.toString() ?: return false
-                if (url.startsWith("http") || url.startsWith("file")) return false
-                try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (e: Exception) {}
-                return true
-            }
+        val s = webView.settings
+        s.javaScriptEnabled = true
+        s.domStorageEnabled = true
+        s.allowFileAccess = true
+        s.allowContentAccess = true
+        s.mediaPlaybackRequiresUserGesture = false
+        s.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+        s.cacheMode = WebSettings.LOAD_DEFAULT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            s.mediaPlaybackRequiresUserGesture = false
         }
 
+        webView.webViewClient = WebViewClient()
         webView.webChromeClient = object : WebChromeClient() {
-            override fun onShowFileChooser(wv: WebView?, cb: ValueCallback<Array<Uri>>?, p: FileChooserParams?): Boolean {
-                fileCallback?.onReceiveValue(null)
-                fileCallback = cb
-                val i = Intent(Intent.ACTION_GET_CONTENT)
-                i.addCategory(Intent.CATEGORY_OPENABLE)
-                i.type = "*/*"
-                try { startActivityForResult(Intent.createChooser(i, "انتخاب فایل"), FILE_REQ) }
-                catch (e: Exception) { fileCallback?.onReceiveValue(null); fileCallback = null }
-                return true
+
+            // انتخاب فایل / دوربین از input type=file در سایت
+            override fun onShowFileChooser(
+                webView: WebView?,
+                callback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                filePathCallback?.onReceiveValue(null)
+                filePathCallback = callback
+
+                // Intent دوربین
+                val takePicture = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                try {
+                    val photoFile = File(cacheDir, "nikan_cam_${System.currentTimeMillis()}.jpg")
+                    cameraImageUri = FileProvider.getUriForFile(
+                        this@MainActivity,
+                        "${packageName}.fileprovider",
+                        photoFile
+                    )
+                    takePicture.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
+                    takePicture.addFlags(
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    cameraImageUri = null
+                }
+
+                // Intent گالری
+                val gallery = Intent(Intent.ACTION_GET_CONTENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "image/*"
+                }
+
+                val chooser = Intent(Intent.ACTION_CHOOSER).apply {
+                    putExtra(Intent.EXTRA_INTENT, gallery)
+                    putExtra(Intent.EXTRA_TITLE, "انتخاب عکس")
+                    if (cameraImageUri != null) {
+                        putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(takePicture))
+                    }
+                }
+
+                return try {
+                    fileChooserLauncher.launch(chooser)
+                    true
+                } catch (e: Exception) {
+                    filePathCallback = null
+                    false
+                }
             }
 
-            override fun onJsAlert(view: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
-                AlertDialog.Builder(this@MainActivity).setMessage(msg)
-                    .setPositiveButton("باشه") { _, _ -> r.confirm() }
-                    .setOnCancelListener { r.cancel() }.show()
-                return true
-            }
-
-            override fun onJsConfirm(view: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
-                AlertDialog.Builder(this@MainActivity).setMessage(msg)
-                    .setPositiveButton("باشه") { _, _ -> r.confirm() }
-                    .setNegativeButton("لغو") { _, _ -> r.cancel() }.show()
-                return true
-            }
-
-            override fun onJsPrompt(view: WebView?, url: String?, msg: String?, def: String?, r: JsPromptResult): Boolean {
-                val input = EditText(this@MainActivity)
-                input.setText(def ?: "")
-                AlertDialog.Builder(this@MainActivity).setMessage(msg).setView(input)
-                    .setPositiveButton("باشه") { _, _ -> r.confirm(input.text.toString()) }
-                    .setNegativeButton("لغو") { _, _ -> r.cancel() }.show()
-                return true
+            // دوربین زنده (getUserMedia) داخل صفحه
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                request?.grant(request.resources)
             }
         }
 
-        val asset = if (BuildConfig.FLAVOR == "mother") "mother-2.html" else "school-app-33.html"
-        webView.loadUrl("file:///android_asset/$asset")
+        webView.loadUrl(startUrl)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == FILE_REQ) {
-            val res = if (resultCode == RESULT_OK && data != null && data.data != null) arrayOf(data.data!!) else null
-            fileCallback?.onReceiveValue(res)
-            fileCallback = null
+    private fun requestNeededPermissions() {
+        val need = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            need.add(Manifest.permission.CAMERA)
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                need.add(Manifest.permission.READ_MEDIA_IMAGES)
+            }
+        }
+        if (need.isNotEmpty()) {
+            permissionLauncher.launch(need.toTypedArray())
         }
     }
 
     override fun onBackPressed() {
-        if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
+        if (this::webView.isInitialized && webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
     }
 }
+
