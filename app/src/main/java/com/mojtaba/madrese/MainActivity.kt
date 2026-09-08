@@ -1,96 +1,134 @@
-package com.mojtaba.madreese
+package com.mojtaba.madrese
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.EditText
 
 class MainActivity : Activity() {
 
+    private lateinit var webView: WebView
     private var fileCallback: ValueCallback<Array<Uri>>? = null
-    private val REQ = 2001
-    private val startUrl = "https://panel.nikan-school.top/"
+    private val FILE_REQ = 1001
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val webView = WebView(this)
+        webView = WebView(this)
         setContentView(webView)
 
-        val s = webView.settings
-        s.javaScriptEnabled = true
-        s.domStorageEnabled = true
-        s.allowFileAccess = true
-        s.allowContentAccess = true
-        if (Build.VERSION.SDK_INT >= 21) {
-            s.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        }
+        val st = webView.settings
+        st.javaScriptEnabled = true
+        st.domStorageEnabled = true
+        st.databaseEnabled = true
+        st.allowFileAccess = true
+        st.loadWithOverviewMode = true
+        st.useWideViewPort = true
 
         webView.webViewClient = object : WebViewClient() {
-            @Deprecated("Deprecated in Java")
-            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                if (url == null) return false
-                return try {
-                    if (url.startsWith("http://") || url.startsWith("https://")) {
-                        false
-                    } else {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        true
-                    }
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                if (url.startsWith("http") || url.startsWith("file")) return false
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 } catch (e: Exception) {
-                    true
                 }
+                return true
             }
         }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
-                webView: WebView?,
-                callback: ValueCallback<Array<Uri>>?,
-                params: FileChooserParams?
+                wv: WebView?,
+                cb: ValueCallback<Array<Uri>>?,
+                p: FileChooserParams?
             ): Boolean {
                 try {
                     fileCallback?.onReceiveValue(null)
                 } catch (e: Exception) {
                 }
-                fileCallback = callback
-                val intent = Intent(Intent.ACTION_GET_CONTENT)
-                intent.addCategory(Intent.CATEGORY_OPENABLE)
-                intent.type = "image/*"
+                fileCallback = cb
+
+                val gallery = Intent(Intent.ACTION_GET_CONTENT)
+                gallery.addCategory(Intent.CATEGORY_OPENABLE)
+                gallery.type = "image/*"
+
+                val camera = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+
+                val chooser = Intent(Intent.ACTION_CHOOSER)
+                chooser.putExtra(Intent.EXTRA_INTENT, gallery)
+                chooser.putExtra(Intent.EXTRA_TITLE, "عکس")
+                chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(camera))
+
                 return try {
-                    startActivityForResult(Intent.createChooser(intent, "عکس"), REQ)
+                    startActivityForResult(chooser, FILE_REQ)
                     true
                 } catch (e: Exception) {
                     fileCallback = null
                     false
                 }
             }
+
+            override fun onJsAlert(view: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
+                AlertDialog.Builder(this@MainActivity).setMessage(msg)
+                    .setPositiveButton("باشه") { _, _ -> r.confirm() }
+                    .setOnCancelListener { r.cancel() }.show()
+                return true
+            }
+
+            override fun onJsConfirm(view: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
+                AlertDialog.Builder(this@MainActivity).setMessage(msg)
+                    .setPositiveButton("باشه") { _, _ -> r.confirm() }
+                    .setNegativeButton("لغو") { _, _ -> r.cancel() }.show()
+                return true
+            }
+
+            override fun onJsPrompt(
+                view: WebView?,
+                url: String?,
+                msg: String?,
+                def: String?,
+                r: JsPromptResult
+            ): Boolean {
+                val input = EditText(this@MainActivity)
+                input.setText(def ?: "")
+                AlertDialog.Builder(this@MainActivity).setMessage(msg).setView(input)
+                    .setPositiveButton("باشه") { _, _ -> r.confirm(input.text.toString()) }
+                    .setNegativeButton("لغو") { _, _ -> r.cancel() }.show()
+                return true
+            }
         }
 
-        webView.loadUrl(startUrl)
+        // مهم: مثل نسخه اصلی از فایل داخل اپ باز می‌شود نه از اینترنت
+        val asset = if (BuildConfig.FLAVOR == "mother") "mother-2.html" else "school-app-33.html"
+        webView.loadUrl("file:///android_asset/$asset")
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQ) return
-        val cb = fileCallback
-        fileCallback = null
-        if (cb == null) return
-        if (resultCode != RESULT_OK || data == null) {
-            cb.onReceiveValue(null)
-            return
-        }
-        val uri = data.data
-        if (uri != null) {
-            cb.onReceiveValue(arrayOf(uri))
+        if (requestCode != FILE_REQ) return
+        val res = if (resultCode == RESULT_OK && data != null && data.data != null) {
+            arrayOf(data.data!!)
         } else {
-            cb.onReceiveValue(null)
+            null
         }
+        fileCallback?.onReceiveValue(res)
+        fileCallback = null
+    }
+
+    override fun onBackPressed() {
+        if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
 }
