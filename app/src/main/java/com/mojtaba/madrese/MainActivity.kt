@@ -1,158 +1,100 @@
-package com.mojtaba.madreese
+package com.mojtaba.madrese
 
-import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
-import android.webkit.PermissionRequest
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import java.io.File
-import java.io.FileOutputStream
+import android.widget.EditText
 
 class MainActivity : Activity() {
 
     private lateinit var webView: WebView
-    private var filePathCallback: ValueCallback<Array<Uri>>? = null
+    private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private val FILE_REQ = 1001
 
-    private val startUrl = "https://panel.nikan-school.top/"
-    private val REQ_FILE = 1001
-    private val REQ_PERM = 1002
-
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         webView = WebView(this)
         setContentView(webView)
 
-        askPermissions()
+        val st = webView.settings
+        st.javaScriptEnabled = true
+        st.domStorageEnabled = true
+        st.databaseEnabled = true
+        st.allowFileAccess = true
+        st.loadWithOverviewMode = true
+        st.useWideViewPort = true
 
-        val settings = webView.settings
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.allowFileAccess = true
-        settings.allowContentAccess = true
-        settings.mediaPlaybackRequiresUserGesture = false
-        if (Build.VERSION.SDK_INT >= 21) {
-            settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                if (url.startsWith("http") || url.startsWith("file")) return false
+                try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (e: Exception) {}
+                return true
+            }
         }
 
-        webView.webViewClient = WebViewClient()
         webView.webChromeClient = object : WebChromeClient() {
-            override fun onShowFileChooser(
-                view: WebView?,
-                callback: ValueCallback<Array<Uri>>?,
-                params: FileChooserParams?
-            ): Boolean {
-                try {
-                    filePathCallback?.onReceiveValue(null)
-                } catch (e: Exception) {
-                }
-                filePathCallback = callback
-
-                val gallery = Intent(Intent.ACTION_GET_CONTENT)
-                gallery.addCategory(Intent.CATEGORY_OPENABLE)
-                gallery.type = "image/*"
-
-                val camera = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-
-                val chooser = Intent(Intent.ACTION_CHOOSER)
-                chooser.putExtra(Intent.EXTRA_INTENT, gallery)
-                chooser.putExtra(Intent.EXTRA_TITLE, "عکس")
-                chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(camera))
-
-                return try {
-                    startActivityForResult(chooser, REQ_FILE)
-                    true
-                } catch (e: Exception) {
-                    filePathCallback = null
-                    false
-                }
+            override fun onShowFileChooser(wv: WebView?, cb: ValueCallback<Array<Uri>>?, p: FileChooserParams?): Boolean {
+                fileCallback?.onReceiveValue(null)
+                fileCallback = cb
+                val i = Intent(Intent.ACTION_GET_CONTENT)
+                i.addCategory(Intent.CATEGORY_OPENABLE)
+                i.type = "*/*"
+                try { startActivityForResult(Intent.createChooser(i, "انتخاب فایل"), FILE_REQ) }
+                catch (e: Exception) { fileCallback?.onReceiveValue(null); fileCallback = null }
+                return true
             }
 
-            override fun onPermissionRequest(request: PermissionRequest?) {
-                if (Build.VERSION.SDK_INT >= 21 && request != null) {
-                    request.grant(request.resources)
-                }
+            override fun onJsAlert(view: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
+                AlertDialog.Builder(this@MainActivity).setMessage(msg)
+                    .setPositiveButton("باشه") { _, _ -> r.confirm() }
+                    .setOnCancelListener { r.cancel() }.show()
+                return true
+            }
+
+            override fun onJsConfirm(view: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
+                AlertDialog.Builder(this@MainActivity).setMessage(msg)
+                    .setPositiveButton("باشه") { _, _ -> r.confirm() }
+                    .setNegativeButton("لغو") { _, _ -> r.cancel() }.show()
+                return true
+            }
+
+            override fun onJsPrompt(view: WebView?, url: String?, msg: String?, def: String?, r: JsPromptResult): Boolean {
+                val input = EditText(this@MainActivity)
+                input.setText(def ?: "")
+                AlertDialog.Builder(this@MainActivity).setMessage(msg).setView(input)
+                    .setPositiveButton("باشه") { _, _ -> r.confirm(input.text.toString()) }
+                    .setNegativeButton("لغو") { _, _ -> r.cancel() }.show()
+                return true
             }
         }
 
-        webView.loadUrl(startUrl)
-    }
-
-    private fun askPermissions() {
-        if (Build.VERSION.SDK_INT < 23) return
-        val need = ArrayList<String>()
-        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            need.add(Manifest.permission.CAMERA)
-        }
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
-                need.add(Manifest.permission.READ_MEDIA_IMAGES)
-            }
-        } else {
-            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                need.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-        }
-        if (need.isNotEmpty()) {
-            requestPermissions(need.toTypedArray(), REQ_PERM)
-        }
+        val asset = if (BuildConfig.FLAVOR == "mother") "mother-2.html" else "school-app-33.html"
+        webView.loadUrl("file:///android_asset/$asset")
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQ_FILE) return
-
-        val cb = filePathCallback
-        filePathCallback = null
-        if (cb == null) return
-
-        if (resultCode != RESULT_OK) {
-            cb.onReceiveValue(null)
-            return
+        if (requestCode == FILE_REQ) {
+            val res = if (resultCode == RESULT_OK && data != null && data.data != null) arrayOf(data.data!!) else null
+            fileCallback?.onReceiveValue(res)
+            fileCallback = null
         }
-
-        try {
-            if (data != null && data.data != null) {
-                cb.onReceiveValue(arrayOf(data.data!!))
-                return
-            }
-            if (data != null && data.clipData != null) {
-                val clip = data.clipData!!
-                val list = Array(clip.itemCount) { i -> clip.getItemAt(i).uri }
-                cb.onReceiveValue(list)
-                return
-            }
-            val bmp = data?.extras?.get("data") as? Bitmap
-            if (bmp != null) {
-                val file = File(cacheDir, "cam_" + System.currentTimeMillis() + ".jpg")
-                val out = FileOutputStream(file)
-                bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                out.flush()
-                out.close()
-                cb.onReceiveValue(arrayOf(Uri.fromFile(file)))
-                return
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        cb.onReceiveValue(null)
     }
 
     override fun onBackPressed() {
-        if (this::webView.isInitialized && webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
-        }
+        if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
 }
