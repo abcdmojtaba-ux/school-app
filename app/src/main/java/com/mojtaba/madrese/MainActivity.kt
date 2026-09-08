@@ -1,4 +1,5 @@
-package com.mojtaba.madrese
+package com.mojtaba.madreese
+
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -13,48 +14,18 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     private lateinit var webView: WebView
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var cameraImageUri: Uri? = null
 
-    // آدرس پنل مدرسه — اگر آدرس دیگری داری همین را عوض کن
     private val startUrl = "https://panel.nikan-school.top/"
-
-    private val fileChooserLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val cb = filePathCallback
-            filePathCallback = null
-            if (cb == null) return@registerForActivityResult
-
-            if (result.resultCode != Activity.RESULT_OK) {
-                cb.onReceiveValue(null)
-                return@registerForActivityResult
-            }
-
-            val data = result.data
-            val uris: Array<Uri>? = when {
-                data?.clipData != null -> {
-                    val clip = data.clipData!!
-                    Array(clip.itemCount) { i -> clip.getItemAt(i).uri }
-                }
-                data?.data != null -> arrayOf(data.data!!)
-                cameraImageUri != null -> arrayOf(cameraImageUri!!)
-                else -> null
-            }
-            cb.onReceiveValue(uris)
-        }
-
-    private val permissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { /* ادامه می‌دهد */ }
+    private val REQ_FILE = 1001
+    private val REQ_PERM = 1002
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,7 +33,21 @@ class MainActivity : AppCompatActivity() {
         webView = WebView(this)
         setContentView(webView)
 
-        requestNeededPermissions()
+        // درخواست مجوز دوربین
+        if (Build.VERSION.SDK_INT >= 23) {
+            val need = mutableListOf<String>()
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                need.add(Manifest.permission.CAMERA)
+            }
+            if (Build.VERSION.SDK_INT >= 33) {
+                if (checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                    need.add(Manifest.permission.READ_MEDIA_IMAGES)
+                }
+            }
+            if (need.isNotEmpty()) {
+                requestPermissions(need.toTypedArray(), REQ_PERM)
+            }
+        }
 
         val s = webView.settings
         s.javaScriptEnabled = true
@@ -70,90 +55,87 @@ class MainActivity : AppCompatActivity() {
         s.allowFileAccess = true
         s.allowContentAccess = true
         s.mediaPlaybackRequiresUserGesture = false
-        s.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        s.cacheMode = WebSettings.LOAD_DEFAULT
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            s.mediaPlaybackRequiresUserGesture = false
+        if (Build.VERSION.SDK_INT >= 21) {
+            s.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         }
 
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = object : WebChromeClient() {
-
-            // انتخاب فایل / دوربین از input type=file در سایت
             override fun onShowFileChooser(
-                webView: WebView?,
+                view: WebView?,
                 callback: ValueCallback<Array<Uri>>?,
-                fileChooserParams: FileChooserParams?
+                params: FileChooserParams?
             ): Boolean {
                 filePathCallback?.onReceiveValue(null)
                 filePathCallback = callback
 
-                // Intent دوربین
-                val takePicture = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
                 try {
-                    val photoFile = File(cacheDir, "nikan_cam_${System.currentTimeMillis()}.jpg")
+                    val photo = File(cacheDir, "cam_${System.currentTimeMillis()}.jpg")
                     cameraImageUri = FileProvider.getUriForFile(
                         this@MainActivity,
-                        "${packageName}.fileprovider",
-                        photoFile
+                        packageName + ".fileprovider",
+                        photo
                     )
-                    takePicture.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
-                    takePicture.addFlags(
-                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
+                    cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
+                    cameraIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    cameraIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 } catch (e: Exception) {
                     cameraImageUri = null
                 }
 
-                // Intent گالری
-                val gallery = Intent(Intent.ACTION_GET_CONTENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "image/*"
+                val galleryIntent = Intent(Intent.ACTION_GET_CONTENT)
+                galleryIntent.addCategory(Intent.CATEGORY_OPENABLE)
+                galleryIntent.type = "image/*"
+
+                val chooser = Intent(Intent.ACTION_CHOOSER)
+                chooser.putExtra(Intent.EXTRA_INTENT, galleryIntent)
+                chooser.putExtra(Intent.EXTRA_TITLE, "عکس")
+                if (cameraImageUri != null) {
+                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(cameraIntent))
                 }
 
-                val chooser = Intent(Intent.ACTION_CHOOSER).apply {
-                    putExtra(Intent.EXTRA_INTENT, gallery)
-                    putExtra(Intent.EXTRA_TITLE, "انتخاب عکس")
-                    if (cameraImageUri != null) {
-                        putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(takePicture))
-                    }
-                }
-
-                return try {
-                    fileChooserLauncher.launch(chooser)
-                    true
+                try {
+                    startActivityForResult(chooser, REQ_FILE)
                 } catch (e: Exception) {
                     filePathCallback = null
-                    false
+                    return false
                 }
+                return true
             }
 
-            // دوربین زنده (getUserMedia) داخل صفحه
             override fun onPermissionRequest(request: PermissionRequest?) {
-                request?.grant(request.resources)
+                if (Build.VERSION.SDK_INT >= 21) {
+                    request?.grant(request.resources)
+                }
             }
         }
 
         webView.loadUrl(startUrl)
     }
 
-    private fun requestNeededPermissions() {
-        val need = mutableListOf<String>()
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            need.add(Manifest.permission.CAMERA)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQ_FILE) return
+        val cb = filePathCallback
+        filePathCallback = null
+        if (cb == null) return
+
+        if (resultCode != RESULT_OK) {
+            cb.onReceiveValue(null)
+            return
         }
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                need.add(Manifest.permission.READ_MEDIA_IMAGES)
+
+        val uris: Array<Uri>? = when {
+            data?.clipData != null -> {
+                val c = data.clipData!!
+                Array(c.itemCount) { i -> c.getItemAt(i).uri }
             }
+            data?.data != null -> arrayOf(data.data!!)
+            cameraImageUri != null -> arrayOf(cameraImageUri!!)
+            else -> null
         }
-        if (need.isNotEmpty()) {
-            permissionLauncher.launch(need.toTypedArray())
-        }
+        cb.onReceiveValue(uris)
     }
 
     override fun onBackPressed() {
@@ -164,4 +146,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-
