@@ -284,6 +284,24 @@ body.theme-light .btn-outline{border-color:#93c5fd;color:#1d4ed8}
   border:1px solid rgba(56,189,248,.25);
 }
 .toast.show{opacity:1}
+.toast.toast-long{bottom:90px}
+
+/* بارگذاری ماندگار برای ورود و همگام‌سازی */
+.login-loading-overlay{
+  display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(7,11,20,.72);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;flex-direction:column;gap:14px;
+  color:#e8eef7;text-align:center;padding:20px;
+}
+.login-loading-overlay.show{display:flex}
+.login-loading-spinner{
+  width:42px;height:42px;border:3px solid rgba(56,189,248,.25);
+  border-top-color:#38bdf8;border-radius:50%;
+  animation:loginSpin .8s linear infinite;
+}
+@keyframes loginSpin{to{transform:rotate(360deg)}}
+.login-loading-text{font-size:.95rem;font-weight:600;max-width:280px;line-height:1.5}
+.login-loading-sub{font-size:.8rem;color:#94a3b8;max-width:260px}
 
 .checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.9em}
 .color-swatch{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer;display:inline-block;margin:4px}
@@ -378,13 +396,15 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
 .msg-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 
 
-.photo-file-btn{position:relative;display:block;width:100%;overflow:hidden;border-radius:12px;margin:0}
+.photo-file-btn{position:relative;display:block;width:100%;overflow:hidden;border-radius:12px;margin:0;-webkit-tap-highlight-color:transparent}
 .photo-file-btn .btn-face{pointer-events:none;width:100%;text-align:center}
 .photo-file-btn input[type=file]{
   position:absolute;inset:0;width:100%;height:100%;
-  opacity:0;cursor:pointer;font-size:100px; /* اندروید: ناحیه لمس بزرگ */
-  z-index:2;
+  opacity:0;cursor:pointer;font-size:28px;
+  z-index:5;
 }
+.photo-actions button{min-height:44px;-webkit-tap-highlight-color:transparent}
+
 #live-cam-box{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px}
 #live-cam-box.show{display:flex}
 #live-cam-box video{width:min(100%,360px);max-height:50vh;background:#000;border-radius:12px}
@@ -450,7 +470,7 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
         <span>ذخیره کد مدرسه و نام کاربری روی این دستگاه</span>
       </label>
       <p class="hint" style="margin-top:-8px;margin-bottom:10px">دفعه بعد لازم نیست دوباره کد و نام کاربری را بنویسید. رمز ذخیره نمی‌شود.</p>
-      <button class="btn btn-primary btn-block" onclick="doLogin()">ورود</button>
+      <button class="btn btn-primary btn-block" id="btn-login" onclick="doLogin()">ورود</button>
       <p class="hint" id="hint-vpn-login" style="margin-top:8px">اگر با کروم باز نشد، یک‌بار صفحه را رفرش کنید یا از مرورگر دیگری امتحان کنید.</p>
       <p class="hint" style="margin-top:10px">اگر دو فایل جدا باز شده، پشتیبان پنل مادر را بارگذاری کنید:</p>
       <button class="btn btn-outline btn-block" onclick="document.getElementById('import-mother-login').click()">بارگذاری پشتیبان پنل مادر</button>
@@ -861,6 +881,11 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="login-loading-overlay" id="login-loading">
+  <div class="login-loading-spinner"></div>
+  <div class="login-loading-text" id="login-loading-text">در حال ورود...</div>
+  <div class="login-loading-sub" id="login-loading-sub">لطفاً چند لحظه صبر کنید</div>
+</div>
 
 <script>
 const APP_KEY='school_app_v1',MOTHER_KEY='mother_panel_v1',DATA_PREFIX='school_data_',SESSION_USER='school_user_session';
@@ -877,8 +902,34 @@ function toFaDigits(s){return String(s).replace(/\d/g,function(d){return'۰۱۲�
 function formatDateFa(iso){if(!iso)return'—';try{var p=String(iso).slice(0,10).split('-');var j=gregorianToJalali(+p[0],+p[1],+p[2]);return toFaDigits(j[0]+'/'+('0'+j[1]).slice(-2)+'/'+('0'+j[2]).slice(-2))}catch(e){return String(iso)}}
 function persianToday(){return formatDateFa(todayStr())}
 function jsDay(){return new Date().getDay()} // 0=Sun
-function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600)}
-function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');if(n==='login'){try{fillRememberedLogin()}catch(e){}}}
+let _toastTimer=null;
+function toast(m,ms){
+  const e=document.getElementById('toast');
+  if(!e)return;
+  e.textContent=m;
+  e.classList.add('show');
+  if(_toastTimer)clearTimeout(_toastTimer);
+  const dur=(typeof ms==='number'&&ms>0)?ms:2800;
+  _toastTimer=setTimeout(function(){e.classList.remove('show')},dur);
+}
+function showLoginLoading(title,sub){
+  const ov=document.getElementById('login-loading');
+  if(!ov)return;
+  const t=document.getElementById('login-loading-text');
+  const s=document.getElementById('login-loading-sub');
+  if(t)t.textContent=title||'در حال ورود...';
+  if(s)s.textContent=sub||'لطفاً چند لحظه صبر کنید — اتصال به سرور';
+  ov.classList.add('show');
+  const btn=document.getElementById('btn-login');
+  if(btn){btn.disabled=true;btn.textContent='در حال ورود...'}
+}
+function hideLoginLoading(){
+  const ov=document.getElementById('login-loading');
+  if(ov)ov.classList.remove('show');
+  const btn=document.getElementById('btn-login');
+  if(btn){btn.disabled=false;btn.textContent='ورود'}
+}
+function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');if(n==='login'){try{fillRememberedLogin()}catch(e){}}hideLoginLoading()}
 function loadSession(){try{return JSON.parse(localStorage.getItem(APP_KEY)||'null')}catch(e){return null}}
 function saveSession(d){localStorage.setItem(APP_KEY,JSON.stringify(d));session=d}
 function loadUserSession(){try{return JSON.parse(localStorage.getItem(SESSION_USER)||'null')}catch(e){return null}}
@@ -889,7 +940,7 @@ function saveMother(d){localStorage.setItem(MOTHER_KEY,JSON.stringify(d))}
 function importMotherBackup(ev){const file=ev.target.files&&ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(){try{const data=JSON.parse(reader.result);if(!data.schools)throw 0;saveMother(data);toast('پشتیبان مادر بارگذاری شد')}catch(e){toast('فایل نامعتبر')}};reader.readAsText(file);ev.target.value=''}
 
 /* سرور Cloudflare — بدون Firebase/گوگل */
-const DEFAULT_SYNC_API='https://api.nikan-school.top';
+const DEFAULT_SYNC_API='https://panel.nikan-school.top';
 const FALLBACK_SYNC_API='https://school-sync.abcd-mojtaba.workers.dev';
 const SYNC_API=(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API).replace(/\/$/,'');
 function setSyncApi(url){url=String(url||'').trim().replace(/\/$/,'');localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
@@ -900,13 +951,13 @@ async function apiFetch(path,options){
   const bases=[];
   const primary=(typeof SYNC_API!=='undefined'&&SYNC_API)?SYNC_API:'';
   if(primary)bases.push(primary);
-  if(typeof FALLBACK_SYNC_API!=='undefined'&&FALLBACK_SYNC_API&&FALLBACK_SYNC_API!==primary)bases.push(FALLBACK_SYNC_API);
+  if(typeof FALLBACK_SYNC_API!=='undefined'&&FALLBACK_SYNC_API&&FALLBACK_SYNC_API!==primary)bases.push(FALLBACK_SYNC_API);try{var _extraApi='https://api.nikan-school.top';if(_extraApi!==primary&&bases.indexOf(_extraApi)<0)bases.push(_extraApi)}catch(e){}
   if(!bases.length)throw new Error('آدرس سرور تنظیم نشده');
   for(const base of bases){
     for(let i=1;i<=maxTry;i++){
       try{
         const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},14000):null;
+        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},10000):null;
         const res=await fetch(base+path,{
           method:opts.method||'GET',
           headers:{'Content-Type':'application/json',...(opts.headers||{})},
@@ -1322,27 +1373,46 @@ function handlePhotoFile(file, previewId){
   }
 }
 function photoButtons(fileId, prevId){
-  const gid = fileId + '-gal';
-  const cid = fileId + '-cam';
-  const uid = fileId + '-user';
-  // input با opacity روی دکمه — روش پایدار اندروید/کروم/وب‌ویو
-  return '<div class="photo-actions" style="display:flex;flex-direction:column;gap:10px;width:100%">'+
-    '<div class="photo-file-btn">'+
-      '<div class="btn btn-primary btn-sm btn-face">📷 دوربین (پشت)</div>'+
-      '<input type="file" id="'+cid+'" accept="image/*" capture="environment" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\');this.value=\'\';" />'+
-    '</div>'+
-    '<div class="photo-file-btn">'+
-      '<div class="btn btn-primary btn-sm btn-face">🤳 دوربین سلفی</div>'+
-      '<input type="file" id="'+uid+'" accept="image/*" capture="user" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\');this.value=\'\';" />'+
-    '</div>'+
-    '<div class="photo-file-btn">'+
-      '<div class="btn btn-outline btn-sm btn-face">📁 از گالری</div>'+
-      '<input type="file" id="'+gid+'" accept="image/*" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\');this.value=\'\';" />'+
-    '</div>'+
-    '<button type="button" class="btn btn-outline btn-sm" onclick="openLiveCamera(\''+prevId+'\')">🎥 دوربین زنده داخل صفحه</button>'+
-    '<p class="hint" style="margin:0">اگر دوربین باز نشد از «گالری» استفاده کنید. برای دوربین زنده سایت باید https باشد.</p>'+
-    '<input type="file" id="'+fileId+'" accept="image/*" style="display:none" onchange="handlePhotoFile(this.files&&this.files[0],\''+prevId+'\')" />'+
-  '</div>';
+  var p = String(prevId || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  var fid = String(fileId || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return '<div class="photo-actions" style="display:flex;flex-direction:column;gap:10px;width:100%">'
+    + '<button type="button" class="btn btn-primary btn-sm" onclick="pickPhotoFromDevice(\'environment\',\'' + p + '\')">📷 دوربین (پشت)</button>'
+    + '<button type="button" class="btn btn-primary btn-sm" onclick="pickPhotoFromDevice(\'user\',\'' + p + '\')">🤳 دوربین سلفی</button>'
+    + '<button type="button" class="btn btn-outline btn-sm" onclick="pickPhotoFromDevice(\'\',\'' + p + '\')">📁 از گالری</button>'
+    + '<button type="button" class="btn btn-outline btn-sm" onclick="openLiveCamera(\'' + p + '\')">🎥 دوربین زنده داخل صفحه</button>'
+    + '<p class="hint" style="margin:0">اگر دوربین باز نشد از «گالری» استفاده کنید. در اپ اندروید اجازه دسترسی دوربین و فایل را بدهید.</p>'
+    + '<input type="file" id="' + fid + '" accept="image/*" style="display:none" onchange="handlePhotoFile(this.files&&this.files[0],\'' + p + '\')" />'
+    + '</div>';
+}
+function pickPhotoFromDevice(mode, prevId){
+  try{
+    window._photoPreviewId = prevId || window._photoPreviewId || '';
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if(mode === 'environment' || mode === 'user'){
+      input.setAttribute('capture', mode);
+    }
+    input.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;z-index:99999;';
+    var cleaned = false;
+    function cleanup(){
+      if(cleaned) return;
+      cleaned = true;
+      try{ if(input.parentNode) input.parentNode.removeChild(input); }catch(e){}
+    }
+    input.addEventListener('change', function(){
+      var f = input.files && input.files[0];
+      cleanup();
+      if(f) handlePhotoFile(f, window._photoPreviewId || prevId);
+      else toast('فایلی انتخاب نشد');
+    });
+    document.body.appendChild(input);
+    input.click();
+    setTimeout(cleanup, 120000);
+  }catch(e){
+    console.error(e);
+    toast('باز کردن انتخاب عکس ممکن نشد');
+  }
 }
 function triggerPhotoInput(id){
   const el=document.getElementById(id);
@@ -1383,8 +1453,15 @@ function openLiveCamera(prevId){
     }
     navigator.mediaDevices.getUserMedia(tryConstraints[i++]).then(function(stream){
       _liveStream=stream;
+      try{
+        video.setAttribute('playsinline','true');
+        video.setAttribute('webkit-playsinline','true');
+        video.muted = true;
+        video.autoplay = true;
+      }catch(e){}
       video.srcObject=stream;
-      video.play().catch(function(){});
+      var p = video.play();
+      if(p && p.catch) p.catch(function(){});
       toast('دوربین باز شد — ثبت عکس را بزنید');
     }).catch(function(){attempt()});
   }
@@ -1498,7 +1575,34 @@ function currentUserAvatarHtml(cls){
   return avatarHtml(currentUserPhoto(),name,cls||'');
 }
 function canManage(){return isManager()||isDeputy()}
-function dualShift(){try{if(session&&(Number(session.shifts)===2||(session.modules||[]).indexOf('dual_shift')>=0))return true;if(schoolData&&Number(schoolData.shifts)===2)return true;if(schoolData&&(schoolData.classes||[]).some(function(c){return Number(c.shift)===1||Number(c.shift)===2}))return true;if(schoolData&&(schoolData.staff||[]).some(function(u){return Number(u.shift)===1||Number(u.shift)===2}))return true}catch(e){}return false}
+/** فقط لایسنس/پنل مادر تعیین می‌کند دو شیفت باشد — وجود فیلد shift روی کلاس قدیمی کافی نیست */
+function dualShift(){
+  try{
+    if(session){
+      if(Number(session.shifts)===2)return true;
+      if(Array.isArray(session.modules)&&session.modules.indexOf('dual_shift')>=0)return true;
+      if(Number(session.shifts)===1)return false;
+    }
+    if(schoolData&&Number(schoolData.shifts)===2)return true;
+  }catch(e){}
+  return false;
+}
+/** ماژول فعال از لایسنس مادر */
+function hasModule(id){
+  try{
+    if(!session)return true;
+    const mods=session.modules;
+    if(!Array.isArray(mods)||!mods.length)return true;
+    return mods.indexOf(id)>=0;
+  }catch(e){return true}
+}
+function maxStudentsAllowed(){
+  try{
+    const n=parseInt(session&&session.maxUsers,10);
+    if(n>0)return n;
+  }catch(e){}
+  return 0;
+}
 
 async function doRegister(){
   const school=document.getElementById('r-school').value.trim(),manager=document.getElementById('r-manager').value.trim(),phone=fixPhone(document.getElementById('r-phone').value),city=document.getElementById('r-city').value.trim(),user=normLoginUser(document.getElementById('r-user').value.trim()),pass=document.getElementById('r-pass').value,pass2=document.getElementById('r-pass2').value;
@@ -1554,7 +1658,10 @@ async function activateWithCode(){
   enterApp();
 }
 function applySchoolSession(sc){
-  saveSession({schoolId:sc.id,code:sc.code,name:sc.name,managerName:sc.managerName,phone:sc.managerPhone,city:sc.city||'',startDate:sc.startDate,expireDate:sc.expireDate,plan:sc.plan||'paid',active:sc.active!==false,shifts:sc.shifts||1,modules:sc.modules||[]});
+  let sh=Number(sc.shifts)||1;
+  if(Array.isArray(sc.modules)&&sc.modules.indexOf('dual_shift')>=0)sh=2;
+  if(Number(sc.shifts)===1&&(!sc.modules||sc.modules.indexOf('dual_shift')<0))sh=1;
+  saveSession({schoolId:sc.id,code:sc.code,name:sc.name,managerName:sc.managerName,phone:sc.managerPhone,city:sc.city||'',startDate:sc.startDate,expireDate:sc.expireDate,plan:sc.plan||'paid',active:sc.active!==false,shifts:sh,modules:sc.modules||[],maxUsers:parseInt(sc.maxUsers,10)||20});
   session=loadSession();loadSchoolData();
   if(sc.managerUsername)schoolData.managerUser=String(sc.managerUsername).trim();
   if(sc.managerPassword)schoolData.managerPass=String(sc.managerPassword);
@@ -1639,6 +1746,9 @@ async function doLogin(){
   const remember=rememberEl?!!rememberEl.checked:true;
   saveRememberedLogin(code,user,(typeof loginRole!=='undefined'?loginRole:'manager'),remember);
   try{if(localStorage.getItem('school_sync_api')==='')localStorage.removeItem('school_sync_api')}catch(e){}
+  window._lastLoginNetErr=null;
+  showLoginLoading('در حال ورود...','در حال بررسی اطلاعات روی این دستگاه و سرور');
+  try{
   const mother=loadMother(),schools=mother.schools||[];
   if(loginRole==='manager'){
     let sc=null;
@@ -1648,29 +1758,26 @@ async function doLogin(){
     // 2) سرور
     if(!sc){
       try{
-        toast('در حال ورود از سرور...');
+        showLoginLoading('در حال ورود از سرور...','در حال ارتباط با سرور — ممکن است چند ثانیه طول بکشد');
+        toast('در حال ورود از سرور...',5000);
         sc=await cloudFindSchoolByLogin(user,pass,code||null);
       }catch(e){
         console.error('login cloud',e);
-        // اگر سرور در دسترس نبود، ادامه بده به سراغ نشست محلی
         sc=null;
         var m=(e&&e.message)?e.message:'';
-        if(/اتصال|سرور|network|Failed|fetch/i.test(m)){
-          // فقط اگر بعداً محلی هم پیدا نشد این را نشان می‌دهیم
-          window._lastLoginNetErr=m;
-        }else{
-          window._lastLoginNetErr=m;
-        }
+        window._lastLoginNetErr=m;
       }
     }
     if(sc){
       // از سرور نسخه به‌روز لایسنس بگیر (تمدید)
       if(SYNC_API&&sc.id){
-        toast('در حال تأیید مدرسه روی سرور...');
+        showLoginLoading('در حال تأیید مدرسه...','بررسی لایسنس و وضعیت مدرسه روی سرور');
+        toast('در حال تأیید مدرسه روی سرور...',4000);
         try{
           const chk=await apiFetch('/api/schools/'+encodeURIComponent(sc.id),{retries:2});
           if(!chk||!chk.school){
             wipeSchoolLocal(sc.id,sc.code);
+            hideLoginLoading();
             return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
           }
           sc=Object.assign({},sc,chk.school);
@@ -1678,16 +1785,18 @@ async function doLogin(){
           var m=(e&&e.message)?String(e.message):'';
           if(/not found|404/i.test(m)){
             wipeSchoolLocal(sc.id,sc.code);
+            hideLoginLoading();
             return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
           }
         }
       }
-      if(sc.active===false)return toast('مدرسه خاموش است');
-      if(sc.expireDate&&isExpired(sc.expireDate))return toast('لایسنس منقضی شده — از پشتیبانی تمدید کنید');
+      if(sc.active===false){hideLoginLoading();return toast('مدرسه خاموش است')}
+      if(sc.expireDate&&isExpired(sc.expireDate)){hideLoginLoading();return toast('لایسنس منقضی شده — از پشتیبانی تمدید کنید')}
       applySchoolSession(sc);
       saveUserSession({role:'manager',username:user,name:sc.managerName||'مدیر',schoolId:sc.id});
-      toast('ورود مدیر');
-      enterApp();
+      showLoginLoading('ورود موفق','در حال آماده‌سازی پنل مدیر...');
+      toast('ورود مدیر',3500);
+      await enterApp();
       return;
     }
     // 3) نشست قبلی همین دستگاه
@@ -1698,53 +1807,76 @@ async function doLogin(){
       const localUser=normLoginUser(schoolData.managerUser||'');
       if(localUser===user&&String(schoolData.managerPass||'')===String(pass)){
         if(SYNC_API&&session.schoolId){
-          toast('در حال تأیید مدرسه روی سرور...');
+          showLoginLoading('در حال تأیید مدرسه...','بررسی وضعیت مدرسه روی سرور');
+          toast('در حال تأیید مدرسه روی سرور...',4000);
           const st=await assertSchoolExistsOnServer(session.schoolId);
           if(st===false){
             wipeSchoolLocal(session.schoolId,session.code);
+            hideLoginLoading();
             return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
           }
-          if(st==='inactive')return toast('مدرسه خاموش است');
+          if(st==='inactive'){hideLoginLoading();return toast('مدرسه خاموش است')}
         }
         saveUserSession({role:'manager',username:user,name:session.managerName||'مدیر',schoolId:session.schoolId});
-        toast('ورود مدیر');
-        enterApp();
+        showLoginLoading('ورود موفق','در حال آماده‌سازی پنل...');
+        toast('ورود مدیر',3500);
+        await enterApp();
         return;
       }
     }
-    if(window._lastLoginNetErr)return toast('ورود نشد. اتصال برقرار نشد — دوباره تلاش کنید');
-    return toast('نام کاربری یا رمز اشتباه است. از پنل مادر همان شماره/رمز را بزنید');
+    hideLoginLoading();
+    if(window._lastLoginNetErr)return toast('ورود نشد. اتصال برقرار نشد — دوباره تلاش کنید',4500);
+    return toast('نام کاربری یا رمز اشتباه است. از پنل مادر همان شماره/رمز را بزنید',4500);
   }
+  // ورود معلم / معاون
+  showLoginLoading('در حال ورود...','بررسی کد مدرسه و کاربران تیم');
   let sess=loadSession();
   if(code){
     let byCode=schools.find(s=>s.code===code);
-    if(!byCode&&SYNC_API){try{const data=await apiFetch('/api/schools/by-code/'+encodeURIComponent(code));if(data&&data.school)byCode=data.school}catch(e){}}
+    if(!byCode&&SYNC_API){
+      try{
+        showLoginLoading('در حال دریافت اطلاعات مدرسه...','ارتباط با سرور');
+        const data=await apiFetch('/api/schools/by-code/'+encodeURIComponent(code));
+        if(data&&data.school)byCode=data.school;
+      }catch(e){}
+    }
     if(byCode){applySchoolSession(byCode);sess=loadSession()}
   }
-  if(!sess)return toast('کد مدرسه را وارد کنید یا اول مدیر فعال کند');
+  if(!sess){hideLoginLoading();return toast('کد مدرسه را وارد کنید یا اول مدیر فعال کند')}
   session=sess;loadSchoolData();
   if(SYNC_API&&session.schoolId){
+    showLoginLoading('در حال تأیید مدرسه...','بررسی وضعیت روی سرور');
     const exists=await assertSchoolExistsOnServer(session.schoolId);
     if(exists===false){
       wipeSchoolLocal(session.schoolId,session.code);
+      hideLoginLoading();
       return toast('این مدرسه حذف شده و دیگر قابل ورود نیست');
     }
-    if(exists==='inactive')return toast('مدرسه خاموش است');
+    if(exists==='inactive'){hideLoginLoading();return toast('مدرسه خاموش است')}
   }
+  showLoginLoading('در حال دریافت تیم...','دریافت لیست معلمان و معاونان از سرور');
   await cloudPullStaff(session.schoolId);
   try{ await cloudPullAppData(true); }catch(e){}
   if(!Array.isArray(schoolData.staff))schoolData.staff=[];
   const staffList=schoolData.staff||[];
-  if(!staffList.length)return toast('هنوز معلم/معاونی ثبت نشده یا به سرور ارسال نشده. اول با مدیر وارد شوید و تیم را ذخیره کنید');
+  if(!staffList.length){hideLoginLoading();return toast('هنوز معلم/معاونی ثبت نشده یا به سرور ارسال نشده. اول با مدیر وارد شوید و تیم را ذخیره کنید',5000)}
   const st=staffList.find(u=>String(u.username||'')===String(user)&&String(u.pass||'')===String(pass)&&u.role===loginRole&&u.active!==false);
   if(!st){
+    hideLoginLoading();
     const sameUser=staffList.find(u=>String(u.username||'')===String(user));
     if(sameUser&&sameUser.role!==loginRole)return toast('نقش را درست انتخاب کنید (الان این کاربر: '+(sameUser.role==='teacher'?'معلم':sameUser.role==='deputy'?'معاون':sameUser.role)+')');
     if(sameUser)return toast('رمز عبور اشتباه است');
     return toast('کاربر یافت نشد. نام کاربری را دقیق مثل تعریف در تیم وارد کنید');
   }
   saveUserSession({role:st.role,username:st.username,name:st.name,schoolId:session.schoolId,staffId:st.id,shift:st.shift||null,photo:st.photo||''});
-  toast('ورود '+(st.role==='deputy'?'معاون':'معلم'));enterApp();
+  showLoginLoading('ورود موفق','در حال آماده‌سازی پنل...');
+  toast('ورود '+(st.role==='deputy'?'معاون':'معلم'),3500);
+  await enterApp();
+  }catch(err){
+    console.error('doLogin',err);
+    hideLoginLoading();
+    toast('خطا در ورود — دوباره تلاش کنید',4000);
+  }
 }
 function applyLicenseFields(s){
   if(!session||!s)return;
@@ -1753,13 +1885,16 @@ function applyLicenseFields(s){
   if(s.name)session.name=s.name;
   if(s.plan)session.plan=s.plan;
   if(s.shifts!=null)session.shifts=Number(s.shifts)||1;
-  if(s.modules)session.modules=s.modules;
-  // دو شیفت از مادر → روی داده محلی مدرسه هم بنشینند
+  if(s.modules)session.modules=Array.isArray(s.modules)?s.modules.slice():s.modules;
+  if(s.maxUsers!=null)session.maxUsers=parseInt(s.maxUsers,10)||20;
+  // هم‌تراز شیفت با لایسنس مادر (تک‌شیفت = اجباری ۱)
   try{
     if(typeof schoolData!=='undefined'&&schoolData){
-      if(s.shifts!=null)schoolData.shifts=Number(s.shifts)||1;
-      if(Array.isArray(s.modules)&&s.modules.indexOf('dual_shift')>=0)schoolData.shifts=2;
-      if(Number(session.shifts)===2)schoolData.shifts=2;
+      let sh=Number(session.shifts)||1;
+      if(Array.isArray(session.modules)&&session.modules.indexOf('dual_shift')>=0)sh=2;
+      if(Number(s.shifts)===1&&(!s.modules||s.modules.indexOf('dual_shift')<0))sh=1;
+      session.shifts=sh;
+      schoolData.shifts=sh;
       try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
     }
   }catch(e){}
@@ -1818,14 +1953,21 @@ async function enterApp(){
   await syncLicenseFromServer();
   session=loadSession();
   if(session.active===false||(session.expireDate&&isExpired(session.expireDate))){
+    hideLoginLoading();
     document.getElementById('locked-info').innerHTML='<div><strong>'+(session.name||'')+'</strong></div><div>انقضا: '+formatDateFa(session.expireDate)+'</div><p class="hint" style="margin-top:8px">در صورت خرید لایسنس، از پنل پشتیبانی تمدید می‌شود. یک‌بار خارج و دوباره وارد شوید.</p><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="recheckLicense()">بررسی مجدد لایسنس</button>';
     showScreen('locked');
     return;
   }
   loadSchoolData();
-  // هم‌تراز کردن شیفت با لایسنس/مادر
-  if(session&&Number(session.shifts)===2)schoolData.shifts=2;
-  else if(session&&session.modules&&session.modules.indexOf('dual_shift')>=0)schoolData.shifts=2;
+  // هم‌تراز کردن شیفت با لایسنس/مادر (تک‌شیفت اجباری می‌ماند)
+  if(session){
+    if(Number(session.shifts)===2||(session.modules&&session.modules.indexOf('dual_shift')>=0)){
+      session.shifts=2;schoolData.shifts=2;
+    }else{
+      session.shifts=1;schoolData.shifts=1;
+    }
+    try{saveSession(session);localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  }
   try{ensureAllSubmissionsInAttendance()}catch(e){}
   document.getElementById('app-title').textContent=session.name||'سامانه مدرسه';
   const roleFa={manager:'مدیر',deputy:'معاون',teacher:'معلم'};
@@ -1848,11 +1990,14 @@ async function enterApp(){
   }catch(e){}
   buildNav();
   showScreen('app');
+  // پنل را سریع نشان بده؛ همگام‌سازی در پس‌زمینه ادامه پیدا می‌کند
+  hideLoginLoading();
   if(canManage()&&typeof Notification!=='undefined'&&Notification.permission==='default'){
     try{Notification.requestPermission()}catch(e){}
   }
   // دریافت اجباری از سرور برای دستگاه جدید
   const afterSync=function(pulled){
+    hideLoginLoading();
     if(canManage()&&session.schoolId){
       cloudPullSubmissions(session.schoolId).then(()=>{try{renderHome()}catch(e){}});
     }
@@ -1863,18 +2008,20 @@ async function enterApp(){
     }
     showAppPage(isTeacher()?'teacher':'home');
     const nC=(schoolData.classes||[]).length,nS=(schoolData.students||[]).length,nT=(schoolData.staff||[]).length;
-    if(nC||nS||nT)toast('اطلاعات مدرسه: '+nC+' کلاس · '+nS+' دانش‌آموز · '+nT+' کاربر');
-    else if(pulled===false)toast('روی سرور هنوز داده‌ای نیست — از دستگاه قبلی «ارسال به سرور» بزنید');
+    if(nC||nS||nT)toast('اطلاعات مدرسه: '+nC+' کلاس · '+nS+' دانش‌آموز · '+nT+' کاربر',4000);
+    else if(pulled===false)toast('روی سرور هنوز داده‌ای نیست — از دستگاه قبلی «ارسال به سرور» بزنید',4500);
   };
   startAutoSync();
   if(session.schoolId){
-    toast('در حال دریافت اطلاعات از سرور...');
+    toast('در حال دریافت اطلاعات از سرور...',5000);
     assertSchoolExistsOnServer(session.schoolId).then(async function(st){
       if(st===false){
+        hideLoginLoading();
         forceKickDeletedSchool('این مدرسه از پنل مادر حذف شده است');
         return;
       }
       if(st==='inactive'){
+        hideLoginLoading();
         session.active=false;saveSession(session);
         showScreen('locked');
         return;
@@ -1890,6 +2037,7 @@ async function enterApp(){
       try{if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}}catch(e){}
       afterSync(ok);
     }).catch(function(){
+      hideLoginLoading();
       forceKickDeletedSchool('امکان تأیید مدرسه روی سرور نیست — دوباره وارد شوید');
     });
   }else afterSync(false);
@@ -1959,12 +2107,17 @@ function buildNav(){
   }
   let html='<button data-p="home" onclick="showAppPage(\'home\')">خانه</button><button data-p="classes" onclick="showAppPage(\'classes\')">کلاس</button>';
   if(isManager())html+='<button data-p="schedule" onclick="showAppPage(\'schedule\')">برنامه</button><button data-p="team" onclick="showAppPage(\'team\')">تیم</button>';
-  html+='<button data-p="messages" onclick="showAppPage(\'messages\')">پیام</button><button data-p="reports" onclick="showAppPage(\'reports\')">گزارش</button><button data-p="send" onclick="showAppPage(\'send\')">پیامک</button><button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
+  html+='<button data-p="messages" onclick="showAppPage(\'messages\')">پیام</button>';
+  if(hasModule('advanced_reports')||hasModule('discipline'))html+='<button data-p="reports" onclick="showAppPage(\'reports\')">گزارش</button>';
+  if(hasModule('sms'))html+='<button data-p="send" onclick="showAppPage(\'send\')">پیامک</button>';
+  html+='<button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
   nav.innerHTML=html;
 }
 function showAppPage(name){
   if(isTeacher()&&['send','team','schedule','settings'].includes(name))return toast('دسترسی ندارید');
   if(!isManager()&&name==='schedule')return toast('فقط مدیر برنامه را تنظیم می‌کند');
+  if(name==='send'&&!hasModule('sms'))return toast('ماژول پیامک برای این مدرسه فعال نیست');
+  if(name==='reports'&&!(hasModule('advanced_reports')||hasModule('discipline')))return toast('ماژول گزارش/انضباط فعال نیست');
   document.querySelectorAll('#screen-app .page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#bottom-nav button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-p')===name||(name==='students'&&b.getAttribute('data-p')==='classes')||(name==='performance'&&b.getAttribute('data-p')==='reports')||(name==='take-att'&&b.getAttribute('data-p')==='teacher')||(name==='submission'&&b.getAttribute('data-p')==='home')));
   const el=document.getElementById('page-'+name);if(el)el.classList.add('active');
@@ -2217,9 +2370,10 @@ function saveClass(id){
     if(!Array.isArray(schoolData.classes))schoolData.classes=[];
     if(id){
       const cl=schoolData.classes.find(x=>x.id===id);
-      if(cl){cl.name=name;cl.shift=shift}
-    }else schoolData.classes.push({id:uid(),name:name,shift:shift});
-    if(shift===1||shift===2)schoolData.shifts=2;
+      if(cl){cl.name=name;if(dualShift())cl.shift=shift;else delete cl.shift}
+    }else schoolData.classes.push(dualShift()?{id:uid(),name:name,shift:shift}:{id:uid(),name:name});
+    // شیفت فقط از لایسنس مادر می‌آید — ذخیره کلاس نباید دو شیفت را روشن کند
+    schoolData.shifts=dualShift()?2:1;
     schoolData._cloudUpdatedAtMs=Date.now();
     saveSchoolData();
     if(canManage())cloudPushAppData(true).catch(function(){});
@@ -2251,6 +2405,10 @@ function saveStudent(id){
       if(s){s.name=name;s.phones=phones;s.note=note;s.photo=photo||'';}
       else return toast('دانش‌آموز یافت نشد');
     }else{
+      const lim=maxStudentsAllowed();
+      if(lim>0&&schoolData.students.length>=lim){
+        return toast('سقف دانش‌آموز این مدرسه '+lim+' نفر است (از پنل مادر). برای افزایش با پشتیبانی تماس بگیرید.');
+      }
       schoolData.students.push({id:uid(),classId:currentClassId,name:name,phones:phones,note:note,photo:photo||''});
     }
     schoolData._cloudUpdatedAtMs=Date.now();
@@ -2282,7 +2440,8 @@ function importExcel(ev){
     let text=String(reader.result||'');
     if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
     const lines=text.split(/\r?\n/).filter(l=>l.trim());
-    let n=0;
+    let n=0,skipped=0;
+    const lim=maxStudentsAllowed();
     lines.forEach(line=>{
       let parts;
       if(line.indexOf('\t')>=0)parts=line.split('\t');
@@ -2291,6 +2450,7 @@ function importExcel(ev){
       if(parts.length<1)return;
       let name=(parts[0]||'').trim().replace(/^"|"$/g,'');
       if(!name||/^(name|نام|اسم)/i.test(name))return;
+      if(lim>0&&schoolData.students.length>=lim){skipped++;return}
       const p1=fixPhone((parts[1]||'').replace(/^"|"$/g,''));
       const p2=fixPhone((parts[2]||'').replace(/^"|"$/g,''));
       schoolData.students.push({id:uid(),classId:currentClassId,name,phones:[p1,p2].filter(Boolean),note:''});
@@ -2300,8 +2460,10 @@ function importExcel(ev){
     if(document.getElementById('page-students').classList.contains('active'))renderStudents();
     else if(currentClassId){openClassStudents(currentClassId)}
     renderHome();
-    alert(n>0?('✓ '+n+' دانش‌آموز به کلاس اضافه شد'):'هیچ ردیفی خوانده نشد.\nفایل را از اکسل با فرمت CSV (UTF-8) ذخیره کنید.\nستون‌ها: نام | شماره پدر | شماره مادر');
-    toast(n>0?(n+' نفر اضافه شد'):'فایلی خوانده نشد');
+    let msg=n>0?('✓ '+n+' دانش‌آموز به کلاس اضافه شد'):'هیچ ردیفی خوانده نشد.\nفایل را از اکسل با فرمت CSV (UTF-8) ذخیره کنید.\nستون‌ها: نام | شماره پدر | شماره مادر';
+    if(skipped)msg+='\n'+skipped+' نفر به سقف لایسنس ('+lim+') نرسیدند.';
+    alert(msg);
+    toast(n>0?(n+' نفر اضافه شد'+(skipped?' · '+skipped+' رد شد':'')):'فایلی خوانده نشد');
   };
   reader.readAsText(file,'UTF-8');
   ev.target.value='';
@@ -2326,16 +2488,19 @@ function openStaffModal(id){
   const u=id?schoolData.staff.find(x=>x.id===id):null;
   document.getElementById('modal-title').textContent=u?'ویرایش کاربر':'کاربر جدید';
   const curShift=(u&&u.shift!=null&&u.shift!=='')?String(u.shift):'';
-  let shiftHtml=
-    '<div class="form-group" id="st-shift-wrap">'+
-    '<label>شیفت کاری</label>'+
-    '<select class="form-control" id="st-shift">'+
-    '<option value=""'+(curShift===''?' selected':'')+'>هر دو شیفت / همه</option>'+
-    '<option value="1"'+(curShift==='1'?' selected':'')+'>صبح</option>'+
-    '<option value="2"'+(curShift==='2'?' selected':'')+'>عصر</option>'+
-    '</select>'+
-    '<p class="hint">معاون عصر فقط کلاس‌های عصر را می‌بیند. معلم با «هر دو» می‌تواند کلاس صبح و عصر داشته باشد.</p>'+
-    '</div>';
+  let shiftHtml='';
+  if(dualShift()){
+    shiftHtml=
+      '<div class="form-group" id="st-shift-wrap">'+
+      '<label>شیفت کاری</label>'+
+      '<select class="form-control" id="st-shift">'+
+      '<option value=""'+(curShift===''?' selected':'')+'>هر دو شیفت / همه</option>'+
+      '<option value="1"'+(curShift==='1'?' selected':'')+'>صبح</option>'+
+      '<option value="2"'+(curShift==='2'?' selected':'')+'>عصر</option>'+
+      '</select>'+
+      '<p class="hint">معاون عصر فقط کلاس‌های عصر را می‌بیند. معلم با «هر دو» می‌تواند کلاس صبح و عصر داشته باشد.</p>'+
+      '</div>';
+  }
   window._pendingPhoto=(u&&u.photo)||'';
   document.getElementById('modal-body').innerHTML=
     '<div class="photo-pick"><div id="st-photo-prev">'+avatarHtml(u&&u.photo,u&&u.name,'avatar-lg')+'</div>'+photoButtons('st-photo','st-photo-prev')+'</div><p class="hint">عکس بعد از ذخیره روی سرور می‌رود و بقیه دستگاه‌ها می‌بینند</p>'+
@@ -2373,8 +2538,9 @@ function saveStaff(id){
     // جلوگیری از نام کاربری تکراری
     const dup=schoolData.staff.find(function(x){return x && String(x.username||'')===String(username) && (!id || x.id!==id);});
     if(dup)return toast('این نام کاربری قبلاً برای «'+(dup.name||'')+'» ثبت شده');
-    // اگر شیفت تعیین شد، حالت دو شیفت مدرسه را هم فعال کن
-    if(shift===1||shift===2){schoolData.shifts=2}
+    // شیفت کاربر فقط وقتی لایسنس دو شیفت دارد معنا دارد
+    if(!dualShift()){/* ignore local force */}
+    else schoolData.shifts=2;
     const photo=(typeof window._pendingPhoto!=='undefined' && window._pendingPhoto!==null)?window._pendingPhoto:'';
     if(id){
       const u=schoolData.staff.find(x=>x.id===id);
@@ -2873,18 +3039,51 @@ function saveManagerPhoto(){
   cloudPushAppData(true).then(function(){toast('عکس مدیر ذخیره و روی سرور آمد')}).catch(function(){toast('محلی ذخیره شد؛ ارسال سرور ناموفق')});
   try{renderHome()}catch(e){}
 }
+function _accentStyleEl(){
+  let el=document.getElementById('nikan-accent-style');
+  if(!el){el=document.createElement('style');el.id='nikan-accent-style';document.head.appendChild(el)}
+  return el;
+}
 function applyTheme(){
-  const t=schoolData.theme||{};
+  const t=(schoolData&&schoolData.theme)||{};
   const mode=t.mode||localStorage.getItem('nikan_theme')||'dark';
   document.body.classList.remove('theme-dark','theme-light');
   document.body.classList.add(mode==='light'?'theme-light':'theme-dark');
   try{localStorage.setItem('nikan_theme',mode)}catch(e){}
   if(t.fontSize)document.documentElement.style.setProperty('--font-scale',t.fontSize);
-  // رنگ سفارشی فقط در حالت روشن کمی اعمال شود
-  if(mode==='light'&&t.color){
-    document.documentElement.style.setProperty('--primary',t.color);
-    document.documentElement.style.setProperty('--primary-light',t.color);
+  else document.documentElement.style.removeProperty('--font-scale');
+  const color=t.color||'';
+  const root=document.documentElement.style;
+  if(mode==='light'&&color){
+    root.setProperty('--primary',color);
+    root.setProperty('--blue',color);
+    root.setProperty('--blue-dim',color);
+    root.setProperty('--cyan',color);
+    // قوانین !important حالت روشن را با استایل پویا دور بزن
+    _accentStyleEl().textContent=
+      'body.theme-light .btn-primary{background:linear-gradient(135deg,'+color+','+color+')!important;color:#fff!important}'+
+      'body.theme-light .card-title{color:'+color+'!important}'+
+      'body.theme-light .stat .n{color:'+color+'!important;-webkit-text-fill-color:'+color+'!important}'+
+      'body.theme-light .bottom-nav button.active{color:'+color+'!important}'+
+      'body.theme-light .tabs button.active{background:'+color+'22!important;color:'+color+'!important;border-color:'+color+'!important}'+
+      'body.theme-light .btn-outline{color:'+color+'!important;border-color:'+color+'!important}'+
+      'body.theme-light .role-btn.active{background:'+color+'22!important;color:'+color+'!important;border-color:'+color+'!important}'+
+      'body.theme-light .auth-card h2{color:'+color+'!important}'+
+      'body.theme-light .modal-header h2{color:'+color+'!important}'+
+      'body.theme-light .theme-switch button.active{outline-color:'+color+'!important}'+
+      'body.theme-light a,body.theme-light .linkish{color:'+color+'!important}';
+  }else{
+    root.removeProperty('--primary');
+    root.removeProperty('--blue');
+    root.removeProperty('--blue-dim');
+    root.removeProperty('--cyan');
+    _accentStyleEl().textContent='';
   }
+  try{
+    document.querySelectorAll('.color-swatch').forEach(function(s){
+      s.classList.toggle('active',!!color&&s.getAttribute('data-c')===color);
+    });
+  }catch(e){}
 }
 function toggleThemeQuick(){
   const cur=(schoolData.theme&&schoolData.theme.mode)||localStorage.getItem('nikan_theme')||'dark';
@@ -2900,8 +3099,21 @@ function setThemeMode(mode){
   }catch(e){}
   toast(mode==='dark'?'حالت تیره':'حالت روشن');
 }
-function setColor(el){document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));el.classList.add('active');schoolData.theme.color=el.getAttribute('data-c');saveSchoolData();applyTheme()}
-function setFontSize(v){schoolData.theme.fontSize=v;saveSchoolData();applyTheme()}
+function setColor(el){
+  if(!schoolData.theme)schoolData.theme={};
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  schoolData.theme.color=el.getAttribute('data-c');
+  // اگر تیره است، برای دیدن رنگ به روشن برو
+  if((schoolData.theme.mode||localStorage.getItem('nikan_theme')||'dark')!=='light'){
+    schoolData.theme.mode='light';
+  }
+  saveSchoolData();
+  applyTheme();
+  try{document.querySelectorAll('.theme-switch button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-mode')==='light'))}catch(e){}
+  toast('رنگ تاکید اعمال شد');
+}
+function setFontSize(v){if(!schoolData.theme)schoolData.theme={};schoolData.theme.fontSize=v;saveSchoolData();applyTheme()}
 
 function getSmsCfg(){
   const raw=(schoolData&&schoolData.smsConfig)&&typeof schoolData.smsConfig==='object'?schoolData.smsConfig:{};
@@ -3072,14 +3284,16 @@ function saveExamScores(){
 }
 
 function renderSettings(){
-  if(isTeacher()){document.getElementById('set-disc-types').style.display='none'}else{document.getElementById('set-disc-types').style.display='block'}
+  const canDisc=hasModule('discipline')&&!isTeacher();
+  if(document.getElementById('set-disc-types'))document.getElementById('set-disc-types').style.display=canDisc?'block':'none';
   const tplBox=document.getElementById('set-sms-tpl');
-  if(tplBox)tplBox.style.display=isTeacher()?'none':'block';
+  if(tplBox)tplBox.style.display=(hasModule('sms')&&!isTeacher())?'block':'none';
   const tl=document.getElementById('sms-tpl-list');
   if(tl){tl.innerHTML=getSmsTemplates().map(tp=>'<div class="list-item"><div style="flex:1"><div class="name">'+tp.name+'</div><div class="meta" style="white-space:pre-wrap">'+tp.text+'</div></div><button class="btn btn-outline btn-sm" onclick="openSmsTplModal(\''+tp.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delSmsTpl(\''+tp.id+'\')">حذف</button></div>').join('')||'<p class="hint">قالبی نیست</p>'}
 
   const r=schoolData.rules||{};document.getElementById('rule-absent').value=r.absent??0.5;document.getElementById('rule-late').value=r.late??0.25;document.getElementById('rule-other').value=r.other??1;
   const t=schoolData.theme||{};if(t.fontSize&&document.getElementById('set-fsize'))document.getElementById('set-fsize').value=t.fontSize;const mode=t.mode||localStorage.getItem('nikan_theme')||'dark';document.querySelectorAll('.theme-switch button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-mode')===mode));
+  try{applyTheme()}catch(e){}
   if(document.getElementById('mgr-photo-prev')){
     const mp=schoolData.managerPhoto||'';
     const mn=(session&&session.managerName)||'مدیر';
@@ -3090,12 +3304,16 @@ function renderSettings(){
     if(card)card.style.display=isManager()?'block':'none';
   var bc=document.getElementById('set-full-backup-card');if(bc)bc.style.display=canManage()?'block':'none';
   }
-  document.getElementById('set-license').innerHTML='<div class="hint" style="margin-bottom:6px">سامانه نیکان · طراحی سید مجتبی موسوی</div><div class="hint">'+(session?.name||'')+'</div><div class="hint">انقضا: '+formatDateFa(session?.expireDate)+'</div>';
+  const lim=maxStudentsAllowed();
+  const mods=Array.isArray(session&&session.modules)?session.modules:[];
+  const modLabels={sms:'پیامک',teacher_attendance:'حضور دبیر',manager_approve:'تأیید مدیر',discipline:'انضباط',advanced_reports:'گزارش پیشرفته',dual_shift:'دو شیفت'};
+  const modTxt=mods.length?mods.map(function(m){return modLabels[m]||m}).join(' · '):'همه (بدون محدودیت ماژول)';
+  document.getElementById('set-license').innerHTML='<div class="hint" style="margin-bottom:6px">سامانه نیکان · طراحی سید مجتبی موسوی</div><div class="hint">'+(session?.name||'')+'</div><div class="hint">انقضا: '+formatDateFa(session?.expireDate)+'</div><div class="hint">شیفت: '+(dualShift()?'دو شیفت':'تک‌شیفت')+'</div><div class="hint">سقف دانش‌آموز: '+(lim>0?lim:'—')+' · الان: '+((schoolData.students||[]).length)+'</div><div class="hint">ماژول‌ها: '+modTxt+'</div>';
   const dl=document.getElementById('disc-type-list');
-  dl.innerHTML=(schoolData.disciplineTypes||[]).map(d=>'<div class="list-item"><div><div class="name">'+d.name+'</div><div class="meta">کسر پیش‌فرض: '+(d.scoreDeduct??0)+'</div></div><button class="btn btn-outline btn-sm" onclick="openDiscTypeModal(\''+d.id+'\')">ویرایش</button>'+(['absent','late','other'].includes(d.id)?'':'<button class="btn btn-danger btn-sm" onclick="delDiscType(\''+d.id+'\')">حذف</button>')+'</div>').join('');
-  // پنل پیامک — از سرور پر شود برای همه دستگاه‌ها
+  if(dl)dl.innerHTML=(schoolData.disciplineTypes||[]).map(d=>'<div class="list-item"><div><div class="name">'+d.name+'</div><div class="meta">کسر پیش‌فرض: '+(d.scoreDeduct??0)+'</div></div><button class="btn btn-outline btn-sm" onclick="openDiscTypeModal(\''+d.id+'\')">ویرایش</button>'+(['absent','late','other'].includes(d.id)?'':'<button class="btn btn-danger btn-sm" onclick="delDiscType(\''+d.id+'\')">حذف</button>')+'</div>').join('');
+  // پنل پیامک فقط اگر ماژول sms فعال باشد
   const smsCard=document.getElementById('set-sms-panel');
-  if(smsCard)smsCard.style.display=canManage()?'block':'none';
+  if(smsCard)smsCard.style.display=(canManage()&&hasModule('sms'))?'block':'none';
   try{fillSmsPanelForm()}catch(e){}
   try{
     const c=getSmsCfg();
