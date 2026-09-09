@@ -552,9 +552,9 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div class="card-title" style="margin:0">کلاس‌ها</div>
         <div id="class-actions">
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('excel-in').click()">اکسل</button>
+          <button class="btn btn-outline btn-sm" type="button" onclick="pickExcelFile()">ورود از اکسل</button>
           <button class="btn btn-primary btn-sm" onclick="openClassModal()">+ کلاس</button>
-          <input type="file" id="excel-in" accept=".csv,.txt" style="display:none" onchange="importExcel(event)" />
+          <input type="file" id="excel-in" accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importExcel(event)" />
         </div>
       </div>
       <p class="hint">برای ورود گروهی: وارد کلاس شوید → «ورود از اکسل» · یا از اینجا اکسل بزنید و کلاس را انتخاب کنید (فایل CSV)</p>
@@ -567,9 +567,9 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
       <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
         <div class="card-title" style="margin:0" id="students-title">دانش‌آموزان</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" id="btn-excel-stu" onclick="document.getElementById('excel-stu').click()">ورود از اکسل</button>
+          <button class="btn btn-outline btn-sm" type="button" id="btn-excel-stu" onclick="pickExcelFile()">ورود از اکسل</button>
           <button class="btn btn-primary btn-sm" id="btn-add-stu" onclick="openStudentModal()">+ دانش‌آموز</button>
-          <input type="file" id="excel-stu" accept=".csv,.txt,text/csv" style="display:none" onchange="importExcel(event)" />
+          <input type="file" id="excel-stu" accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importExcel(event)" />
         </div>
       </div>
       <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="showAppPage('classes')">← کلاس‌ها</button>
@@ -829,6 +829,16 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
           <option value="1.12">بزرگ</option>
           <option value="1.25">خیلی بزرگ</option>
         </select></div>
+    </div>
+    <div class="card" id="set-manager-account-card" style="display:none">
+      <div class="card-title">حساب ورود مدیر</div>
+      <p class="hint" style="margin-bottom:10px">نام کاربری و رمز ورود خودتان را از اینجا عوض کنید.</p>
+      <div class="form-group"><label>نام کاربری فعلی</label><input class="form-control" id="mgr-user-cur" readonly /></div>
+      <div class="form-group"><label>نام کاربری جدید (اختیاری)</label><input class="form-control" id="mgr-user-new" autocomplete="username" placeholder="خالی = بدون تغییر" /></div>
+      <div class="form-group"><label>رمز فعلی *</label><input class="form-control" id="mgr-pass-cur" type="password" autocomplete="current-password" /></div>
+      <div class="form-group"><label>رمز جدید *</label><input class="form-control" id="mgr-pass-new" type="password" autocomplete="new-password" placeholder="حداقل ۶ کاراکتر" /></div>
+      <div class="form-group"><label>تکرار رمز جدید *</label><input class="form-control" id="mgr-pass-new2" type="password" autocomplete="new-password" /></div>
+      <button class="btn btn-primary btn-block" type="button" onclick="changeManagerPassword()">ذخیره حساب ورود</button>
     </div>
     <div class="card" id="set-manager-photo-card">
       <div class="card-title">عکس مدیر</div>
@@ -2423,17 +2433,65 @@ function saveStudent(id){
   }
 }
 function delStudent(id){if(!confirm('حذف؟'))return;schoolData.students=schoolData.students.filter(s=>s.id!==id);saveSchoolData();renderStudents();renderHome()}
+/** انتخاب فایل اکسل/CSV — جدا از دوربین و گالری (مهم برای اندروید) */
+function pickExcelFile(){
+  try{
+    if(!canManage())return toast('دسترسی ندارید');
+    var input=document.createElement('input');
+    input.type='file';
+    // بدون image/* و بدون capture تا اندروید دوربین باز نکند
+    input.accept='.csv,.txt,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    input.removeAttribute('capture');
+    input.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+    var done=false;
+    function cleanup(){
+      if(done)return;done=true;
+      try{if(input.parentNode)input.parentNode.removeChild(input)}catch(e){}
+    }
+    input.addEventListener('change',function(){
+      var f=input.files&&input.files[0];
+      cleanup();
+      if(!f){toast('فایلی انتخاب نشد');return}
+      // اگر اشتباهاً عکس انتخاب شد
+      if(f.type&&f.type.indexOf('image/')===0){
+        return toast('فایل عکس است. لطفاً فایل CSV یا Excel ذخیره‌شده به‌صورت CSV را انتخاب کنید');
+      }
+      importExcelFromFile(f);
+    });
+    document.body.appendChild(input);
+    input.click();
+    setTimeout(cleanup,120000);
+  }catch(e){
+    console.error(e);
+    // fallback به input مخفی صفحه
+    try{
+      var el=document.getElementById('excel-stu')||document.getElementById('excel-in');
+      if(el){el.value='';el.click()}
+      else toast('باز کردن انتخاب فایل ممکن نشد');
+    }catch(e2){toast('باز کردن انتخاب فایل ممکن نشد')}
+  }
+}
 function importExcel(ev){
-  const file=ev.target.files[0];if(!file)return;
+  const file=ev.target&&ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  try{ev.target.value=''}catch(e){}
+  importExcelFromFile(file);
+}
+function importExcelFromFile(file){
+  if(!file)return;
+  if(file.type&&file.type.indexOf('image/')===0){
+    return toast('این فایل عکس است. از «ورود از اکسل» فایل CSV انتخاب کنید');
+  }
+  if(!schoolData)loadSchoolData();
   if(!currentClassId){
     if(schoolData.classes.length===1){currentClassId=schoolData.classes[0].id}
     else if(schoolData.classes.length>1){
       const names=schoolData.classes.map((c,i)=>(i+1)+') '+c.name).join('\n');
       const pick=prompt('شماره کلاس را وارد کنید:\n'+names);
       const idx=parseInt(pick,10)-1;
-      if(isNaN(idx)||!schoolData.classes[idx]){toast('کلاس انتخاب نشد');ev.target.value='';return}
+      if(isNaN(idx)||!schoolData.classes[idx]){toast('کلاس انتخاب نشد');return}
       currentClassId=schoolData.classes[idx].id;
-    }else{toast('اول یک کلاس بسازید');ev.target.value='';return}
+    }else{toast('اول یک کلاس بسازید');return}
   }
   const reader=new FileReader();
   reader.onload=function(){
@@ -2465,8 +2523,8 @@ function importExcel(ev){
     alert(msg);
     toast(n>0?(n+' نفر اضافه شد'+(skipped?' · '+skipped+' رد شد':'')):'فایلی خوانده نشد');
   };
+  reader.onerror=function(){toast('خواندن فایل ناموفق بود')};
   reader.readAsText(file,'UTF-8');
-  ev.target.value='';
 }
 
 /* Staff & colleagues */
@@ -3283,6 +3341,71 @@ function saveExamScores(){
   toast('نمرات ذخیره شد');
 }
 
+async function changeManagerPassword(){
+  if(!isManager())return toast('فقط مدیر می‌تواند رمز را عوض کند');
+  if(!schoolData)loadSchoolData();
+  const curPass=toEnDigits((document.getElementById('mgr-pass-cur')||{}).value||'');
+  const n1=toEnDigits((document.getElementById('mgr-pass-new')||{}).value||'');
+  const n2=toEnDigits((document.getElementById('mgr-pass-new2')||{}).value||'');
+  let newUser=normLoginUser((document.getElementById('mgr-user-new')||{}).value||'');
+  const curUser=normLoginUser(schoolData.managerUser||(userSession&&userSession.username)||'');
+  if(!curPass)return toast('رمز فعلی را وارد کنید');
+  if(String(schoolData.managerPass||'')!==String(curPass))return toast('رمز فعلی اشتباه است');
+  if(n1.length<6)return toast('رمز جدید حداقل ۶ کاراکتر باشد');
+  if(n1!==n2)return toast('تکرار رمز یکسان نیست');
+  if(!newUser)newUser=curUser;
+  if(!newUser)return toast('نام کاربری لازم است');
+  schoolData.managerUser=newUser;
+  schoolData.managerPass=n1;
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  try{
+    if(userSession){
+      userSession.username=newUser;
+      saveUserSession(userSession);
+    }
+  }catch(e){}
+  // به‌روز کردن مادر محلی و سرور تا ورود بعدی با رمز جدید کار کند
+  try{
+    const mother=loadMother();
+    if(mother&&Array.isArray(mother.schools)&&session&&session.schoolId){
+      const i=mother.schools.findIndex(function(x){return x.id===session.schoolId||x.code===session.code});
+      if(i>=0){
+        mother.schools[i].managerUsername=newUser;
+        mother.schools[i].managerPassword=n1;
+        saveMother(mother);
+      }
+    }
+  }catch(e){}
+  toast('در حال ذخیره روی سرور...');
+  try{
+    await cloudPushSchool({
+      id:session.schoolId,
+      code:session.code,
+      name:session.name,
+      managerUsername:newUser,
+      managerPassword:n1,
+      active:session.active!==false,
+      expireDate:session.expireDate,
+      plan:session.plan,
+      shifts:session.shifts||1,
+      modules:session.modules||[],
+      maxUsers:session.maxUsers
+    });
+    await cloudPushAppData(true);
+    toast('حساب ورود ذخیره شد — دفعه بعد با رمز جدید وارد شوید');
+  }catch(e){
+    toast('محلی ذخیره شد؛ ارسال سرور ناموفق — بعداً همگام کنید');
+  }
+  try{
+    document.getElementById('mgr-pass-cur').value='';
+    document.getElementById('mgr-pass-new').value='';
+    document.getElementById('mgr-pass-new2').value='';
+    document.getElementById('mgr-user-new').value='';
+    document.getElementById('mgr-user-cur').value=newUser;
+  }catch(e){}
+}
+
 function renderSettings(){
   const canDisc=hasModule('discipline')&&!isTeacher();
   if(document.getElementById('set-disc-types'))document.getElementById('set-disc-types').style.display=canDisc?'block':'none';
@@ -3294,6 +3417,15 @@ function renderSettings(){
   const r=schoolData.rules||{};document.getElementById('rule-absent').value=r.absent??0.5;document.getElementById('rule-late').value=r.late??0.25;document.getElementById('rule-other').value=r.other??1;
   const t=schoolData.theme||{};if(t.fontSize&&document.getElementById('set-fsize'))document.getElementById('set-fsize').value=t.fontSize;const mode=t.mode||localStorage.getItem('nikan_theme')||'dark';document.querySelectorAll('.theme-switch button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-mode')===mode));
   try{applyTheme()}catch(e){}
+  const accCard=document.getElementById('set-manager-account-card');
+  if(accCard){
+    accCard.style.display=isManager()?'block':'none';
+    if(isManager()){
+      const curUser=schoolData.managerUser||(userSession&&userSession.username)||'';
+      const uEl=document.getElementById('mgr-user-cur');
+      if(uEl)uEl.value=curUser;
+    }
+  }
   if(document.getElementById('mgr-photo-prev')){
     const mp=schoolData.managerPhoto||'';
     const mn=(session&&session.managerName)||'مدیر';
