@@ -395,6 +395,34 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
 .msg-meta{font-size:.78rem;opacity:.8;margin-top:4px}
 .msg-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 
+/* قالب گزارش اولیا */
+.rep-head{text-align:center;padding:8px 4px 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.rep-head .rep-name{font-size:1.15rem;font-weight:800;color:var(--text)}
+.rep-head .rep-meta{font-size:.8rem;color:var(--muted);margin-top:4px}
+.rep-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.rep-stat{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}
+.rep-stat .n{font-size:1.2rem;font-weight:800;color:var(--primary)}
+.rep-stat .l{font-size:.68rem;color:var(--muted);margin-top:2px}
+.rep-sec{margin:14px 0 8px;font-weight:800;color:var(--primary);font-size:.92rem}
+.rep-table{width:100%;border-collapse:collapse;font-size:.86rem;margin-bottom:8px}
+.rep-table th,.rep-table td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right}
+.rep-table th{color:var(--muted);font-weight:700;font-size:.75rem}
+.rep-table tr.sub-row{cursor:pointer}
+.rep-table tr.sub-row:active{background:rgba(56,189,248,.06)}
+.rep-table .score{font-weight:800;color:var(--primary);white-space:nowrap}
+.rep-detail{display:none;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin:0 0 10px}
+.rep-detail.show{display:block}
+.rep-detail .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:.82rem}
+.rep-detail .row:last-child{border-bottom:none}
+.rep-chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700;background:rgba(56,189,248,.12);color:var(--primary);margin-left:4px}
+.rep-att-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.rep-att-sum span{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.8rem}
+@media print{
+  .bottom-nav,.topbar,#perf-admin-box,button{display:none!important}
+  #page-performance,#perf-report-card{box-shadow:none!important;border:none!important}
+  body{background:#fff!important;color:#000!important}
+}
+
 
 .photo-file-btn{position:relative;display:block;width:100%;overflow:hidden;border-radius:12px;margin:0;-webkit-tap-highlight-color:transparent}
 .photo-file-btn .btn-face{pointer-events:none;width:100%;text-align:center}
@@ -591,10 +619,11 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
       <div id="teacher-class-list"></div>
       <div id="teacher-perf-panel" style="display:none;margin-top:12px">
         <div class="card-title" id="teacher-perf-title">عملکرد کلاس</div>
-        <div class="form-group"><label>از تاریخ (مثلاً 1403/07/01 یا خالی=همه)</label>
-          <input class="form-control" id="tp-from" placeholder="1403/07/01" /></div>
-        <div class="form-group"><label>تا تاریخ</label>
-          <input class="form-control" id="tp-to" placeholder="1403/07/30" /></div>
+        <p class="hint">تاریخ را شمسی بنویسید (مثل ۱۴۰۴/۰۶/۱۹) یا خالی بگذارید.</p>
+        <div class="form-group"><label>از تاریخ شمسی (خالی=همه)</label>
+          <input class="form-control" id="tp-from" placeholder="1404/06/01" inputmode="numeric" /></div>
+        <div class="form-group"><label>تا تاریخ شمسی</label>
+          <input class="form-control" id="tp-to" placeholder="1404/06/19" inputmode="numeric" /></div>
         <button class="btn btn-primary btn-block" onclick="runTeacherClassPerf()">نمایش عملکرد</button>
         <div id="teacher-perf-out" style="margin-top:10px"></div>
       </div>
@@ -694,9 +723,25 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
   <div id="page-reports" class="page">
     <div class="card">
       <div class="card-title">گزارش حضور و انضباط</div>
-      <p class="hint">بازه تاریخ را وارد کنید (مثال: ۱۴۰۳/۰۷/۰۱). خالی = همه زمان‌ها.</p>
-      <div class="form-group"><label>از تاریخ</label><input class="form-control" id="rep-from" placeholder="1403/07/01" /></div>
-      <div class="form-group"><label>تا تاریخ</label><input class="form-control" id="rep-to" placeholder="1403/07/30" /></div>
+      <p class="hint">همه تاریخ‌ها <b>شمسی</b> است. مثال: ۱۴۰۴/۰۶/۱۹ — خالی = همه زمان‌ها.</p>
+      <div class="form-group">
+        <label>از تاریخ (شمسی)</label>
+        <input class="form-control" id="rep-from" placeholder="1404/06/19" inputmode="numeric" oninput="syncRepCalFromText('from')" />
+        <p class="hint" id="rep-from-fa" style="margin-top:4px"></p>
+        <input type="date" class="form-control" id="rep-from-cal" onchange="syncRepDateFromCal('from')" style="margin-top:6px" title="کمک‌تقویم" />
+        <p class="hint" style="margin-top:2px">در صورت نیاز از تقویم بالا هم می‌توانید انتخاب کنید؛ خودکار شمسی می‌شود.</p>
+      </div>
+      <div class="form-group">
+        <label>تا تاریخ (شمسی)</label>
+        <input class="form-control" id="rep-to" placeholder="1404/06/19" inputmode="numeric" oninput="syncRepCalFromText('to')" />
+        <p class="hint" id="rep-to-fa" style="margin-top:4px"></p>
+        <input type="date" class="form-control" id="rep-to-cal" onchange="syncRepDateFromCal('to')" style="margin-top:6px" title="کمک‌تقویم" />
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button type="button" class="btn btn-outline btn-sm" onclick="setRepToday()">امروز (شمسی)</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="setRepThisWeek()">۷ روز اخیر</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="clearRepDates()">پاک کردن بازه</button>
+      </div>
       <button class="btn btn-primary btn-block" onclick="genSchoolAbsenceStats()">آمار غیبت کل مدرسه و کلاس‌ها</button>
       <div id="rep-school-out" style="margin-top:12px"></div>
     </div>
@@ -709,27 +754,34 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
   </div>
 
   <div id="page-performance" class="page">
-    <div class="card">
-      <button class="btn btn-outline btn-sm" onclick="showAppPage('reports')">← گزارش</button>
-      <div class="card-title" style="margin-top:10px" id="perf-title">عملکرد</div>
-      <div id="perf-score" style="font-size:1.35rem;font-weight:700;color:var(--primary);margin-bottom:8px"></div>
-      <div id="perf-body"></div>
-      <div class="card-title" style="margin-top:14px">ثبت مورد</div>
-      <div class="form-group"><label>نوع / مورد انضباطی</label><select class="form-control" id="d-type"></select></div>
-      <div class="form-group"><label>شرح</label><input class="form-control" id="d-note" /></div>
-      <div class="form-group"><label>کسر نمره (خالی=پیش‌فرض)</label><input type="number" step="0.25" class="form-control" id="d-score" /></div>
-      <button class="btn btn-danger btn-block" onclick="addDisciplineCustom()">ثبت در عملکرد</button>
+    <div class="card" id="perf-report-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="showAppPage('reports')">← گزارش</button>
+        <button class="btn btn-outline btn-sm" type="button" onclick="window.print()">چاپ / ذخیره</button>
+      </div>
+      <div id="perf-report" style="margin-top:12px"></div>
+    </div>
+    <div class="card" id="perf-admin-box">
+      <button type="button" class="btn btn-outline btn-block" onclick="var b=document.getElementById('perf-admin-form');if(b)b.style.display=b.style.display==='none'?'block':'none'">ثبت / ویرایش مورد انضباطی ▼</button>
+      <div id="perf-admin-form" style="display:none;margin-top:12px">
+        <div class="form-group"><label>نوع / مورد انضباطی</label><select class="form-control" id="d-type"></select></div>
+        <div class="form-group"><label>شرح</label><input class="form-control" id="d-note" /></div>
+        <div class="form-group"><label>کسر نمره (خالی=پیش‌فرض)</label><input type="number" step="0.25" class="form-control" id="d-score" /></div>
+        <button class="btn btn-danger btn-block" onclick="addDisciplineCustom()">ثبت در عملکرد</button>
+        <div id="perf-att-admin" style="margin-top:12px"></div>
+      </div>
     </div>
   </div>
 
   <!-- SETTINGS -->
   <div id="page-exams" class="page">
     <div class="card">
+      <button class="btn btn-outline btn-sm" id="exams-back-more" style="margin-bottom:10px" onclick="showAppPage(isTeacher()?'home':'settings')">← بازگشت</button>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="card-title" style="margin:0">امتحانات و نمرات</div>
         <button class="btn btn-primary btn-sm" id="btn-add-exam" onclick="openExamModal()">+ امتحان</button>
       </div>
-      <p class="hint">امتحان برای کلاس تعریف کنید و نمره هر دانش‌آموز را ثبت کنید.</p>
+      <p class="hint">معلم امتحان و نمره ثبت می‌کند · مدیر و معاون فقط مشاهده می‌کنند · در عملکرد دانش‌آموز نمرات درس‌به‌درس دیده می‌شود.</p>
       <div id="exams-list"></div>
     </div>
     <div class="card" id="exam-scores-panel" style="display:none">
@@ -744,11 +796,12 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
   <!-- INTERNAL MESSAGES -->
   <div id="page-messages" class="page">
     <div class="card">
+      <button class="btn btn-outline btn-sm" style="margin-bottom:10px" onclick="showAppPage('settings')">← بیشتر</button>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <div class="card-title" style="margin:0">اتوماسیون پیام داخلی</div>
+        <div class="card-title" style="margin:0">اتوماسیون</div>
         <button class="btn btn-primary btn-sm" onclick="openComposeMessage()">+ پیام جدید</button>
       </div>
-      <p class="hint">مدیر، معاون و معلم می‌توانند برای هم پیام بگذارند و پاسخ دهند. پیام‌ها با سرور همگام می‌شوند.</p>
+      <p class="hint">پیام داخلی بین مدیر، معاون و معلم — جدا از پیامک اولیا. پیام‌ها با سرور همگام می‌شوند.</p>
       <div class="tabs">
         <button class="active" id="msg-tab-in" onclick="msgTab('in')">دریافتی</button>
         <button id="msg-tab-out" onclick="msgTab('out')">ارسالی</button>
@@ -757,6 +810,11 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
     </div>
   </div>
   <div id="page-settings" class="page">
+    <div class="card" id="more-hub">
+      <div class="card-title">بیشتر</div>
+      <p class="hint" style="margin-bottom:10px">منوی اصلی خلوت است؛ بقیه قابلیت‌ها اینجاست — با یک ضربه باز می‌شود.</p>
+      <div class="qa-grid" id="more-hub-grid"></div>
+    </div>
     <div class="card" id="set-disc-types">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="card-title" style="margin:0">موارد انضباطی (نام‌ها)</div>
@@ -805,7 +863,7 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
       <div class="form-group"><label>تأخیر</label><input type="number" step="0.25" class="form-control" id="rule-late" onchange="saveRules()" /></div>
       <div class="form-group"><label>سایر (پیش‌فرض)</label><input type="number" step="0.25" class="form-control" id="rule-other" onchange="saveRules()" /></div>
     </div>
-    <div class="card">
+    <div class="card" id="set-theme-card">
       <div class="card-title">ظاهر سامانه</div>
       <div class="form-group"><label>حالت نمایش</label>
         <div class="theme-switch">
@@ -908,9 +966,69 @@ function uid(){return 'id_'+Date.now().toString(36)+Math.random().toString(36).s
 function todayStr(){return new Date().toISOString().slice(0,10)}
 function addDays(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function gregorianToJalali(gy,gm,gd){var g_d_m=[0,31,59,90,120,151,181,212,243,273,304,334];var gy2=(gm>2)?(gy+1):gy;var days=355666+(365*gy)+~~((gy2+3)/4)-~~((gy2+99)/100)+~~((gy2+399)/400)+gd+g_d_m[gm-1];var jy=-1595+33*~~(days/12053);days%=12053;jy+=4*~~(days/1461);days%=1461;if(days>365){jy+=~~((days-1)/365);days=(days-1)%365}var jm,jd;(days<186)?(jm=1+~~(days/31),jd=1+(days%31)):(jm=7+~~((days-186)/30),jd=1+((days-186)%30));return[jy,jm,jd]}
+function jalaliToGregorian(jy,jm,jd){
+  jy=+jy;jm=+jm;jd=+jd;
+  var jy2=jy-979;
+  var days=365*jy2+~~(jy2/33)*8+~~(((jy2%33)+3)/4)+78+jd+((jm<7)?(jm-1)*31:((jm-7)*30+186));
+  var gy=1600+400*~~(days/146097);
+  days%=146097;
+  if(days>36524){gy+=100*~~(--days/36524);days%=36524;if(days>=365)days++}
+  gy+=4*~~(days/1461);days%=1461;
+  if(days>365){gy+=~~((days-1)/365);days=(days-1)%365}
+  var gd=days+1;
+  var sal_a=[0,31,((gy%4===0&&gy%100!==0)||(gy%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
+  var gm=0;for(gm=1;gm<=12&&gd>sal_a[gm];gm++)gd-=sal_a[gm];
+  return[gy,gm,gd];
+}
 function toFaDigits(s){return String(s).replace(/\d/g,function(d){return'۰۱۲۳۴۵۶۷۸۹'[d]})}
-function formatDateFa(iso){if(!iso)return'—';try{var p=String(iso).slice(0,10).split('-');var j=gregorianToJalali(+p[0],+p[1],+p[2]);return toFaDigits(j[0]+'/'+('0'+j[1]).slice(-2)+'/'+('0'+j[2]).slice(-2))}catch(e){return String(iso)}}
+function formatDateFa(iso){
+  if(!iso)return'—';
+  try{
+    var norm=normalizeDateToIso(iso);
+    if(!norm)return String(iso);
+    var p=String(norm).slice(0,10).split('-');
+    var j=gregorianToJalali(+p[0],+p[1],+p[2]);
+    return toFaDigits(j[0]+'/'+('0'+j[1]).slice(-2)+'/'+('0'+j[2]).slice(-2));
+  }catch(e){return String(iso)}
+}
 function persianToday(){return formatDateFa(todayStr())}
+function formatDateTimeFa(ms){
+  try{
+    var d=new Date(ms);
+    if(isNaN(d.getTime()))return'—';
+    var iso=d.toISOString().slice(0,10);
+    var t=d.toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'});
+    return formatDateFa(iso)+' · '+t;
+  }catch(e){return'—'}
+}
+/** هر نوع تاریخ ذخیره‌شده یا ورودی را به YYYY-MM-DD میلادی یکدست می‌کند */
+function normalizeDateToIso(s){
+  s=toEnDigits(String(s||'').trim());
+  if(!s)return null;
+  // ISO یا شبیه 2026-09-10
+  var m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if(!m)return null;
+  var y=+m[1],mo=+m[2],d=+m[3];
+  if(y>=1700){
+    return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  }
+  // شمسی 13xx/14xx
+  if(y>=1200&&y<=1600){
+    try{
+      var g=jalaliToGregorian(y,mo,d);
+      return g[0]+'-'+String(g[1]).padStart(2,'0')+'-'+String(g[2]).padStart(2,'0');
+    }catch(e){return null}
+  }
+  return null;
+}
+function jalaliPartsToday(){
+  var p=todayStr().split('-');
+  return gregorianToJalali(+p[0],+p[1],+p[2]);
+}
+function jalaliInputToday(){
+  var j=jalaliPartsToday();
+  return j[0]+'/'+String(j[1]).padStart(2,'0')+'/'+String(j[2]).padStart(2,'0');
+}
 function jsDay(){return new Date().getDay()} // 0=Sun
 let _toastTimer=null;
 function toast(m,ms){
@@ -2112,24 +2230,48 @@ function doLogout(){
 function buildNav(){
   const nav=document.getElementById('bottom-nav');
   if(isTeacher()){
-    nav.innerHTML='<button class="active" data-p="teacher" onclick="showAppPage(\'teacher\')">کلاس‌های من</button><button data-p="messages" onclick="showAppPage(\'messages\')">پیام</button><button data-p="exams" onclick="showAppPage(\'exams\')">امتحان</button><button data-p="home" onclick="showAppPage(\'home\')">خانه</button>';
+    // معلم: کارهای روزانه در منو · بقیه داخل بیشتر
+    nav.innerHTML=
+      '<button class="active" data-p="teacher" onclick="showAppPage(\'teacher\')">کلاس‌ها</button>'+
+      '<button data-p="exams" onclick="showAppPage(\'exams\')">نمرات</button>'+
+      '<button data-p="home" onclick="showAppPage(\'home\')">خانه</button>'+
+      '<button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
     return;
   }
-  let html='<button data-p="home" onclick="showAppPage(\'home\')">خانه</button><button data-p="classes" onclick="showAppPage(\'classes\')">کلاس</button>';
-  if(isManager())html+='<button data-p="schedule" onclick="showAppPage(\'schedule\')">برنامه</button><button data-p="team" onclick="showAppPage(\'team\')">تیم</button>';
-  html+='<button data-p="messages" onclick="showAppPage(\'messages\')">پیام</button>';
-  if(hasModule('advanced_reports')||hasModule('discipline'))html+='<button data-p="reports" onclick="showAppPage(\'reports\')">گزارش</button>';
+  // مدیر / معاون: منوی اصلی ثابت و خلوت
+  let html='';
+  html+='<button data-p="home" onclick="showAppPage(\'home\')">خانه</button>';
+  html+='<button data-p="classes" onclick="showAppPage(\'classes\')">کلاس</button>';
+  if(isManager())html+='<button data-p="schedule" onclick="showAppPage(\'schedule\')">برنامه</button>';
+  html+='<button data-p="team" onclick="showAppPage(\'team\')">تیم</button>';
   if(hasModule('sms'))html+='<button data-p="send" onclick="showAppPage(\'send\')">پیامک</button>';
+  if(hasModule('advanced_reports')||hasModule('discipline'))html+='<button data-p="reports" onclick="showAppPage(\'reports\')">گزارش</button>';
   html+='<button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
   nav.innerHTML=html;
 }
 function showAppPage(name){
-  if(isTeacher()&&['send','team','schedule','settings'].includes(name))return toast('دسترسی ندارید');
+  if(isTeacher()&&['send','team','schedule'].includes(name))return toast('دسترسی ندارید');
   if(!isManager()&&name==='schedule')return toast('فقط مدیر برنامه را تنظیم می‌کند');
   if(name==='send'&&!hasModule('sms'))return toast('ماژول پیامک برای این مدرسه فعال نیست');
   if(name==='reports'&&!(hasModule('advanced_reports')||hasModule('discipline')))return toast('ماژول گزارش/انضباط فعال نیست');
   document.querySelectorAll('#screen-app .page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('#bottom-nav button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-p')===name||(name==='students'&&b.getAttribute('data-p')==='classes')||(name==='performance'&&b.getAttribute('data-p')==='reports')||(name==='take-att'&&b.getAttribute('data-p')==='teacher')||(name==='submission'&&b.getAttribute('data-p')==='home')));
+  // صفحات زیرمجموعه «بیشتر» هم تب بیشتر را فعال نگه می‌دارند
+  const morePages=['settings','messages','exams'];
+  document.querySelectorAll('#bottom-nav button').forEach(b=>{
+    const p=b.getAttribute('data-p');
+    const on=
+      p===name||
+      (name==='students'&&p==='classes')||
+      (name==='performance'&&p==='reports')||
+      (name==='take-att'&&p==='teacher')||
+      (name==='submission'&&p==='home')||
+      (morePages.indexOf(name)>=0&&p==='settings'&&!(isTeacher()&&name==='exams'));
+    b.classList.toggle('active',!!on);
+  });
+  // معلم: نمرات تب خودش را دارد
+  if(isTeacher()&&name==='exams'){
+    document.querySelectorAll('#bottom-nav button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-p')==='exams'));
+  }
   const el=document.getElementById('page-'+name);if(el)el.classList.add('active');
   if(name==='home')renderHome();
   if(name==='classes')renderClasses();
@@ -2169,22 +2311,17 @@ function renderHome(){
   if(isTeacher()){
     act.innerHTML='<div class="card-title">دسترسی سریع</div><div class="qa-grid">'+
       '<button type="button" class="qa-item accent" onclick="showAppPage(\'teacher\')"><span class="ic">📋</span><span class="lb">حضور و غیاب</span><span class="ds">کلاس‌های امروز</span></button>'+
-      '<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">امتحانات</span><span class="ds">ثبت نمرات</span></button>'+
-      '<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">پیام داخلی</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'اتوماسیون')+'</span></button>'+
-      '<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">پیام داخلی</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'صندوق پیام')+'</span></button>'+
-      '<button type="button" class="qa-item" onclick="openContactSalesModal()"><span class="ic">🤝</span><span class="lb">واحد فروش</span><span class="ds">پشتیبانی و کارشناسی</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">نمرات</span><span class="ds">ثبت امتحان</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">اتوماسیون</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'پیام داخلی')+'</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'settings\')"><span class="ic">⋯</span><span class="lb">بیشتر</span><span class="ds">ظاهر و پشتیبانی</span></button>'+
       '</div>';
   }else{
+    // میان‌برهای هم‌راستا با منوی پایین — بدون تکرار شلوغ
     act.innerHTML='<div class="card-title">دسترسی سریع</div><div class="qa-grid">'+
-      '<button type="button" class="qa-item accent" onclick="showAppPage(\'classes\')"><span class="ic">🏫</span><span class="lb">کلاس و دانش‌آموز</span><span class="ds">'+_vc.length+' کلاس · '+stuN+' نفر</span></button>'+
-      '<button type="button" class="qa-item ok" onclick="showAppPage(\'send\')"><span class="ic">✉️</span><span class="lb">ارسال پیامک</span><span class="ds">اولیا و همکاران</span></button>'+
-      '<button type="button" class="qa-item" onclick="showAppPage(\'reports\')"><span class="ic">📊</span><span class="lb">گزارش و عملکرد</span><span class="ds">انضباط و حضور</span></button>'+
-      '<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">امتحان و نمره</span><span class="ds">کارنامه کلاسی</span></button>'+
-      (isManager()
-        ?'<button type="button" class="qa-item" onclick="showAppPage(\'schedule\')"><span class="ic">📅</span><span class="lb">برنامه معلمان</span><span class="ds">زنگ و کلاس</span></button>'+
-         '<button type="button" class="qa-item" onclick="showAppPage(\'team\')"><span class="ic">👥</span><span class="lb">تیم و همکاران</span><span class="ds">معاون و معلم</span></button>'
-        :'')+
-      '<button type="button" class="qa-item" onclick="openContactSalesModal()"><span class="ic">🤝</span><span class="lb">واحد فروش</span><span class="ds">پشتیبانی و کارشناسی</span></button>'+
+      '<button type="button" class="qa-item accent" onclick="showAppPage(\'classes\')"><span class="ic">🏫</span><span class="lb">کلاس</span><span class="ds">'+_vc.length+' کلاس · '+stuN+' نفر</span></button>'+
+      (hasModule('sms')?'<button type="button" class="qa-item ok" onclick="showAppPage(\'send\')"><span class="ic">✉️</span><span class="lb">پیامک</span><span class="ds">اولیا و همکاران</span></button>':'')+
+      ((hasModule('advanced_reports')||hasModule('discipline'))?'<button type="button" class="qa-item" onclick="showAppPage(\'reports\')"><span class="ic">📊</span><span class="lb">گزارش</span><span class="ds">حضور و انضباط</span></button>':'')+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'settings\')"><span class="ic">⋯</span><span class="lb">بیشتر</span><span class="ds">امتحان · اتوماسیون · تنظیمات</span></button>'+
       '</div>';
   }
   // pending + reviewed submissions
@@ -2777,22 +2914,8 @@ function openTeacherClassPerf(cid){
   runTeacherClassPerf();
 }
 function parseFaDateInput(s){
-  s=toEnDigits(String(s||'').trim());
-  if(!s)return null;
-  // accept 1403/07/01 or 1403-07-01
-  const m=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-  if(!m)return null;
-  const jy=+m[1],jm=+m[2],jd=+m[3];
-  // store as comparable string jyyy-mm-dd via existing jalali helpers if any
-  try{
-    if(typeof jalaali!=='undefined'&&jalaali.toGregorian){
-      const g=jalaali.toGregorian(jy,jm,jd);
-      const mm=String(g.gm).padStart(2,'0'),dd=String(g.gd).padStart(2,'0');
-      return g.gy+'-'+mm+'-'+dd;
-    }
-  }catch(e){}
-  // fallback: if attendance dates are jalali-like keep as zero-padded
-  return jy+'-'+String(jm).padStart(2,'0')+'-'+String(jd).padStart(2,'0');
+  // خروجی همیشه YYYY-MM-DD میلادی تا با attendance.date یکی باشد
+  return normalizeDateToIso(s);
 }
 function runTeacherClassPerf(){
   if(!teacherPerfClassId)return;
@@ -2802,9 +2925,7 @@ function runTeacherClassPerf(){
   let html='';
   if(!stus.length){document.getElementById('teacher-perf-out').innerHTML='<p class="hint">دانش‌آموزی نیست</p>';return}
   stus.forEach(s=>{
-    let att=(schoolData.attendance||[]).filter(a=>a.studentId===s.id);
-    if(from)att=att.filter(a=>String(a.date||'')>=from);
-    if(to)att=att.filter(a=>String(a.date||'')<=to);
+    let att=filterAttByRange((schoolData.attendance||[]).filter(a=>a.studentId===s.id),from,to);
     const abs=att.filter(a=>a.type==='absent').length;
     const late=att.filter(a=>a.type==='late').length;
     const other=att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
@@ -3004,12 +3125,78 @@ function prepareReports(){
   document.getElementById('rep-class').innerHTML='<option value="">— انتخاب کلاس —</option>'+classesForRole().map(c=>'<option value="'+c.id+'">'+classTitle(c)+'</option>').join('');
   document.getElementById('rep-out').innerHTML='';
   const so=document.getElementById('rep-school-out');if(so)so.innerHTML='';
+  // اگر خالی است، امروز را پیش‌فرض بگذار تا تقویم و شمسی هم‌خوان باشند
+  try{
+    const f=document.getElementById('rep-from');
+    const t=document.getElementById('rep-to');
+    if(f&&!f.value&&t&&!t.value)setRepToday();
+    else{syncRepCalFromText('from');syncRepCalFromText('to');updateRepFaLabels()}
+  }catch(e){}
+}
+function updateRepFaLabels(){
+  const fromIso=normalizeDateToIso((document.getElementById('rep-from')||{}).value||'')||(document.getElementById('rep-from-cal')||{}).value||'';
+  const toIso=normalizeDateToIso((document.getElementById('rep-to')||{}).value||'')||(document.getElementById('rep-to-cal')||{}).value||'';
+  const a=document.getElementById('rep-from-fa');
+  const b=document.getElementById('rep-to-fa');
+  if(a)a.textContent=fromIso?('شمسی: '+formatDateFa(fromIso)):'';
+  if(b)b.textContent=toIso?('شمسی: '+formatDateFa(toIso)):'';
+}
+function syncRepDateFromCal(which){
+  const cal=document.getElementById(which==='from'?'rep-from-cal':'rep-to-cal');
+  const txt=document.getElementById(which==='from'?'rep-from':'rep-to');
+  if(!cal||!txt)return;
+  if(cal.value){
+    // نمایش شمسی در فیلد متنی
+    txt.value=formatDateFa(cal.value).replace(/[۰-۹]/g,function(d){return'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)});
+    // بهتر: ارقام انگلیسی شمسی
+    try{
+      var p=cal.value.split('-');
+      var j=gregorianToJalali(+p[0],+p[1],+p[2]);
+      txt.value=j[0]+'/'+String(j[1]).padStart(2,'0')+'/'+String(j[2]).padStart(2,'0');
+    }catch(e){}
+  }
+  updateRepFaLabels();
+}
+function syncRepCalFromText(which){
+  const cal=document.getElementById(which==='from'?'rep-from-cal':'rep-to-cal');
+  const txt=document.getElementById(which==='from'?'rep-from':'rep-to');
+  if(!cal||!txt)return;
+  const iso=normalizeDateToIso(txt.value);
+  if(iso)cal.value=iso;
+  updateRepFaLabels();
+}
+function setRepToday(){
+  const iso=todayStr();
+  const j=jalaliInputToday();
+  const fc=document.getElementById('rep-from-cal');
+  const tc=document.getElementById('rep-to-cal');
+  const f=document.getElementById('rep-from');
+  const t=document.getElementById('rep-to');
+  if(fc)fc.value=iso;if(tc)tc.value=iso;
+  if(f)f.value=j;if(t)t.value=j;
+  updateRepFaLabels();
+}
+function setRepThisWeek(){
+  const to=todayStr();
+  const from=addDays(to,-6);
+  const fc=document.getElementById('rep-from-cal');
+  const tc=document.getElementById('rep-to-cal');
+  const f=document.getElementById('rep-from');
+  const t=document.getElementById('rep-to');
+  if(fc)fc.value=from;if(tc)tc.value=to;
+  if(f){
+    try{var p=from.split('-');var j=gregorianToJalali(+p[0],+p[1],+p[2]);f.value=j[0]+'/'+String(j[1]).padStart(2,'0')+'/'+String(j[2]).padStart(2,'0')}catch(e){f.value=from}
+  }
+  if(t)t.value=jalaliInputToday();
+  updateRepFaLabels();
+}
+function clearRepDates(){
+  ['rep-from','rep-to','rep-from-cal','rep-to-cal'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=''});
+  updateRepFaLabels();
 }
 function calcScore(sid,from,to){
   let score=20;
-  let att=(schoolData.attendance||[]).filter(a=>a.studentId===sid);
-  if(from)att=att.filter(a=>String(a.date||'')>=from);
-  if(to)att=att.filter(a=>String(a.date||'')<=to);
+  let att=filterAttByRange((schoolData.attendance||[]).filter(a=>a.studentId===sid),from,to);
   att.forEach(a=>{score-=parseFloat(a.scoreDeduct)||0});
   return Math.max(0,Math.round(score*100)/100);
 }
@@ -3022,8 +3209,10 @@ function repDateRange(){
 }
 function filterAttByRange(att,from,to){
   let a=att||[];
-  if(from)a=a.filter(x=>String(x.date||'')>=from);
-  if(to)a=a.filter(x=>String(x.date||'')<=to);
+  const f=from?normalizeDateToIso(from)||from:null;
+  const t=to?normalizeDateToIso(to)||to:null;
+  if(f)a=a.filter(function(x){var d=normalizeDateToIso(x.date)||String(x.date||'');return d>=f});
+  if(t)a=a.filter(function(x){var d=normalizeDateToIso(x.date)||String(x.date||'');return d<=t});
   return a;
 }
 function genSchoolAbsenceStats(){
@@ -3071,15 +3260,163 @@ function genReport(){
     const other=att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
     absT+=abs;lateT+=late;
     const score=calcScore(s.id,from,to);
-    html+='<div class="list-item clickable" onclick="openPerformance(\''+s.id+'\')"><div class="who">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+(other?' · سایر: '+other:'')+' · موارد: '+att.length+'</div></div></div><strong style="color:var(--primary)">'+score+'</strong></div>';
+    const exs=studentExamList(s.id);
+    let examMeta='';
+    if(exs.length){
+      let sum=0;
+      exs.forEach(function(ex){sum+=parseFloat(ex.scores[s.id])||0});
+      examMeta=' · امتحان: '+exs.length+' · میانگین: '+(Math.round((sum/exs.length)*100)/100);
+    }
+    html+='<div class="list-item clickable" onclick="openPerformance(\''+s.id+'\')"><div class="who">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+(other?' · سایر: '+other:'')+examMeta+'</div></div></div><strong style="color:var(--primary)">'+score+'</strong></div>';
   });
-  const head='<div class="meta" style="margin-bottom:8px">جمع کلاس — غیبت: '+absT+' · تأخیر: '+lateT+' · میانگین نمره تقریبی در بازه</div>';
+  const head='<div class="meta" style="margin-bottom:8px">جمع کلاس — غیبت: '+absT+' · تأخیر: '+lateT+' · روی نام بزنید: انضباط + نمرات امتحان</div>';
   document.getElementById('rep-out').innerHTML=head+(html||'<p class="hint">دانش‌آموزی نیست</p>');
   toast('گزارش کلاس آماده شد');
 }
 
 function fillDiscTypeSelect(){const sel=document.getElementById('d-type');if(!sel)return;sel.innerHTML=(schoolData.disciplineTypes||[]).map(t=>'<option value="'+t.id+'" data-score="'+(t.scoreDeduct||0)+'">'+t.name+'</option>').join('')}
-function openPerformance(id){if(!canManage())return;currentStudentId=id;const s=schoolData.students.find(x=>x.id===id);if(!s)return;document.getElementById('perf-title').textContent='عملکرد: '+s.name;document.getElementById('perf-score').textContent='نمره انضباط: '+calcScore(id)+' از ۲۰';const att=schoolData.attendance.filter(a=>a.studentId===id).sort((a,b)=>b.date.localeCompare(a.date));const typeName=tid=>{const t=(schoolData.disciplineTypes||[]).find(x=>x.id===tid);return t?t.name:(tid==='absent'?'غیبت':tid==='late'?'تأخیر':'مورد')};document.getElementById('perf-body').innerHTML=att.length?att.map(a=>'<div class="list-item"><div><div class="name">'+typeName(a.type)+'</div><div class="meta">'+formatDateFa(a.date)+(a.note?' · '+a.note:'')+' · کسر '+(a.scoreDeduct||0)+'</div></div><button class="btn btn-outline btn-sm" onclick="editAtt(\''+a.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delAtt(\''+a.id+'\')">حذف</button></div>').join(''):'<p class="hint">موردی نیست</p>';fillDiscTypeSelect();document.getElementById('d-note').value='';document.getElementById('d-score').value='';showAppPage('performance')}
+function studentExamList(sid){
+  const s=(schoolData.students||[]).find(x=>x.id===sid);
+  if(!s)return[];
+  return (schoolData.exams||[])
+    .filter(function(ex){return ex.classId===s.classId&&ex.scores&&ex.scores[sid]!=null&&ex.scores[sid]!==''})
+    .slice()
+    .sort(function(a,b){
+      var da=normalizeDateToIso(a.date)||String(a.date||'');
+      var db=normalizeDateToIso(b.date)||String(b.date||'');
+      return db.localeCompare(da);
+    });
+}
+function togglePerfSubject(key){
+  const el=document.getElementById('perf-sub-'+key);
+  if(!el)return;
+  el.classList.toggle('show');
+}
+function openPerformance(id){
+  if(!canManage())return;
+  currentStudentId=id;
+  const s=schoolData.students.find(x=>x.id===id);
+  if(!s)return;
+  const cls=(schoolData.classes||[]).find(c=>c.id===s.classId);
+  const disc=calcScore(id);
+  const exams=studentExamList(id);
+  const att=(schoolData.attendance||[]).filter(a=>a.studentId===id).slice().sort(function(a,b){
+    var da=normalizeDateToIso(a.date)||String(a.date||'');
+    var db=normalizeDateToIso(b.date)||String(b.date||'');
+    return db.localeCompare(da);
+  });
+  const absN=att.filter(a=>a.type==='absent').length;
+  const lateN=att.filter(a=>a.type==='late').length;
+  const otherN=att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
+
+  // میانگین کلی آزمون‌ها
+  let examAvg=null,examCnt=0,examSum=0;
+  exams.forEach(function(ex){
+    const max=parseFloat(ex.maxScore)||20;
+    const sc=parseFloat(ex.scores[id]);
+    if(!isNaN(sc)&&max>0){examSum+=(sc/max)*20;examCnt++}
+  });
+  if(examCnt)examAvg=Math.round((examSum/examCnt)*100)/100;
+
+  const typeName=function(tid){
+    const t=(schoolData.disciplineTypes||[]).find(x=>x.id===tid);
+    return t?t.name:(tid==='absent'?'غیبت':tid==='late'?'تأخیر':'مورد');
+  };
+
+  // گروه‌بندی درس
+  const bySub={};
+  exams.forEach(function(ex){
+    const sub=ex.subject||'سایر دروس';
+    if(!bySub[sub])bySub[sub]=[];
+    bySub[sub].push(ex);
+  });
+  const subjects=Object.keys(bySub).sort(function(a,b){return a.localeCompare(b,'fa')});
+
+  let html='';
+  // سربرگ گزارش اولیا
+  html+='<div class="rep-head">';
+  html+='<div class="rep-name">'+s.name+'</div>';
+  html+='<div class="rep-meta">'+(cls?classTitle(cls):'کلاس')+(session&&session.name?(' · '+session.name):'')+' · '+persianToday()+'</div>';
+  html+='</div>';
+
+  html+='<div class="rep-stats">';
+  html+='<div class="rep-stat"><div class="n">'+disc+'</div><div class="l">انضباط از ۲۰</div></div>';
+  html+='<div class="rep-stat"><div class="n">'+(examAvg!=null?examAvg:'—')+'</div><div class="l">میانگین نمرات</div></div>';
+  html+='<div class="rep-stat"><div class="n">'+absN+'</div><div class="l">غیبت</div></div>';
+  html+='</div>';
+
+  // جدول دروس — جمع‌وجور
+  html+='<div class="rep-sec">نمرات دروس</div>';
+  if(!subjects.length){
+    html+='<p class="hint">هنوز نمره‌ای ثبت نشده است.</p>';
+  }else{
+    html+='<table class="rep-table"><thead><tr><th>درس</th><th>تعداد</th><th>میانگین</th></tr></thead><tbody>';
+    subjects.forEach(function(sub,idx){
+      const arr=bySub[sub];
+      let sum=0,cnt=0;
+      arr.forEach(function(ex){
+        const sc=parseFloat(ex.scores[id]);
+        const max=parseFloat(ex.maxScore)||20;
+        if(!isNaN(sc)&&max>0){sum+=(sc/max)*20;cnt++}
+      });
+      const avg=cnt?Math.round((sum/cnt)*100)/100:'—';
+      const key='s'+idx;
+      html+='<tr class="sub-row" onclick="togglePerfSubject(\''+key+'\')"><td><strong>'+sub+'</strong><div class="meta" style="font-size:.72rem">برای جزئیات بزنید</div></td><td>'+arr.length+'</td><td class="score">'+avg+'</td></tr>';
+      html+='<tr><td colspan="3" style="padding:0;border:none"><div class="rep-detail" id="perf-sub-'+key+'">';
+      // مرتب‌سازی آزمون‌ها قدیمی→جدید برای ارائه
+      arr.slice().sort(function(a,b){
+        var da=normalizeDateToIso(a.date)||'';
+        var db=normalizeDateToIso(b.date)||'';
+        return da.localeCompare(db);
+      }).forEach(function(ex){
+        const sc=ex.scores[id];
+        const max=ex.maxScore||20;
+        html+='<div class="row"><div><span class="rep-chip">'+ex.title+'</span><div class="meta" style="margin-top:3px">'+formatDateFa(ex.date)+(ex.teacherName?(' · '+ex.teacherName):'')+'</div></div><div class="score">'+sc+' <span style="font-weight:500;color:var(--muted);font-size:.75rem">/ '+max+'</span></div></div>';
+      });
+      html+='</div></td></tr>';
+    });
+    html+='</tbody></table>';
+    html+='<p class="hint">روی هر درس بزنید تا میان‌ترم، پایانی و بقیه آزمون‌ها باز شود.</p>';
+  }
+
+  // خلاصه حضور — نه لیست بلند
+  html+='<div class="rep-sec">حضور و انضباط</div>';
+  html+='<div class="rep-att-sum">';
+  html+='<span>غیبت: <b>'+absN+'</b></span>';
+  html+='<span>تأخیر: <b>'+lateN+'</b></span>';
+  html+='<span>سایر: <b>'+otherN+'</b></span>';
+  html+='<span>نمره انضباط: <b>'+disc+'</b> از ۲۰</span>';
+  html+='</div>';
+  if(att.length){
+    html+='<button type="button" class="btn btn-outline btn-sm" onclick="togglePerfSubject(\'att\')">جزئیات موارد ('+att.length+') ▼</button>';
+    html+='<div class="rep-detail" id="perf-sub-att" style="margin-top:8px">';
+    att.forEach(function(a){
+      html+='<div class="row"><div><strong>'+typeName(a.type)+'</strong><div class="meta">'+formatDateFa(a.date)+(a.note?(' · '+a.note):'')+'</div></div><div class="meta">کسر '+(a.scoreDeduct||0)+'</div></div>';
+    });
+    html+='</div>';
+  }else{
+    html+='<p class="hint">مورد انضباطی ثبت نشده است.</p>';
+  }
+
+  document.getElementById('perf-report').innerHTML=html;
+
+  // بخش مدیریتی جدا
+  const adminAtt=document.getElementById('perf-att-admin');
+  if(adminAtt){
+    if(att.length){
+      adminAtt.innerHTML='<div class="card-title">ویرایش موارد</div>'+att.map(function(a){
+        return '<div class="list-item"><div><div class="name">'+typeName(a.type)+'</div><div class="meta">'+formatDateFa(a.date)+(a.note?' · '+a.note:'')+'</div></div>'+
+          '<button class="btn btn-outline btn-sm" onclick="editAtt(\''+a.id+'\')">ویرایش</button>'+
+          '<button class="btn btn-danger btn-sm" onclick="delAtt(\''+a.id+'\')">حذف</button></div>';
+      }).join('');
+    }else adminAtt.innerHTML='';
+  }
+  fillDiscTypeSelect();
+  const dn=document.getElementById('d-note');if(dn)dn.value='';
+  const ds=document.getElementById('d-score');if(ds)ds.value='';
+  const af=document.getElementById('perf-admin-form');if(af)af.style.display='none';
+  showAppPage('performance');
+}
 function addDisciplineCustom(){if(!currentStudentId)return;const type=document.getElementById('d-type').value;let note=document.getElementById('d-note').value.trim();let score=document.getElementById('d-score').value;const s=schoolData.students.find(x=>x.id===currentStudentId);const dt=(schoolData.disciplineTypes||[]).find(t=>t.id===type);if(!note)note=dt?dt.name:'مورد';const deduct=score!==''?parseFloat(score):(dt?dt.scoreDeduct:1);schoolData.attendance.push({id:uid(),studentId:currentStudentId,classId:s.classId,date:todayStr(),type,note,scoreDeduct:deduct});schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId);toast('ثبت شد')}
 function editAtt(id){const a=schoolData.attendance.find(x=>x.id===id);if(!a)return;const note=prompt('شرح',a.note||'');if(note===null)return;const sc=prompt('کسر نمره',String(a.scoreDeduct||0));if(sc===null)return;a.note=note;a.scoreDeduct=parseFloat(sc)||0;schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId)}
 function delAtt(id){if(!confirm('حذف؟'))return;schoolData.attendance=schoolData.attendance.filter(a=>a.id!==id);schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId);toast('حذف شد و نمره به‌روز شد')}
@@ -3266,70 +3603,158 @@ function smsModeAllowsSim(){const m=getSmsCfg().mode;return m==='sim'||m==='both
 
 
 
+function teacherClassOptions(){
+  return [...new Set((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).map(a=>a.classId))]
+    .map(id=>(schoolData.classes||[]).find(c=>c.id===id)).filter(Boolean);
+}
+function teacherSubjectsForClass(classId){
+  const set=[];
+  (schoolData.assignments||[]).forEach(function(a){
+    if(a.teacherId!==userSession.staffId||a.classId!==classId)return;
+    const sub=String(a.subject||'').trim();
+    if(sub&&set.indexOf(sub)<0)set.push(sub);
+  });
+  return set;
+}
+function fillExamSubjectOptions(){
+  const classId=(document.getElementById('ex-class')||{}).value;
+  const sel=document.getElementById('ex-subject');
+  if(!sel)return;
+  const subs=teacherSubjectsForClass(classId);
+  if(subs.length){
+    sel.innerHTML=subs.map(function(s){return '<option value="'+s+'">'+s+'</option>'}).join('')+
+      '<option value="__other__">سایر / دستی</option>';
+  }else{
+    sel.innerHTML='<option value="__other__">دستی بنویسید</option>';
+  }
+  const other=document.getElementById('ex-subject-other');
+  if(other)other.style.display=(!subs.length||sel.value==='__other__')?'block':'none';
+}
+function canEditExam(ex){
+  if(!ex||!isTeacher()||!userSession)return false;
+  if(ex.teacherId&&ex.teacherId===userSession.staffId)return true;
+  // امتحان‌های قدیمی بدون teacherId: اگر کلاس در برنامه معلم باشد
+  if(!ex.teacherId){
+    return (schoolData.assignments||[]).some(function(a){return a.teacherId===userSession.staffId&&a.classId===ex.classId});
+  }
+  return false;
+}
 function renderExams(){
   const box=document.getElementById('exams-list');
   if(!box)return;
-  const list=schoolData.exams||[];
-  if(!list.length){box.innerHTML='<p class="hint">امتحانی ثبت نشده</p>';return}
-  box.innerHTML=list.slice().reverse().map(ex=>{
+  const addBtn=document.getElementById('btn-add-exam');
+  if(addBtn){
+    addBtn.style.display=isTeacher()?'inline-flex':'none';
+    addBtn.textContent='+ ثبت امتحان';
+  }
+  let list=(schoolData.exams||[]).slice();
+  if(isTeacher()&&userSession){
+    list=list.filter(function(ex){
+      return ex.teacherId===userSession.staffId||
+        (!ex.teacherId&&(schoolData.assignments||[]).some(function(a){return a.teacherId===userSession.staffId&&a.classId===ex.classId}));
+    });
+  }
+  if(!list.length){
+    box.innerHTML='<p class="hint">'+(isTeacher()?'هنوز امتحانی برای کلاس‌های شما ثبت نشده. دکمه «ثبت امتحان» را بزنید.':'هنوز معلمان امتحانی ثبت نکرده‌اند. شما فقط مشاهده‌کننده هستید.')+'</p>';
+    return;
+  }
+  box.innerHTML=list.slice().reverse().map(function(ex){
     const c=(schoolData.classes||[]).find(x=>x.id===ex.classId);
     const n=Object.keys(ex.scores||{}).length;
-    return '<div class="list-item"><div><div class="name">'+ex.title+'</div><div class="meta">'+classTitle(c||{name:'؟'})+' · '+formatDateFa(ex.date)+' · نمره از '+(ex.maxScore||20)+' · ثبت‌شده: '+n+'</div></div>'+
-      ((canManage()||isTeacher())?('<button class="btn btn-primary btn-sm" onclick="openExamScores(\''+ex.id+'\')">نمرات</button>'):'')+
-      (isManager()?('<button class="btn btn-danger btn-sm" onclick="delExam(\''+ex.id+'\')">حذف</button>'):'')+'</div>';
+    const sub=ex.subject||'—';
+    const teacher=ex.teacherName||'معلم';
+    const editable=canEditExam(ex);
+    return '<div class="list-item"><div style="flex:1"><div class="name">'+sub+(ex.title&&ex.title!==sub?(' · '+ex.title):'')+'</div><div class="meta">'+classTitle(c||{name:'؟'})+' · '+teacher+' · '+formatDateFa(ex.date)+' · از '+(ex.maxScore||20)+' · ثبت‌شده: '+n+'</div></div>'+
+      '<button class="btn btn-primary btn-sm" onclick="openExamScores(\''+ex.id+'\')">'+(editable?'ورود نمره':'مشاهده')+'</button>'+
+      (editable?('<button class="btn btn-danger btn-sm" onclick="delExam(\''+ex.id+'\')">حذف</button>'):'')+'</div>';
   }).join('');
 }
 function openExamModal(){
-  if(!canManage()&&!isTeacher())return toast('دسترسی ندارید');
-  const cls=isTeacher()?[...new Set((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).map(a=>a.classId))].map(id=>(schoolData.classes||[]).find(c=>c.id===id)).filter(Boolean):classesForRole();
-  if(!cls.length)return toast('کلاسی نیست');
-  document.getElementById('modal-title').textContent='امتحان جدید';
+  if(!isTeacher())return toast('فقط معلم می‌تواند امتحان ثبت کند. مدیر و معاون مشاهده‌کننده هستند.');
+  const cls=teacherClassOptions();
+  if(!cls.length)return toast('کلاسی در برنامه شما نیست — از مدیر بخواهید برنامه را تنظیم کند');
+  document.getElementById('modal-title').textContent='ثبت امتحان';
   document.getElementById('modal-body').innerHTML=
-    '<div class="form-group"><label>عنوان امتحان</label><input class="form-control" id="ex-title" placeholder="مثلاً ریاضی میان‌ترم" /></div>'+
-    '<div class="form-group"><label>کلاس</label><select class="form-control" id="ex-class">'+cls.map(c=>'<option value="'+c.id+'">'+classTitle(c)+'</option>').join('')+'</select></div>'+
-    '<div class="form-group"><label>تاریخ (اختیاری)</label><input class="form-control" id="ex-date" value="'+todayStr()+'" /></div>'+
+    '<p class="hint" style="margin-bottom:10px">معلم: '+(userSession.name||userSession.username||'')+' — نمرات بعداً درس‌به‌درس در عملکرد دانش‌آموز دیده می‌شود.</p>'+
+    '<div class="form-group"><label>کلاس</label><select class="form-control" id="ex-class" onchange="fillExamSubjectOptions()">'+cls.map(function(c){return '<option value="'+c.id+'">'+classTitle(c)+'</option>'}).join('')+'</select></div>'+
+    '<div class="form-group"><label>درس</label><select class="form-control" id="ex-subject" onchange="var o=document.getElementById(\'ex-subject-other\');if(o)o.style.display=this.value===\'__other__\'?\'block\':\'none\'"></select></div>'+
+    '<div class="form-group" id="ex-subject-other" style="display:none"><label>نام درس (دستی)</label><input class="form-control" id="ex-subject-text" placeholder="مثلاً ریاضی" /></div>'+
+    '<div class="form-group"><label>عنوان امتحان</label><input class="form-control" id="ex-title" placeholder="مثلاً میان‌ترم / پایانی / کوییز" /></div>'+
+    '<div class="form-group"><label>تاریخ شمسی</label><input class="form-control" id="ex-date" value="'+jalaliInputToday()+'" placeholder="1404/06/19" inputmode="numeric" /><p class="hint">امروز: '+persianToday()+'</p></div>'+
     '<div class="form-group"><label>نمره از</label><input type="number" class="form-control" id="ex-max" value="20" /></div>'+
-    '<button class="btn btn-primary btn-block" onclick="saveExam()">ذخیره</button>';
+    '<button class="btn btn-primary btn-block" onclick="saveExam()">ذخیره امتحان</button>';
   document.getElementById('modal').classList.add('show');
+  try{fillExamSubjectOptions()}catch(e){}
 }
 function saveExam(){
-  const title=document.getElementById('ex-title').value.trim();
+  if(!isTeacher())return toast('فقط معلم می‌تواند امتحان ثبت کند');
   const classId=document.getElementById('ex-class').value;
-  const date=document.getElementById('ex-date').value||todayStr();
+  let subject='';
+  const subSel=document.getElementById('ex-subject');
+  if(subSel&&subSel.value&&subSel.value!=='__other__')subject=subSel.value;
+  else subject=(document.getElementById('ex-subject-text').value||'').trim();
+  let title=(document.getElementById('ex-title').value||'').trim();
+  if(!title)title='امتحان';
+  const rawDate=document.getElementById('ex-date').value||jalaliInputToday();
+  const date=normalizeDateToIso(rawDate)||todayStr();
   const maxScore=parseFloat(document.getElementById('ex-max').value)||20;
-  if(!title||!classId)return toast('عنوان و کلاس لازم است');
+  if(!classId)return toast('کلاس لازم است');
+  if(!subject)return toast('نام درس را وارد کنید');
   if(!schoolData.exams)schoolData.exams=[];
-  schoolData.exams.push({id:uid(),title,classId,date,maxScore,scores:{},createdAt:Date.now()});
+  schoolData.exams.push({
+    id:uid(),
+    title:title,
+    subject:subject,
+    classId:classId,
+    date:date,
+    maxScore:maxScore,
+    scores:{},
+    teacherId:userSession.staffId||null,
+    teacherName:userSession.name||userSession.username||'معلم',
+    createdAt:Date.now()
+  });
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
   cloudPushAppData(true).catch(function(){});
-  closeModal();renderExams();toast('امتحان اضافه شد');
+  closeModal();renderExams();toast('امتحان «'+subject+'» ثبت شد');
 }
 function delExam(id){
-  if(!confirm('حذف امتحان؟'))return;
+  const ex=(schoolData.exams||[]).find(e=>e.id===id);
+  if(!canEditExam(ex))return toast('فقط معلم همان درس می‌تواند حذف کند');
+  if(!confirm('حذف این امتحان و نمراتش؟'))return;
   schoolData.exams=(schoolData.exams||[]).filter(e=>e.id!==id);
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();cloudPushAppData(true).catch(function(){});
   renderExams();
+  toast('حذف شد');
 }
 let currentExamId=null;
 function openExamScores(id){
   currentExamId=id;
   const ex=(schoolData.exams||[]).find(e=>e.id===id);
   if(!ex)return;
+  const editable=canEditExam(ex);
   const stus=(schoolData.students||[]).filter(s=>s.classId===ex.classId);
   document.getElementById('exam-scores-panel').style.display='block';
-  document.getElementById('exam-scores-title').textContent=ex.title+' (از '+(ex.maxScore||20)+')';
-  document.getElementById('exam-scores-list').innerHTML=stus.map(s=>{
+  document.getElementById('exam-scores-title').textContent=
+    (ex.subject?ex.subject+' · ':'')+ex.title+' · '+(ex.teacherName||'')+' (از '+(ex.maxScore||20)+')'+
+    (editable?'':' — فقط مشاهده');
+  const saveBtn=document.querySelector('#exam-scores-panel .btn-success');
+  if(saveBtn)saveBtn.style.display=editable?'block':'none';
+  document.getElementById('exam-scores-list').innerHTML=stus.map(function(s){
     const sc=(ex.scores&&ex.scores[s.id]!=null)?ex.scores[s.id]:'';
-    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><input type="number" step="0.25" class="form-control ex-score" data-sid="'+s.id+'" value="'+sc+'" style="width:90px" placeholder="—" /></div>';
+    if(editable){
+      return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><input type="number" step="0.25" class="form-control ex-score" data-sid="'+s.id+'" value="'+sc+'" style="width:90px" placeholder="—" /></div>';
+    }
+    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><strong style="color:var(--primary)">'+(sc!==''?sc:'—')+'</strong></div>';
   }).join('')||'<p class="hint">دانش‌آموزی نیست</p>';
 }
 function saveExamScores(){
   const ex=(schoolData.exams||[]).find(e=>e.id===currentExamId);
   if(!ex)return;
+  if(!canEditExam(ex))return toast('فقط معلم این درس می‌تواند نمره وارد کند');
   if(!ex.scores)ex.scores={};
-  document.querySelectorAll('.ex-score').forEach(inp=>{
+  document.querySelectorAll('.ex-score').forEach(function(inp){
     const v=inp.value.trim();
     if(v==='')delete ex.scores[inp.getAttribute('data-sid')];
     else ex.scores[inp.getAttribute('data-sid')]=parseFloat(v);
@@ -3407,6 +3832,32 @@ async function changeManagerPassword(){
 }
 
 function renderSettings(){
+  // میان‌برهای مرتب داخل «بیشتر»
+  const hub=document.getElementById('more-hub-grid');
+  if(hub){
+    let h='';
+    h+='<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">اتوماسیون</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'پیام داخلی تیم')+'</span></button>';
+    if(!isTeacher()){
+      h+='<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">امتحان و نمره</span><span class="ds">تعریف امتحان و کارنامه</span></button>';
+    }else{
+      h+='<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">نمرات من</span><span class="ds">امتحان کلاس‌های من</span></button>';
+    }
+    if(canManage()&&hasModule('sms')){
+      h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-sms-panel\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">⚙️</span><span class="lb">تنظیم پیامک</span><span class="ds">پنل و قالب‌ها</span></button>';
+    }
+    if(hasModule('discipline')&&!isTeacher()){
+      h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-disc-types\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">📋</span><span class="lb">انضباط</span><span class="ds">موارد و قوانین کسر نمره</span></button>';
+    }
+    h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-theme-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">🎨</span><span class="lb">ظاهر</span><span class="ds">تیره / روشن و فونت</span></button>';
+    if(isManager()){
+      h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-manager-account-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">🔐</span><span class="lb">حساب مدیر</span><span class="ds">رمز و نام کاربری</span></button>';
+    }
+    if(canManage()){
+      h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-full-backup-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">💾</span><span class="lb">پشتیبان</span><span class="ds">دانلود / بازیابی</span></button>';
+    }
+    h+='<button type="button" class="qa-item" onclick="openContactSalesModal()"><span class="ic">🤝</span><span class="lb">پشتیبانی</span><span class="ds">تماس و شبکه‌های اجتماعی</span></button>';
+    hub.innerHTML=h;
+  }
   const canDisc=hasModule('discipline')&&!isTeacher();
   if(document.getElementById('set-disc-types'))document.getElementById('set-disc-types').style.display=canDisc?'block':'none';
   const tplBox=document.getElementById('set-sms-tpl');
@@ -3580,7 +4031,7 @@ function paintMessages(){
   list.innerHTML=arr.map(function(m){
     const mine=m.fromKey===k;
     const unread=!mine&&isMsgUnread(m);
-    const when=m.createdAtMs?new Date(m.createdAtMs).toLocaleString('fa-IR'):'';
+    const when=m.createdAtMs?formatDateTimeFa(m.createdAtMs):'';
     let html='<div class="msg-bubble'+(mine?' mine':'')+(unread?' unread':'')+'">';
     html+='<div class="name">'+(mine?('به: '+(m.toName||'')):('از: '+(m.fromName||'')))+'</div>';
     html+='<div style="margin-top:6px;white-space:pre-wrap">'+escapeHtml(m.text||'')+'</div>';
