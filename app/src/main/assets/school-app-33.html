@@ -3259,17 +3259,12 @@ function genReport(){
     const late=att.filter(a=>a.type==='late').length;
     const other=att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
     absT+=abs;lateT+=late;
-    const score=calcScore(s.id,from,to);
-    const exs=studentExamList(s.id);
-    let examMeta='';
-    if(exs.length){
-      let sum=0;
-      exs.forEach(function(ex){sum+=parseFloat(ex.scores[s.id])||0});
-      examMeta=' · امتحان: '+exs.length+' · میانگین: '+(Math.round((sum/exs.length)*100)/100);
-    }
-    html+='<div class="list-item clickable" onclick="openPerformance(\''+s.id+'\')"><div class="who">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+(other?' · سایر: '+other:'')+examMeta+'</div></div></div><strong style="color:var(--primary)">'+score+'</strong></div>';
+    // عدد اصلی لیست = فقط نمره انضباط
+    const discScore=calcScore(s.id,from,to);
+    const exN=studentExamList(s.id).length;
+    html+='<div class="list-item clickable" onclick="openPerformance(\''+s.id+'\')"><div class="who">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">غیبت: '+abs+' · تأخیر: '+late+(other?' · سایر: '+other:'')+(exN?' · '+exN+' آزمون':'')+'</div></div></div><div style="text-align:left;min-width:64px"><div style="font-weight:800;color:var(--primary);font-size:1.05rem">'+discScore+'</div><div class="meta" style="font-size:.68rem">انضباط /۲۰</div></div></div>';
   });
-  const head='<div class="meta" style="margin-bottom:8px">جمع کلاس — غیبت: '+absT+' · تأخیر: '+lateT+' · روی نام بزنید: انضباط + نمرات امتحان</div>';
+  const head='<div class="meta" style="margin-bottom:8px">جمع کلاس — غیبت: '+absT+' · تأخیر: '+lateT+' · عدد هر نفر = نمره انضباط · برای نمرات درسی روی نام بزنید</div>';
   document.getElementById('rep-out').innerHTML=head+(html||'<p class="hint">دانش‌آموزی نیست</p>');
   toast('گزارش کلاس آماده شد');
 }
