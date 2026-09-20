@@ -17,8 +17,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # رفع خطا: Failed to find package 'tools'
+      # گوگل پکیج tools را حذف کرده — packages را خالی بگذارید
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
