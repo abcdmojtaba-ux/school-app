@@ -549,6 +549,7 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
       <div class="stat"><div class="n" id="st-days">0</div><div class="l" id="st-days-label">روز مانده</div></div>
     </div>
     <div class="card" id="home-actions"></div>
+    <div class="card" id="home-messages" style="display:none"></div>
     <div class="card" id="home-pending" style="display:none"></div>
   </div>
 
@@ -1197,7 +1198,9 @@ async function manualSyncAll(){
     if(sc)await cloudPushSchool(sc);
     else await cloudPushSchool({id:session.schoolId,code:session.code,name:session.name,managerUsername:schoolData.managerUser,managerPassword:schoolData.managerPass,active:true});
     await cloudPushAppData(true);
-    const subs=schoolData.submissions||[];
+    const deleted={};
+    (schoolData.deletedSubmissionIds||[]).forEach(function(id){deleted[id]=true});
+    const subs=(schoolData.submissions||[]).filter(function(s){return s&&s.id&&!deleted[s.id]});
     for(const sub of subs.slice(0,30)){try{await cloudPushSubmission(session.schoolId,sub)}catch(e){}}
     await cloudPullAppData(true);
     try{renderHome()}catch(e){}
@@ -1241,11 +1244,33 @@ async function cloudPullSubmissions(schoolId){
     const data=await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/submissions');
     const list=(data&&data.submissions)||[];
     schoolData.submissions=schoolData.submissions||[];
-    const map={};schoolData.submissions.forEach(s=>{map[s.id]=s});
-    list.forEach(s=>{if(s&&s.id)map[s.id]=Object.assign({},map[s.id]||{},s)});
-    schoolData.submissions=Object.values(map);
+    if(!Array.isArray(schoolData.deletedSubmissionIds))schoolData.deletedSubmissionIds=[];
+    const deleted={};
+    schoolData.deletedSubmissionIds.forEach(function(id){if(id)deleted[id]=true});
+    const map={};
+    schoolData.submissions.forEach(function(s){if(s&&s.id&&!deleted[s.id])map[s.id]=s});
+    list.forEach(function(s){
+      if(!s||!s.id||deleted[s.id])return;
+      map[s.id]=Object.assign({},map[s.id]||{},s);
+    });
+    // حذف‌شده‌ها هرگز برنگردند
+    Object.keys(deleted).forEach(function(id){delete map[id]});
+    schoolData.submissions=Object.keys(map).map(function(k){return map[k]});
     ensureAllSubmissionsInAttendance();
-    localStorage.setItem(dataKey(),JSON.stringify(schoolData));
+    try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  }catch(e){console.warn(e)}
+}
+function rememberDeletedSubmission(id){
+  if(!id)return;
+  if(!Array.isArray(schoolData.deletedSubmissionIds))schoolData.deletedSubmissionIds=[];
+  if(schoolData.deletedSubmissionIds.indexOf(id)<0)schoolData.deletedSubmissionIds.push(id);
+  // سقف ۲۰۰ تا لیست بی‌نهایت نشود
+  if(schoolData.deletedSubmissionIds.length>200)schoolData.deletedSubmissionIds=schoolData.deletedSubmissionIds.slice(-200);
+}
+async function cloudDeleteSubmission(schoolId,subId){
+  if(!SYNC_API||!schoolId||!subId)return;
+  try{
+    await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/submissions',{method:'DELETE',body:{id:subId}});
   }catch(e){console.warn(e)}
 }
 async function cloudPushStaff(schoolId,staffList){
@@ -1282,6 +1307,7 @@ async function cloudPushAppData(force){
       colleagues:schoolData.colleagues||[],
       attendance:schoolData.attendance||[],
       submissions:schoolData.submissions||[],
+      deletedSubmissionIds:schoolData.deletedSubmissionIds||[],
       disciplineTypes:schoolData.disciplineTypes||[],
       smsTemplates:schoolData.smsTemplates||[],
       exams:schoolData.exams||[],
@@ -1342,6 +1368,18 @@ function applyRemoteAppData(d,remoteTs,forceAll){
   schoolData.colleagues=_mergeById(schoolData.colleagues,d.colleagues,!!forceAll);
   schoolData.attendance=_mergeById(schoolData.attendance,d.attendance,!!forceAll);
   schoolData.submissions=_mergeById(schoolData.submissions,d.submissions,!!forceAll);
+  // ادغام شناسه‌های حذف‌شده و فیلتر
+  if(Array.isArray(d.deletedSubmissionIds)&&d.deletedSubmissionIds.length){
+    if(!Array.isArray(schoolData.deletedSubmissionIds))schoolData.deletedSubmissionIds=[];
+    d.deletedSubmissionIds.forEach(function(id){
+      if(id&&schoolData.deletedSubmissionIds.indexOf(id)<0)schoolData.deletedSubmissionIds.push(id);
+    });
+  }
+  if(Array.isArray(schoolData.deletedSubmissionIds)&&schoolData.deletedSubmissionIds.length){
+    var del={};schoolData.deletedSubmissionIds.forEach(function(id){del[id]=true});
+    schoolData.submissions=(schoolData.submissions||[]).filter(function(s){return s&&s.id&&!del[s.id]});
+    schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return !a.submissionId||!del[a.submissionId]});
+  }
   if(Array.isArray(d.disciplineTypes)&&d.disciplineTypes.length)schoolData.disciplineTypes=d.disciplineTypes;
   if(Array.isArray(d.smsTemplates)&&d.smsTemplates.length)schoolData.smsTemplates=d.smsTemplates;
   schoolData.exams=_mergeById(schoolData.exams,d.exams,!!forceAll);
@@ -2485,7 +2523,8 @@ function renderHome(){
       '<button type="button" class="qa-item accent" onclick="showAppPage(\'classes\')"><span class="ic">🏫</span><span class="lb">کلاس</span><span class="ds">'+_vc.length+' کلاس · '+stuN+' نفر</span></button>'+
       (hasModule('sms')?'<button type="button" class="qa-item ok" onclick="showAppPage(\'send\')"><span class="ic">✉️</span><span class="lb">پیامک</span><span class="ds">اولیا و همکاران</span></button>':'')+
       ((hasModule('advanced_reports')||hasModule('discipline'))?'<button type="button" class="qa-item" onclick="showAppPage(\'reports\')"><span class="ic">📊</span><span class="lb">گزارش</span><span class="ds">حضور و انضباط</span></button>':'')+
-      '<button type="button" class="qa-item" onclick="showAppPage(\'settings\')"><span class="ic">⋯</span><span class="lb">بیشتر</span><span class="ds">امتحان · اتوماسیون · تنظیمات</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'settings\')"><span class="ic">⋯</span><span class="lb">بیشتر</span><span class="ds">امتحان · تنظیمات</span></button>'+
+      '<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">اتوماسیون</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'پیام داخلی')+'</span></button>'+
       '</div>';
   }
   // خانه: در انتظار + شیت پایین بررسی‌شده‌ها
@@ -2521,10 +2560,13 @@ function renderHome(){
     pend.innerHTML=html;
     try{renderReviewedSheet()}catch(e){}
   }else{pend.style.display='none'}
+
+  try{renderHomeMessages()}catch(e){}
 }
 
 function applySubmissionAttendance(s){
   if(!s||!s.rows)return;
+  if(s.id&&Array.isArray(schoolData.deletedSubmissionIds)&&schoolData.deletedSubmissionIds.indexOf(s.id)>=0)return;
   schoolData.attendance=schoolData.attendance||[];
   s.rows.forEach(r=>{
     if(r.status==='present')return;
@@ -2540,7 +2582,12 @@ function applySubmissionAttendance(s){
   });
 }
 function ensureAllSubmissionsInAttendance(){
-  (schoolData.submissions||[]).forEach(applySubmissionAttendance);
+  var deleted={};
+  (schoolData.deletedSubmissionIds||[]).forEach(function(id){if(id)deleted[id]=true});
+  (schoolData.submissions||[]).forEach(function(s){
+    if(s&&s.id&&deleted[s.id])return;
+    applySubmissionAttendance(s);
+  });
 }
 
 let currentSubmissionId=null;
@@ -2700,22 +2747,24 @@ async function deleteSubmission(id){
   if(!canManage())return toast('دسترسی ندارید');
   if(!confirm('این مورد بررسی‌شده حذف شود؟'))return;
   var sub=(schoolData.submissions||[]).find(function(x){return x.id===id});
+  rememberDeletedSubmission(id);
   schoolData.submissions=(schoolData.submissions||[]).filter(function(x){return x.id!==id});
-  // حضورهای وابسته به این ارسال هم حذف
-  if(sub){
-    schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return a.submissionId!==id});
-  }
+  schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return a.submissionId!==id});
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
-  try{await cloudPushAppData(true)}catch(e){}
-  toast('حذف شد');
+  toast('حذف شد — در حال ارسال به سرور...');
+  try{
+    if(session&&session.schoolId)await cloudDeleteSubmission(session.schoolId,id);
+    await cloudPushAppData(true);
+    toast('از سرور هم حذف شد ✓');
+  }catch(e){toast('محلی حذف شد؛ همگام‌سازی ناموفق')}
   try{renderHome();renderReviewedSheet();renderAttLog()}catch(e){}
 }
 async function deleteAllReviewedFiltered(){
   if(!canManage())return toast('دسترسی ندارید');
   var raw=((document.getElementById('home-rev-date')||{}).value||'').trim();
   var dayIso=raw?normalizeDateToIso(raw):null;
-  var ids={};
+  var ids=[];
   (schoolData.submissions||[]).forEach(function(s){
     if(!s.status||s.status==='pending')return;
     if(!canAccessClass(s.classId))return;
@@ -2723,19 +2772,27 @@ async function deleteAllReviewedFiltered(){
       var d=normalizeDateToIso(s.date)||s.date;
       if(d!==dayIso)return;
     }
-    ids[s.id]=true;
+    if(s.id)ids.push(s.id);
   });
-  var n=Object.keys(ids).length;
+  var n=ids.length;
   if(!n)return toast('موردی برای حذف نیست');
   if(!confirm(n+' مورد بررسی‌شده'+(dayIso?' در این تاریخ':'')+' حذف شود؟\nحضور وابسته هم پاک می‌شود.'))return;
-  schoolData.submissions=(schoolData.submissions||[]).filter(function(s){return !ids[s.id]});
-  schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return !a.submissionId||!ids[a.submissionId]});
+  var idset={};ids.forEach(function(id){idset[id]=true;rememberDeletedSubmission(id)});
+  schoolData.submissions=(schoolData.submissions||[]).filter(function(s){return !idset[s.id]});
+  schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return !a.submissionId||!idset[a.submissionId]});
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
-  try{await cloudPushAppData(true)}catch(e){}
-  toast(n+' مورد حذف شد');
+  toast('در حال حذف از سرور...');
+  try{
+    if(session&&session.schoolId){
+      for(var k=0;k<ids.length;k++){try{await cloudDeleteSubmission(session.schoolId,ids[k])}catch(e){}}
+    }
+    await cloudPushAppData(true);
+    toast(n+' مورد از سرور حذف شد ✓');
+  }catch(e){toast(n+' مورد محلی حذف شد')}
   try{renderHome();renderReviewedSheet();renderAttLog()}catch(e){}
 }
+
 
 function renderAttLog(){
   if(!canManage())return;
@@ -2802,7 +2859,7 @@ async function submitManagerClassAtt(){
     return {studentId:el.getAttribute('data-sid'),status:el.value};
   });
   if(!rows.length)return toast('لیست دانش‌آموز خالی است');
-  if(!Array.isArray(schoolData.submissions))schoolData.submissions=[];
+  if(!Array.isArray(schoolData.submissions))schoolData.submissions=[];if(!Array.isArray(schoolData.deletedSubmissionIds))schoolData.deletedSubmissionIds=[];
   if(!Array.isArray(schoolData.attendance))schoolData.attendance=[];
   var sub={
     id:uid(),
@@ -4952,7 +5009,41 @@ function markMsgRead(m){
     m.readBy.push(k);
     schoolData._cloudUpdatedAtMs=Date.now();
     saveSchoolData();
+    try{pushMessagesNow()}catch(e){}
   }
+}
+
+function homeUnreadMessages(){
+  return (schoolData.messages||[]).filter(function(m){
+    return messageVisibleToMe(m) && m.fromKey!==myMsgKey() && isMsgUnread(m);
+  }).slice().sort(function(a,b){return (b.createdAtMs||0)-(a.createdAtMs||0)});
+}
+function renderHomeMessages(){
+  var box=document.getElementById('home-messages');
+  if(!box)return;
+  var list=homeUnreadMessages();
+  if(!list.length){
+    box.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+  var html='<div class="card-title">پیام‌های اتوماسیون ('+list.length+')</div>';
+  html+='<p class="hint">پیام‌های خوانده‌نشده — با پاسخ یا «خواندم» از صفحه اول برداشته می‌شوند و در اتوماسیون می‌مانند.</p>';
+  list.slice(0,15).forEach(function(m){
+    var when=m.createdAtMs?formatDateTimeFa(m.createdAtMs):'';
+    var preview=String(m.text||'').slice(0,120);
+    html+='<div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">';
+    html+='<div><div class="name">از: '+(m.fromName||'—')+'</div>';
+    html+='<div class="meta">'+when+(m.parentId?' · پاسخ':'')+'</div>';
+    html+='<div style="margin-top:6px;white-space:pre-wrap">'+escapeHtml(preview)+(String(m.text||'').length>120?'…':'')+'</div></div>';
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    html+='<button type="button" class="btn btn-primary btn-sm" onclick="replyMessage(\''+m.id+'\')">پاسخ</button>';
+    html+='<button type="button" class="btn btn-outline btn-sm" onclick="markOneRead(\''+m.id+'\')">خواندم</button>';
+    html+='<button type="button" class="btn btn-outline btn-sm" onclick="showAppPage(\'messages\')">همه پیام‌ها</button>';
+    html+='</div></div>';
+  });
+  box.innerHTML=html;
+  box.style.display='block';
 }
 function unreadMsgCount(){
   return (schoolData.messages||[]).filter(function(m){return messageVisibleToMe(m)&&isMsgUnread(m)}).length;
@@ -5027,7 +5118,7 @@ function replyMessage(id){
 }
 function markOneRead(id){
   const m=(schoolData.messages||[]).find(function(x){return x.id===id});
-  if(m){markMsgRead(m);renderMessages();try{renderHome()}catch(e){}}
+  if(m){markMsgRead(m);schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();pushMessagesNow();renderMessages();try{renderHomeMessages();renderHome()}catch(e){}}
 }
 function sendInternalMessage(parentId){
   const sel=document.getElementById('msg-to');
@@ -5064,6 +5155,7 @@ function sendInternalMessage(parentId){
   closeModal();
   _msgTab='out';
   renderMessages();
+  try{renderHomeMessages();renderHome()}catch(e){}
   toast('پیام ارسال شد');
 }
 function pushMessagesNow(){
