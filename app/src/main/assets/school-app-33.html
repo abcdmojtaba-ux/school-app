@@ -2,6 +2,9 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>سامانه نیکان | پنل مدرسه</title>
 <style>
@@ -1020,6 +1023,7 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
 </div>
 
 <script>
+const APP_BUILD='2026-09-23-a';
 const APP_KEY='school_app_v1',MOTHER_KEY='mother_panel_v1',DATA_PREFIX='school_data_',SESSION_USER='school_user_session';
 const DAYS=['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
 let session=null,userSession=null,schoolData=null,currentClassId=null,currentStudentId=null,loginRole='manager',currentAssign=null;
@@ -2574,10 +2578,21 @@ function applySubmissionAttendance(s){
     // already have from this submission?
     const exists=schoolData.attendance.some(a=>a.submissionId===s.id&&a.studentId===r.studentId);
     if(exists)return;
-    // same day same type from teacher for this student+class?
-    const dup=schoolData.attendance.some(a=>a.studentId===r.studentId&&a.date===s.date&&a.type===type&&a.fromTeacher&&a.classId===s.classId);
-    if(dup)return;
-    const deduct=type==='late'?(schoolData.rules.late||0.25):(schoolData.rules.absent||0.5);
+    // تأخیر: هر زنگ جدا · غیبت: رکورد ثبت می‌شود ولی کسر فقط اگر اولین غیبت آن روز باشد
+    if(type==='late'){
+      const dupLate=schoolData.attendance.some(a=>a.studentId===r.studentId&&a.date===s.date&&a.type==='late'&&a.submissionId===s.id);
+      if(dupLate)return;
+    }
+    var deduct=0;
+    if(type==='late'){
+      deduct=(schoolData.rules&&schoolData.rules.late)||0.25;
+    }else{
+      // absent: آیا قبلاً برای این روز کسر شده؟
+      var alreadyAbsent=schoolData.attendance.some(function(a){
+        return a.studentId===r.studentId&&(a.type||'')==='absent'&&(normalizeDateToIso(a.date)||a.date)===(normalizeDateToIso(s.date)||s.date)&&parseFloat(a.scoreDeduct)>0;
+      });
+      deduct=alreadyAbsent?0:((schoolData.rules&&schoolData.rules.absent)||0.5);
+    }
     schoolData.attendance.push({id:uid(),studentId:r.studentId,classId:s.classId,date:s.date,type:type,note:'حضور و غیاب معلم — '+(s.periodName||''),scoreDeduct:deduct,fromTeacher:true,submissionId:s.id,teacherId:s.teacherId||null});
   });
 }
@@ -2881,7 +2896,15 @@ async function submitManagerClassAtt(){
   rows.forEach(function(r){
     if(r.status==='present')return;
     var type=r.status==='late'?'late':'absent';
-    var deduct=type==='late'?(schoolData.rules.late||0.25):(schoolData.rules.absent||0.5);
+    var deduct=0;
+    if(type==='late'){
+      deduct=(schoolData.rules&&schoolData.rules.late)||0.25;
+    }else{
+      var already=schoolData.attendance.some(function(a){
+        return a.studentId===r.studentId&&(a.type||'')==='absent'&&(normalizeDateToIso(a.date)||a.date)===(normalizeDateToIso(day)||day)&&parseFloat(a.scoreDeduct)>0;
+      });
+      deduct=already?0:((schoolData.rules&&schoolData.rules.absent)||0.5);
+    }
     schoolData.attendance.push({
       id:uid(),studentId:r.studentId,classId:cid,date:day,type:type,
       note:'حضور مدیریت — '+period,scoreDeduct:deduct,
@@ -3774,7 +3797,16 @@ async function submitAttendance(){
     rows.forEach(r=>{
       if(r.status==='present')return;
       const type=r.status==='late'?'late':'absent';
-      const deduct=type==='late'?(schoolData.rules.late||0.25):(schoolData.rules.absent||0.5);
+      var deduct=0;
+      if(type==='late'){
+        deduct=(schoolData.rules&&schoolData.rules.late)||0.25;
+      }else{
+        var day=todayStr();
+        var already=schoolData.attendance.some(function(a){
+          return a.studentId===r.studentId&&(a.type||'')==='absent'&&(normalizeDateToIso(a.date)||a.date)===(normalizeDateToIso(day)||day)&&parseFloat(a.scoreDeduct)>0;
+        });
+        deduct=already?0:((schoolData.rules&&schoolData.rules.absent)||0.5);
+      }
       schoolData.attendance.push({id:uid(),studentId:r.studentId,classId:currentAssign.classId,date:todayStr(),type,note:'حضور و غیاب معلم — '+(currentAssign.periodName||''),scoreDeduct:deduct,fromTeacher:true,submissionId:sub.id,teacherId:userSession.staffId});
     });
     saveSchoolData();
@@ -3995,8 +4027,34 @@ function clearRepDates(){
 function calcScore(sid,from,to){
   let score=20;
   let att=filterAttByRange((schoolData.attendance||[]).filter(a=>a.studentId===sid),from,to);
-  att.forEach(a=>{score-=parseFloat(a.scoreDeduct)||0});
+  // غیبت: حداکثر یک‌بار کسر در هر روز · تأخیر و سایر: هر مورد جدا
+  var absentDays={};
+  att.forEach(function(a){
+    var t=a.type||'';
+    if(t==='absent'){
+      var day=normalizeDateToIso(a.date)||String(a.date||'');
+      if(!day)return;
+      if(absentDays[day])return; // قبلاً برای این روز کسر شده
+      absentDays[day]=true;
+      score-=parseFloat(a.scoreDeduct)||(schoolData.rules&&schoolData.rules.absent)||0.5;
+    }else{
+      score-=parseFloat(a.scoreDeduct)||0;
+    }
+  });
   return Math.max(0,Math.round(score*100)/100);
+}
+/** همه غیبت‌های یک دانش‌آموز در یک روز را یکجا بردار (بی‌اثر کردن روز) */
+function clearAbsencesForDay(studentId,dateStr){
+  var day=normalizeDateToIso(dateStr)||String(dateStr||'');
+  if(!studentId||!day)return 0;
+  var before=(schoolData.attendance||[]).length;
+  schoolData.attendance=(schoolData.attendance||[]).filter(function(a){
+    if(a.studentId!==studentId)return true;
+    if((a.type||'')!=='absent')return true;
+    var d=normalizeDateToIso(a.date)||String(a.date||'');
+    return d!==day;
+  });
+  return before-schoolData.attendance.length;
 }
 function repDateRange(){
   const fromEl=document.getElementById('rep-from');
@@ -4399,7 +4457,22 @@ function openPerformance(id){
 }
 function addDisciplineCustom(){if(!currentStudentId)return;const type=document.getElementById('d-type').value;let note=document.getElementById('d-note').value.trim();let score=document.getElementById('d-score').value;const s=schoolData.students.find(x=>x.id===currentStudentId);const dt=(schoolData.disciplineTypes||[]).find(t=>t.id===type);if(!note)note=dt?dt.name:'مورد';const deduct=score!==''?parseFloat(score):(dt?dt.scoreDeduct:1);schoolData.attendance.push({id:uid(),studentId:currentStudentId,classId:s.classId,date:todayStr(),type,note,scoreDeduct:deduct});schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId);toast('ثبت شد')}
 function editAtt(id){const a=schoolData.attendance.find(x=>x.id===id);if(!a)return;const note=prompt('شرح',a.note||'');if(note===null)return;const sc=prompt('کسر نمره',String(a.scoreDeduct||0));if(sc===null)return;a.note=note;a.scoreDeduct=parseFloat(sc)||0;schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId)}
-function delAtt(id){if(!confirm('حذف؟'))return;schoolData.attendance=schoolData.attendance.filter(a=>a.id!==id);schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId);toast('حذف شد و نمره به‌روز شد')}
+function delAtt(id){
+  if(!confirm('حذف این مورد؟'))return;
+  var a=(schoolData.attendance||[]).find(function(x){return x.id===id});
+  if(a&&(a.type||'')==='absent'){
+    // بی‌اثر کردن کل غیبت‌های همان روز
+    var n=clearAbsencesForDay(a.studentId,a.date);
+    toast(n>1?('غیبت این روز ('+n+' مورد) بی‌اثر شد'):'حذف شد و نمره به‌روز شد');
+  }else{
+    schoolData.attendance=(schoolData.attendance||[]).filter(function(x){return x.id!==id});
+    toast('حذف شد و نمره به‌روز شد');
+  }
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  if(currentStudentId)openPerformance(currentStudentId);
+}
 function openDiscTypeModal(id){const t=id?(schoolData.disciplineTypes||[]).find(x=>x.id===id):null;document.getElementById('modal-title').textContent=t?'ویرایش مورد':'مورد انضباطی جدید';document.getElementById('modal-body').innerHTML='<div class="form-group"><label>نام مورد</label><input class="form-control" id="dt-name" value="'+(t?.name||'')+'" /></div><div class="form-group"><label>کسر پیش‌فرض</label><input type="number" step="0.25" class="form-control" id="dt-score" value="'+(t?.scoreDeduct??1)+'" /></div><button class="btn btn-primary btn-block" onclick="saveDiscType(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
 function saveDiscType(id){const name=document.getElementById('dt-name').value.trim();const score=parseFloat(document.getElementById('dt-score').value)||0;if(!name)return toast('نام لازم است');if(id){const t=schoolData.disciplineTypes.find(x=>x.id===id);if(t){t.name=name;t.scoreDeduct=score}}else schoolData.disciplineTypes.push({id:uid(),name,scoreDeduct:score});saveSchoolData();closeModal();renderSettings();toast('ذخیره شد')}
 function delDiscType(id){if(['absent','late','other'].includes(id))return toast('مورد پیش‌فرض را نمی‌توان حذف کرد');if(!confirm('حذف؟'))return;schoolData.disciplineTypes=schoolData.disciplineTypes.filter(t=>t.id!==id);saveSchoolData();renderSettings()}
