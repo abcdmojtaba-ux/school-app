@@ -697,12 +697,32 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
   <!-- SCHEDULE (manager assigns teacher) -->
   <div id="page-schedule" class="page">
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div class="card-title" style="margin:0">برنامه هفتگی معلمان</div>
-        <button class="btn btn-primary btn-sm" onclick="openAssignModal()">+ اختصاص</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('assign-excel-input').click()">ورود از اکسل</button>
+          <input type="file" id="assign-excel-input" accept=".csv,.txt,.xlsx,.xls" style="display:none" onchange="importAssignmentsExcel(event)" />
+          <button type="button" class="btn btn-primary btn-sm" onclick="openAssignModal()">+ اختصاص</button>
+        </div>
       </div>
-      <p class="hint">کلاس + روز هفته + ساعت را به معلم بدهید. فقط همان‌ها برای معلم دیده می‌شود.</p>
-      <div id="assign-list"></div>
+      <p class="hint">ستون‌های اکسل/CSV: ۱)نام معلم ۲)کلاس ۳)نام زنگ ۴)درس ۵)ساعت شروع ۶)ساعت پایان — ردیف اول می‌تواند عنوان باشد.</p>
+      <div class="form-group" style="margin-top:10px">
+        <label>جستجو و انتخاب معلم برای آمار / PDF</label>
+        <input class="form-control" id="assign-teacher-search" placeholder="نام معلم را جستجو کنید..." oninput="filterTeacherStatsSelect()" style="margin-bottom:8px" />
+        <select class="form-control" id="assign-teacher-filter" onchange="renderTeacherScheduleStats()">
+          <option value="">— انتخاب معلم —</option>
+        </select>
+      </div>
+      <div id="assign-shift-filter-wrap" class="form-group" style="display:none">
+        <label>فیلتر شیفت</label>
+        <select class="form-control" id="assign-shift-filter" onchange="renderTeacherScheduleStats();renderAssignments()">
+          <option value="all">همه شیفت‌ها</option>
+          <option value="1">صبح</option>
+          <option value="2">عصر</option>
+        </select>
+      </div>
+      <div id="teacher-schedule-stats" style="margin-top:10px"></div>
+      <div id="assign-list" style="margin-top:12px"></div>
     </div>
   </div>
 
@@ -1138,51 +1158,68 @@ function importMotherBackup(ev){const file=ev.target.files&&ev.target.files[0];i
 /* سرور Cloudflare — بدون Firebase/گوگل */
 const DEFAULT_SYNC_API='https://panel.nikan-school.top';
 const FALLBACK_SYNC_API='https://school-sync.abcd-mojtaba.workers.dev';
-const SYNC_API=(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API).replace(/\/$/,'');
-function setSyncApi(url){url=String(url||'').trim().replace(/\/$/,'');localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
+const SYNC_API=(function(u){u=String(u||'');while(u.length&&u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u})(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API);
+function setSyncApi(url){url=String(url||'').trim();while(url.length&&url.charAt(url.length-1)==='/')url=url.slice(0,-1);localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
 async function apiFetch(path,options){
   const opts=options||{};
-  const maxTry=opts.retries!=null?opts.retries:2;
+  const maxTry=opts.retries!=null?opts.retries:1;
   let lastErr=null;
   const bases=[];
-  // اول همان دامنه‌ای که صفحه از آن باز شده (panel) — برای همراه‌اول/مخابرات مهم است
-  try{
-    if(typeof location!=='undefined'&&location.origin&&/^https?:/i.test(location.origin)){
-      var same=location.origin.replace(/\/$/,'');
-      if(bases.indexOf(same)<0)bases.push(same);
-    }
-  }catch(e){}
-  const primary=(typeof SYNC_API!=='undefined'&&SYNC_API)?SYNC_API:'';
-  if(primary&&bases.indexOf(primary)<0)bases.push(primary);
-  if(typeof FALLBACK_SYNC_API!=='undefined'&&FALLBACK_SYNC_API&&FALLBACK_SYNC_API!==primary&&bases.indexOf(FALLBACK_SYNC_API)<0)bases.push(FALLBACK_SYNC_API);
-  try{var _extraApi='https://api.nikan-school.top';if(_extraApi!==primary&&bases.indexOf(_extraApi)<0)bases.push(_extraApi)}catch(e){}
+  const addBase=function(b){
+    if(!b)return;
+    b=(function(u){u=String(u||'');while(u.length&&u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u})(b);
+    if(b&&bases.indexOf(b)<0)bases.push(b);
+  };
+  var isApi=String(path||'').indexOf('/api')===0;
+  if(isApi){
+    try{
+      var sticky=localStorage.getItem('school_sync_api')||'';
+      if(sticky&&sticky.indexOf('panel.nikan-school.top')<0)addBase(sticky);
+    }catch(e){}
+    addBase('https://api.nikan-school.top');
+    addBase('https://school-sync.abcd-mojtaba.workers.dev');
+    try{if(typeof location!=='undefined'&&location.origin)addBase(location.origin)}catch(e){}
+    addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
+    addBase(typeof FALLBACK_SYNC_API!=='undefined'?FALLBACK_SYNC_API:'');
+    addBase('https://panel.nikan-school.top');
+  }else{
+    try{addBase(localStorage.getItem('school_sync_api'))}catch(e){}
+    try{if(typeof location!=='undefined'&&location.origin)addBase(location.origin)}catch(e){}
+    addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
+    addBase(typeof FALLBACK_SYNC_API!=='undefined'?FALLBACK_SYNC_API:'');
+    addBase('https://api.nikan-school.top');
+    addBase('https://school-sync.abcd-mojtaba.workers.dev');
+  }
   if(!bases.length)throw new Error('آدرس سرور تنظیم نشده');
+  const tOut=opts.timeoutMs!=null?opts.timeoutMs:8000;
   for(const base of bases){
     for(let i=1;i<=maxTry;i++){
       try{
         const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},10000):null;
+        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},tOut):null;
         const res=await fetch(base+path,{
           method:opts.method||'GET',
-          headers:{'Content-Type':'application/json',...(opts.headers||{})},
+          headers:Object.assign({'Content-Type':'application/json','Accept':'application/json'},opts.headers||{}),
           body:opts.body?JSON.stringify(opts.body):undefined,
-          signal:ctrl?ctrl.signal:undefined
+          signal:ctrl?ctrl.signal:undefined,
+          cache:'no-store'
         });
         if(timer)clearTimeout(timer);
         let data=null;
         try{data=await res.json()}catch(e){data=null}
         if(!res.ok)throw new Error((data&&data.error)||('HTTP '+res.status));
-        // اگر با fallback جواب گرفت، همان را ترجیح بده برای دفعات بعد
-        try{if(base!==primary)localStorage.setItem('school_sync_api',base)}catch(e){}
+        try{localStorage.setItem('school_sync_api',base)}catch(e){}
         return data;
       }catch(e){
         lastErr=e;
-        if(i<maxTry)await new Promise(r=>setTimeout(r,300*i));
+        try{if(String(base).indexOf('panel.nikan-school.top')>=0)localStorage.removeItem('school_sync_api')}catch(e2){}
+        if(i<maxTry)await new Promise(r=>setTimeout(r,200*i));
       }
     }
   }
   throw lastErr||new Error('خطای سرور');
 }
+
 async function manualSyncAll(){
   if(!session||!session.schoolId)return toast('اول وارد شوید');
   // معلم: فقط دریافت از سرور
@@ -1303,14 +1340,20 @@ async function cloudPushAppData(force){
     return;
   }
   try{
+    var _attAll=schoolData.attendance||[];
+    var _subAll=schoolData.submissions||[];
+    var _attSlim=_attAll.length>800?_attAll.slice(-800):_attAll;
+    var _subSlim=_subAll.length>150?_subAll.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,150):_subAll;
     const payload={
       classes:schoolData.classes||[],
       students:schoolData.students||[],
       staff:schoolData.staff||[],
       assignments:schoolData.assignments||[],
+      deletedAssignmentIds:schoolData.deletedAssignmentIds||[],
+      absentSmsSent:schoolData.absentSmsSent||{},
       colleagues:schoolData.colleagues||[],
-      attendance:schoolData.attendance||[],
-      submissions:schoolData.submissions||[],
+      attendance:_attSlim,
+      submissions:_subSlim,
       deletedSubmissionIds:schoolData.deletedSubmissionIds||[],
       disciplineTypes:schoolData.disciplineTypes||[],
       smsTemplates:schoolData.smsTemplates||[],
@@ -1349,7 +1392,6 @@ function _pickArr(local,remote){
 function _mergeById(local,remote,preferRemote){
   if(!Array.isArray(remote))return Array.isArray(local)?local.slice():[];
   if(!Array.isArray(local)||!local.length)return remote.slice();
-  // سرور کامل/جدیدتر: لیست سرور را عیناً بگیر (حذف‌شده‌ها دیگر ظاهر نشوند)
   if(preferRemote)return remote.slice();
   if(!remote.length)return local.slice();
   var map={};
@@ -1358,8 +1400,24 @@ function _mergeById(local,remote,preferRemote){
     if(!x||!x.id)return;
     if(!map[x.id])map[x.id]=x;
   });
-  // فقط در حالت غیر-force آیتم فقط-محلی را نگه دار
   local.forEach(function(x){if(x&&x.id&&map[x.id]===undefined)map[x.id]=x});
+  return Object.keys(map).map(function(k){return map[k]});
+}
+/** برنامه معلمان: اتحاد بر اساس id — لیست ناقص سرور برنامه را نصف نکند */
+function _mergeAssignmentsSafe(local,remote,preferRemote){
+  local=Array.isArray(local)?local:[];
+  remote=Array.isArray(remote)?remote:[];
+  if(!local.length)return remote.slice();
+  if(!remote.length)return local.slice();
+  var map={};
+  local.forEach(function(x){if(x&&x.id)map[x.id]=x});
+  remote.forEach(function(x){
+    if(!x||!x.id)return;
+    map[x.id]=Object.assign({},map[x.id]||{},x);
+  });
+  if(preferRemote&&remote.length>=local.length){
+    remote.forEach(function(x){if(x&&x.id)map[x.id]=x});
+  }
   return Object.keys(map).map(function(k){return map[k]});
 }
 function applyRemoteAppData(d,remoteTs,forceAll){
@@ -1368,7 +1426,18 @@ function applyRemoteAppData(d,remoteTs,forceAll){
   schoolData.classes=_mergeById(schoolData.classes,d.classes,!!forceAll);
   schoolData.students=_mergeById(schoolData.students,d.students,!!forceAll);
   schoolData.staff=_mergeById(schoolData.staff,d.staff,!!forceAll);
-  schoolData.assignments=_mergeById(schoolData.assignments,d.assignments,!!forceAll);
+  schoolData.assignments=_mergeAssignmentsSafe(schoolData.assignments,d.assignments,!!forceAll);
+  if(Array.isArray(d.deletedAssignmentIds)&&d.deletedAssignmentIds.length){
+    if(!Array.isArray(schoolData.deletedAssignmentIds))schoolData.deletedAssignmentIds=[];
+    d.deletedAssignmentIds.forEach(function(id){if(id&&schoolData.deletedAssignmentIds.indexOf(id)<0)schoolData.deletedAssignmentIds.push(id)});
+  }
+  if(Array.isArray(schoolData.deletedAssignmentIds)&&schoolData.deletedAssignmentIds.length){
+    var _da={};schoolData.deletedAssignmentIds.forEach(function(id){if(id)_da[id]=true});
+    schoolData.assignments=(schoolData.assignments||[]).filter(function(a){return a&&a.id&&!_da[a.id]});
+  }
+  if(d.absentSmsSent&&typeof d.absentSmsSent==='object'){
+    schoolData.absentSmsSent=Object.assign({},schoolData.absentSmsSent||{},d.absentSmsSent);
+  }
   schoolData.colleagues=_mergeById(schoolData.colleagues,d.colleagues,!!forceAll);
   schoolData.attendance=_mergeById(schoolData.attendance,d.attendance,!!forceAll);
   schoolData.submissions=_mergeById(schoolData.submissions,d.submissions,!!forceAll);
@@ -1491,14 +1560,14 @@ function scheduleCloudPush(){
   if(!SYNC_API||!session||!session.schoolId)return;
   if(userSession&&userSession.role==='teacher'&&_dataRichness(schoolData)<30)return;
   clearTimeout(_pushTimer);
-  _pushTimer=setTimeout(function(){cloudPushAppData(true).catch(function(){})},500);
+  _pushTimer=setTimeout(function(){cloudPushAppData(true).catch(function(){})},2500);
 }
 let _pullTick=0,_pullBusy=false;
 function startAutoSync(){
   clearInterval(_pullTimer);
   // هر ۴۵ ثانیه + وقتی تب فعال شد فوری
-  const base=45000;
-  const jitter=Math.floor(Math.random()*15000);
+  const base=90000;
+  const jitter=Math.floor(Math.random()*20000);
   try{
     document.removeEventListener('visibilitychange',_onVisSync);
   }catch(e){}
@@ -1556,7 +1625,7 @@ async function autoPullAll(checkSchool){
 }
 function dataKey(){return DATA_PREFIX+(session?.schoolId||session?.code||'local')}
 function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,other:1},theme:{},shifts:1,messages:[]}}
-function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
+function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.deletedAssignmentIds)schoolData.deletedAssignmentIds=[];if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
 function saveSchoolData(){localStorage.setItem(dataKey(),JSON.stringify(schoolData));scheduleCloudPush()}
 function isExpired(exp){return exp&&exp<todayStr()}
 function toEnDigits(s){s=String(s||'');const fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩';let o='';for(const ch of s){let i=fa.indexOf(ch);if(i>=0){o+=i;continue}i=ar.indexOf(ch);if(i>=0){o+=i;continue}o+=ch}return o}
@@ -2091,6 +2160,7 @@ async function doLogin(){
         showLoginLoading('در حال ورود از سرور...','در حال ارتباط با سرور — ممکن است چند ثانیه طول بکشد');
         toast('در حال ورود از سرور...',5000);
         sc=await cloudFindSchoolByLogin(user,pass,code||null);
+        if(sc) sc.__fromServer = true;
       }catch(e){
         console.error('login cloud',e);
         sc=null;
@@ -2122,6 +2192,7 @@ async function doLogin(){
       }
       if(sc.active===false){hideLoginLoading();return toast('مدرسه خاموش است')}
       if(sc.expireDate&&isExpired(sc.expireDate)){hideLoginLoading();return toast('لایسنس منقضی شده — از پشتیبانی تمدید کنید')}
+      try{delete sc.__fromServer}catch(e){}
       applySchoolSession(sc);
       saveUserSession({role:'manager',username:user,name:sc.managerName||'مدیر',schoolId:sc.id});
       showLoginLoading('ورود موفق','در حال آماده‌سازی پنل مدیر...');
@@ -2355,6 +2426,11 @@ async function enterApp(){
         session.active=false;saveSession(session);
         showScreen('locked');
         return;
+      }
+      // اول تغییرات ذخیره‌نشده‌ی محلی (مثلاً برنامه معلمی که هنوز به سرور نرسیده) را بفرست
+      // تا در ادامه، دریافت کامل (force) آن‌ها را پاک نکند — مخصوصاً روی اینترنت کند/ناپایدار
+      if(_dataRichness(schoolData)>0&&canManage()){
+        try{await cloudPushAppData(true)}catch(e){}
       }
       let ok=false;
       for(let i=0;i<3&&!ok;i++){
@@ -2644,10 +2720,40 @@ function openSubmission(id){
   window._openSub=s;
   showAppPage('submission');
 }
+function _absentSmsKey(studentId,dateStr){
+  return String(studentId)+'|'+String(normalizeDateToIso(dateStr)||dateStr||todayStr());
+}
+function wasAbsentSmsSent(studentId,dateStr){
+  if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};
+  return !!schoolData.absentSmsSent[_absentSmsKey(studentId,dateStr)];
+}
+function markAbsentSmsSent(studentIds,dateStr){
+  if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};
+  (studentIds||[]).forEach(function(id){
+    if(id)schoolData.absentSmsSent[_absentSmsKey(id,dateStr)]=Date.now();
+  });
+  saveSchoolData();
+  try{cloudPushAppData(true).catch(function(){})}catch(e){}
+}
 function prepareSmsFromSubmission(kind){
   const s=window._openSub||(schoolData.submissions||[]).find(x=>x.id===currentSubmissionId);if(!s||!s.rows)return toast('ابتدا حضور و غیاب را باز کنید');
-  const useIds=s.rows.filter(r=>r.status===(kind==='late'?'late':'absent')).map(r=>r.studentId);
-  if(!useIds.length)return toast(kind==='late'?'تأخیری نیست':'غایبی نیست');
+  var dateStr=s.date||todayStr();
+  var allIds=s.rows.filter(r=>r.status===(kind==='late'?'late':'absent')).map(r=>r.studentId);
+  var useIds=allIds.slice();
+  var skipped=[];
+  if(kind==='absent'){
+    useIds=[];
+    allIds.forEach(function(id){
+      if(wasAbsentSmsSent(id,dateStr))skipped.push(id);
+      else useIds.push(id);
+    });
+    if(skipped.length){
+      var names=skipped.map(function(id){var st=(schoolData.students||[]).find(function(x){return x.id===id});return st?st.name:id}).filter(Boolean);
+      toast('برای '+skipped.length+' نفر امروز قبلاً غیبت ثبت شده — پیامک آماده نمی‌شود (فقط یک‌بار در روز)');
+      if(names.length)console.info('sms skip',names);
+    }
+  }
+  if(!useIds.length)return toast(kind==='late'?'تأخیری نیست':(skipped.length?'برای همه این غایب‌ها قبلاً پیامک رفته است':'غایبی نیست'));
   let tplText='';
   try{const el=document.getElementById(kind==='late'?'sub-msg-late':'sub-msg-absent');if(el&&el.value.trim())tplText=el.value.trim()}catch(e){}
   if(!tplText){const tpl=getSmsTemplates().find(t=>t.id===(kind==='late'?'late':'absent'));tplText=(tpl&&tpl.text)||(kind==='late'?TPL.late:TPL.absent)}
@@ -2673,6 +2779,12 @@ function prepareSmsFromSubmission(kind){
   let top='';
   const cfg=getSmsCfg();
   top+='<div class="card"><div class="meta">حالت: <strong>'+(cfg.mode==='panel'?'فقط پنل':cfg.mode==='both'?'هر دو':'فقط سیم‌کارت')+'</strong></div></div>';
+  if(kind==='absent'&&useIds.length){
+    markAbsentSmsSent(useIds,dateStr);
+  }
+  if(skipped&&skipped.length){
+    top+='<div class="card" style="border:1px solid #f9a825"><div class="meta">⚠ '+skipped.length+' نفر قبلاً پیامک غیبت گرفته‌اند و از لیست حذف شدند.</div></div>';
+  }
   if(smsModeAllowsPanel()&&uniq.length){
     window._smsJobs=jobs;
     if(cfg.username&&cfg.password){
@@ -3531,57 +3643,190 @@ function prepareColSms(){
 }
 
 /* Assignments */
-function renderAssignments(){
-  const list=document.getElementById('assign-list');
-  const arr=schoolData.assignments||[];
-  if(!arr.length){list.innerHTML='<p class="hint">هنوز کلاسی به معلمی اختصاص داده نشده.</p>';return}
-  list.innerHTML=arr.map(a=>{
-    const t=(schoolData.staff||[]).find(x=>x.id===a.teacherId);
-    const c=(schoolData.classes||[]).find(x=>x.id===a.classId);/*shiftaware*/
-    return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(a.subject?' · '+a.subject:'')+' → '+(t?t.name:'معلم')+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button class="btn btn-outline btn-sm" onclick="openAssignModal(\''+a.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delAssign(\''+a.id+'\')">حذف</button></div>';
-  }).join('');
-}
+
 function openAssignModal(id){
-  const a=id?(schoolData.assignments||[]).find(x=>x.id===id):null;
-  const teachers=(schoolData.staff||[]).filter(s=>s.role==='teacher');
-  if(!teachers.length)return toast('اول معلم تعریف کنید');
-  if(!schoolData.classes.length)return toast('اول کلاس تعریف کنید');
+  var a=id?(schoolData.assignments||[]).find(function(x){return x.id===id}):null;
+  var teachers=(schoolData.staff||[]).filter(function(s){return !s.role||s.role==='teacher'||s.role==='معلم'||s.role==='دبیر'});
+  if(!teachers.length)teachers=schoolData.staff||[];
+  if(!teachers.length)return toast('اول معلم/همکار تعریف کنید');
+  if(!(schoolData.classes||[]).length)return toast('اول کلاس تعریف کنید');
   document.getElementById('modal-title').textContent=a?'ویرایش اختصاص':'اختصاص کلاس به معلم';
+  var tOpts=teachers.map(function(t){return '<option value="'+t.id+'"'+(a&&a.teacherId===t.id?' selected':'')+'>'+(t.name||t.username||t.id)+'</option>'}).join('');
+  var cOpts=(schoolData.classes||[]).map(function(c){return '<option value="'+c.id+'"'+(a&&a.classId===c.id?' selected':'')+'>'+(typeof classTitle==='function'?classTitle(c):(c.name||c.id))+'</option>'}).join('');
+  var dOpts=DAYS.map(function(d,i){return '<option value="'+i+'"'+(a&&a.dayOfWeek===i?' selected':'')+'>'+d+'</option>'}).join('');
+  var idStr=id?String(id):'';
   document.getElementById('modal-body').innerHTML=
-    '<div class="form-group"><label>معلم</label><select class="form-control" id="as-teacher">'+teachers.map(t=>'<option value="'+t.id+'"'+(a&&a.teacherId===t.id?' selected':'')+'>'+t.name+'</option>').join('')+'</select></div>'+
-    '<div class="form-group"><label>کلاس (شیفت از روی کلاس)</label><select class="form-control" id="as-class">'+schoolData.classes.map(c=>'<option value="'+c.id+'"'+(a&&a.classId===c.id?' selected':'')+'>'+classTitle(c)+'</option>').join('')+'</select></div>'+
-    '<div class="form-group"><label>نام درس *</label><input class="form-control" id="as-subject" value="'+(a?.subject||'')+'" placeholder="مثلاً ریاضی" /></div>'+
-    '<div class="form-group"><label>روز هفته</label><select class="form-control" id="as-day">'+DAYS.map((d,i)=>'<option value="'+i+'"'+(a&&a.dayOfWeek===i?' selected':'')+'>'+d+'</option>').join('')+'</select></div>'+
-    '<div class="form-group"><label>عنوان زنگ / جلسه</label><input class="form-control" id="as-period" value="'+(a?.periodName||'زنگ ۱')+'" placeholder="مثلاً زنگ ۱" /></div>'+
-    '<div class="form-group"><label>از ساعت</label><input class="form-control" id="as-start" type="time" value="'+(a?.startTime||'08:00')+'" /></div>'+
-    '<div class="form-group"><label>تا ساعت</label><input class="form-control" id="as-end" type="time" value="'+(a?.endTime||'09:30')+'" /></div>'+
-    '<button class="btn btn-primary btn-block" onclick="saveAssign(\''+(id||'')+'\')">ذخیره</button>';
+    '<div class="form-group"><label>جستجوی معلم</label><input class="form-control" id="as-teacher-search" placeholder="نام معلم را بنویسید..." oninput="filterAssignTeacherSelect()" /></div>'+
+    '<div class="form-group"><label>معلم</label><select class="form-control" id="as-teacher">'+tOpts+'</select></div>'+
+    '<div class="form-group"><label>کلاس</label><select class="form-control" id="as-class">'+cOpts+'</select></div>'+
+    '<div class="form-group"><label>نام درس *</label><input class="form-control" id="as-subject" value="'+(a&&a.subject?a.subject:'')+'" placeholder="مثلاً ریاضی" /></div>'+
+    '<div class="form-group"><label>روز هفته</label><select class="form-control" id="as-day">'+dOpts+'</select></div>'+
+    '<div class="form-group"><label>عنوان زنگ / جلسه</label><input class="form-control" id="as-period" value="'+(a&&a.periodName?a.periodName:'زنگ ۱')+'" placeholder="مثلاً زنگ ۱" /></div>'+
+    '<div class="form-group"><label>از ساعت</label><input class="form-control" id="as-start" type="time" value="'+(a&&a.startTime?a.startTime:'08:00')+'" /></div>'+
+    '<div class="form-group"><label>تا ساعت</label><input class="form-control" id="as-end" type="time" value="'+(a&&a.endTime?a.endTime:'09:30')+'" /></div>'+
+    '<button type="button" class="btn btn-primary btn-block" data-id="'+idStr+'" onclick="saveAssign(this.dataset.id||null)">ذخیره</button>';
   document.getElementById('modal').classList.add('show');
 }
+
+function filterTeacherStatsSelect(){
+  var q=(document.getElementById('assign-teacher-search')&&document.getElementById('assign-teacher-search').value||'').trim().toLowerCase();
+  var filt=document.getElementById('assign-teacher-filter');
+  if(!filt)return;
+  var cur=filt.value||'';
+  var allStaff=schoolData.staff||[];
+  var opts='<option value="">— انتخاب معلم —</option>';
+  allStaff.forEach(function(t){
+    var n=(t.name||'')+' '+(t.username||'');
+    if(q&&n.toLowerCase().indexOf(q)<0)return;
+    opts+='<option value="'+t.id+'"'+(cur===t.id?' selected':'')+'>'+(t.name||t.username||t.id)+'</option>';
+  });
+  filt.innerHTML=opts;
+  if(cur){try{filt.value=cur}catch(e){}}
+  renderTeacherScheduleStats();
+}
+
+function filterAssignTeacherSelect(){
+  var q=(document.getElementById('as-teacher-search')&&document.getElementById('as-teacher-search').value||'').trim().toLowerCase();
+  var sel=document.getElementById('as-teacher');
+  if(!sel)return;
+  var teachers=(schoolData.staff||[]).filter(function(s){return !s.role||s.role==='teacher'||s.role==='معلم'||s.role==='دبیر'});
+  if(!teachers.length)teachers=schoolData.staff||[];
+  var cur=sel.value;
+  var opts=teachers.filter(function(t){
+    if(!q)return true;
+    var n=(t.name||'')+' '+(t.username||'');
+    return n.toLowerCase().indexOf(q)>=0;
+  });
+  sel.innerHTML=opts.map(function(t){return '<option value="'+t.id+'">'+(t.name||t.username||t.id)+'</option>'}).join('');
+  if(cur){try{sel.value=cur}catch(e){}}
+}
 function saveAssign(id){
-  const teacherId=document.getElementById('as-teacher').value,classId=document.getElementById('as-class').value,dayOfWeek=parseInt(document.getElementById('as-day').value),periodName=document.getElementById('as-period').value.trim(),startTime=document.getElementById('as-start').value,endTime=document.getElementById('as-end').value,subject=(document.getElementById('as-subject').value||'').trim();
+  if(id==='null'||id==='undefined')id='';
+  var teacherId=document.getElementById('as-teacher').value;
+  var classId=document.getElementById('as-class').value;
+  var dayOfWeek=parseInt(document.getElementById('as-day').value,10);
+  var periodName=(document.getElementById('as-period').value||'').trim();
+  var startTime=document.getElementById('as-start').value;
+  var endTime=document.getElementById('as-end').value;
+  var subject=(document.getElementById('as-subject').value||'').trim();
   if(!teacherId||!classId||!periodName)return toast('فیلدها را کامل کنید');
   if(!subject)return toast('نام درس را وارد کنید');
-  if(id){const a=schoolData.assignments.find(x=>x.id===id);if(a)Object.assign(a,{teacherId,classId,dayOfWeek,periodName,startTime,endTime,subject})}
-  else schoolData.assignments.push({id:uid(),teacherId,classId,dayOfWeek,periodName,startTime,endTime,subject});
-  schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});closeModal();renderAssignments();toast('ذخیره شد');
+  if(!Array.isArray(schoolData.assignments))schoolData.assignments=[];
+  if(id){
+    var a=schoolData.assignments.find(function(x){return x.id===id});
+    if(a)Object.assign(a,{teacherId:teacherId,classId:classId,dayOfWeek:dayOfWeek,periodName:periodName,startTime:startTime,endTime:endTime,subject:subject});
+    else schoolData.assignments.push({id:id,teacherId:teacherId,classId:classId,dayOfWeek:dayOfWeek,periodName:periodName,startTime:startTime,endTime:endTime,subject:subject});
+  }else{
+    schoolData.assignments.push({id:uid(),teacherId:teacherId,classId:classId,dayOfWeek:dayOfWeek,periodName:periodName,startTime:startTime,endTime:endTime,subject:subject});
+  }
+  if(id&&Array.isArray(schoolData.deletedAssignmentIds)){
+    schoolData.deletedAssignmentIds=schoolData.deletedAssignmentIds.filter(function(x){return x!==id});
+  }
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  try{closeModal()}catch(e){}
+  renderAssignments();
+  try{renderTeacherScheduleStats()}catch(e){}
+  toast('ذخیره شد — ارسال به سرور...');
+  cloudPushAppData(true).then(function(){toast('برنامه روی سرور ذخیره شد')}).catch(function(){toast('محلی ذخیره شد')});
 }
-function delAssign(id){if(!confirm('حذف؟'))return;schoolData.assignments=schoolData.assignments.filter(a=>a.id!==id);schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});renderAssignments()}
+function delAssign(id){
+  if(!id)return;
+  if(!confirm('حذف این برنامه؟'))return;
+  schoolData.assignments=(schoolData.assignments||[]).filter(function(a){return a.id!==id});
+  if(!schoolData.deletedAssignmentIds)schoolData.deletedAssignmentIds=[];
+  if(schoolData.deletedAssignmentIds.indexOf(id)<0)schoolData.deletedAssignmentIds.push(id);
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  renderAssignments();
+  try{renderTeacherScheduleStats()}catch(e){}
+  toast('حذف شد');
+}
 
-/* Teacher day */
-function isSlotSubmittedToday(assignId){
-  const d=todayStr();
-  return (schoolData.submissions||[]).some(s=>s.assignId===assignId&&s.date===d&&s.teacherId===userSession.staffId);
+function renderAssignments(){
+  const list=document.getElementById('assign-list');
+  if(!list)return;
+  const filt=document.getElementById('assign-teacher-filter');
+  const allStaff=schoolData.staff||[];
+  if(filt){
+    const cur=filt.value||'';
+    let opts='<option value="">— انتخاب معلم برای آمار —</option>';
+    allStaff.forEach(function(t){
+      opts+='<option value="'+t.id+'"'+(cur===t.id?' selected':'')+'>'+(t.name||t.username||t.id)+'</option>';
+    });
+    filt.innerHTML=opts;
+    if(cur)filt.value=cur;
+  }
+  // شیفت دوگانه
+  var shifts=1;
+  try{shifts=parseInt((session&&session.shifts)||(schoolData.shifts)||1,10)||1}catch(e){}
+  var shiftWrap=document.getElementById('assign-shift-filter-wrap');
+  if(shiftWrap)shiftWrap.style.display=shifts>=2?'block':'none';
+  let arr=schoolData.assignments||[];
+  const tid=filt&&filt.value;
+  if(tid)arr=arr.filter(function(a){return a.teacherId===tid});
+  var sf=document.getElementById('assign-shift-filter');
+  var shiftVal=sf?sf.value:'all';
+  if(shiftVal&&shiftVal!=='all'){
+    arr=arr.filter(function(a){
+      var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
+      var sh=c&&c.shift!=null?String(c.shift):'1';
+      return sh===String(shiftVal);
+    });
+  }
+  try{renderTeacherScheduleStats()}catch(e){}
+  if(!arr.length){list.innerHTML='<p class="hint">هنوز کلاسی به معلمی اختصاص داده نشده.</p>';return}
+  arr=arr.slice().sort(function(a,b){
+    var d=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d)return d;
+    return String(a.startTime||'').localeCompare(String(b.startTime||''));
+  });
+  list.innerHTML=arr.map(function(a){
+    var t=(schoolData.staff||[]).find(function(x){return x.id===a.teacherId});
+    var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
+    var sh=c&&c.shift!=null?(String(c.shift)==='2'?'عصر':'صبح'):'';
+    var idStr=String(a.id||'');
+    return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(sh?' · '+sh:'')+(a.subject?' · '+a.subject:'')+' → '+(t?t.name:'معلم')+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button type="button" class="btn btn-outline btn-sm" data-id="'+idStr+'" onclick="openAssignModal(this.dataset.id)">ویرایش</button><button type="button" class="btn btn-danger btn-sm" data-id="'+idStr+'" onclick="delAssign(this.dataset.id)">حذف</button></div>';
+  }).join('');
 }
-function renderTeacherDay(){
-  document.getElementById('teacher-day-label').textContent='امروز: '+DAYS[jsDay()]+' · '+persianToday();
-  const slots=(schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId&&a.dayOfWeek===jsDay());
-  const box=document.getElementById('teacher-slots');
-  if(!slots.length){box.innerHTML='<p class="hint">برای امروز کلاسی به شما اختصاص داده نشده.</p>';return}
-  box.innerHTML=slots.map(a=>{
-    const c=schoolData.classes.find(x=>x.id===a.classId);
-    const done=isSlotSubmittedToday(a.id);
-    return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(a.subject?' · '+a.subject:'')+'</div><div class="meta">'+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+(done?' · ✓ ثبت شده':'')+'</div></div>'+(done?'<span class="badge badge-ok">ثبت شد</span> <button class="btn btn-outline btn-sm" onclick="openTakeAtt(\''+a.id+'\')">ویرایش</button>':'<button class="btn btn-primary btn-sm" onclick="openTakeAtt(\''+a.id+'\')">حضور و غیاب</button>')+'</div>';
+function renderTeacherScheduleStats(){
+  var box=document.getElementById('teacher-schedule-stats');
+  if(!box)return;
+  var filt=document.getElementById('assign-teacher-filter');
+  var tid=filt&&filt.value;
+  if(!tid){box.innerHTML='';return}
+  var t=(schoolData.staff||[]).find(function(x){return x.id===tid});
+  var arr=(schoolData.assignments||[]).filter(function(a){return a.teacherId===tid});
+  var sf=document.getElementById('assign-shift-filter');
+  var shiftVal=sf?sf.value:'all';
+  if(shiftVal&&shiftVal!=='all'){
+    arr=arr.filter(function(a){
+      var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
+      var sh=c&&c.shift!=null?String(c.shift):'1';
+      return sh===String(shiftVal);
+    });
+  }
+  if(!arr.length){box.innerHTML='<p class="hint">برای این معلم برنامه‌ای ثبت نشده.</p>';return}
+  arr=arr.slice().sort(function(a,b){return (a.dayOfWeek||0)-(b.dayOfWeek||0)||String(a.startTime||'').localeCompare(String(b.startTime||''))});
+  var subjects={},classes={},byShift={1:0,2:0};
+  arr.forEach(function(a){
+    if(a.subject)subjects[a.subject]=(subjects[a.subject]||0)+1;
+    if(a.classId)classes[a.classId]=(classes[a.classId]||0)+1;
+    var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
+    var sh=c&&c.shift!=null?String(c.shift):'1';
+    byShift[sh]=(byShift[sh]||0)+1;
+  });
+  var html='<div class="card" style="margin:0">';
+  html+='<div class="card-title">برنامه هفته — '+(t?t.name:'معلم')+'</div>';
+  html+='<p class="hint">جلسات: <strong>'+arr.length+'</strong> · دروس: <strong>'+Object.keys(subjects).length+'</strong> · کلاس‌ها: <strong>'+Object.keys(classes).length+'</strong>';
+  if((byShift[1]||0)+(byShift[2]||0)>0)html+=' · صبح: '+(byShift[1]||0)+' · عصر: '+(byShift[2]||0);
+  html+='</p>';
+  html+='<div style="overflow-x:auto"><table style="width:100%;font-size:.85rem"><thead><tr><th>روز</th><th>زنگ</th><th>ساعت</th><th>کلاس</th><th>شیفت</th><th>درس</th></tr></thead><tbody>';
+  arr.forEach(function(a){
+    var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
+    var sh=c&&c.shift!=null?(String(c.shift)==='2'?'عصر':'صبح'):'';
+    var idStr=String(a.id||'');
+    return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(sh?' · '+sh:'')+(a.subject?' · '+a.subject:'')+' → '+(t?t.name:'معلم')+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button type="button" class="btn btn-outline btn-sm" data-id="'+idStr+'" onclick="openAssignModal(this.dataset.id)">ویرایش</button><button type="button" class="btn btn-danger btn-sm" data-id="'+idStr+'" onclick="delAssign(this.dataset.id)">حذف</button></div>';
   }).join('');
 }
 function openTakeAtt(assignId){
@@ -3710,7 +3955,7 @@ function runTeacherClassPerf(){
   html+='<p class="hint" style="margin-bottom:8px">فقط نمرات و حضور/غیاب <b>شما</b> · روی نام بزنید برای جزئیات و PDF · نمره انضباط نیست</p>';
   stus.forEach(s=>{
     let att=teacherOwnAttendance(s.id,from,to);
-    const abs=att.filter(a=>a.type==='absent').length;
+    const abs=countAbsentDays(s.id,from,to);
     const late=att.filter(a=>a.type==='late').length;
     const avg=teacherExamAvg(s.id);
     const exN=teacherStudentExams(s.id).length;
@@ -3789,6 +4034,21 @@ async function submitAttendance(){
   if(btn){btn.disabled=true;btn.textContent='در حال ثبت...'}
   try{
     const rows=[...document.querySelectorAll('.att-st')].map(el=>({studentId:el.getAttribute('data-sid'),status:el.value}));
+    // هشدار: غایب‌هایی که قبلاً امروز پیامک گرفته‌اند
+    var alreadySms=[];
+    rows.forEach(function(r){
+      if(r.status==='absent'&&wasAbsentSmsSent(r.studentId,todayStr())){
+        var st=(schoolData.students||[]).find(function(x){return x.id===r.studentId});
+        alreadySms.push(st?st.name:r.studentId);
+      }
+    });
+    if(alreadySms.length){
+      if(!confirm('برای این افراد امروز قبلاً پیامک غیبت ارسال شده: '+alreadySms.slice(0,12).join('، ')+(alreadySms.length>12?' …':'')+' — حضور ثبت می‌شود ولی پیامک دوباره پیشنهاد نمی‌شود مگر غایب جدید.')){
+        submittingAtt=false;
+        if(btn){btn.disabled=false;btn.textContent='ثبت و ارسال برای مدیر/معاون'}
+        return;
+      }
+    }
     // remove previous submissions for same slot today (replace)
     schoolData.submissions=(schoolData.submissions||[]).filter(s=>!(s.assignId===currentAssign.id&&s.date===todayStr()&&s.teacherId===userSession.staffId));
     schoolData.attendance=(schoolData.attendance||[]).filter(a=>!(a.fromTeacher&&a.classId===currentAssign.classId&&a.date===todayStr()&&(a.note||'').indexOf(currentAssign.periodName||'')>=0));
@@ -3807,8 +4067,16 @@ async function submitAttendance(){
         });
         deduct=already?0:((schoolData.rules&&schoolData.rules.absent)||0.5);
       }
-      schoolData.attendance.push({id:uid(),studentId:r.studentId,classId:currentAssign.classId,date:todayStr(),type,note:'حضور و غیاب معلم — '+(currentAssign.periodName||''),scoreDeduct:deduct,fromTeacher:true,submissionId:sub.id,teacherId:userSession.staffId});
+      schoolData.attendance.push({id:uid(),studentId:r.studentId,classId:currentAssign.classId,date:todayStr(),type:type,note:'حضور و غیاب معلم — '+(currentAssign.periodName||''),scoreDeduct:deduct,fromTeacher:true,submissionId:sub.id,teacherId:userSession.staffId});
+      if(type==='absent'&&!wasAbsentSmsSent(r.studentId,todayStr())){
+        if(!schoolData._pendingAbsentSms)schoolData._pendingAbsentSms=[];
+        schoolData._pendingAbsentSms.push(r.studentId);
+      }
     });
+    if(schoolData._pendingAbsentSms&&schoolData._pendingAbsentSms.length){
+      markAbsentSmsSent(schoolData._pendingAbsentSms,todayStr());
+      schoolData._pendingAbsentSms=[];
+    }
     saveSchoolData();
     await cloudPushSubmission(session.schoolId,sub);
     const tName=userSession.name||userSession.username||'معلم';
@@ -4045,17 +4313,52 @@ function calcScore(sid,from,to){
 }
 /** همه غیبت‌های یک دانش‌آموز در یک روز را یکجا بردار (بی‌اثر کردن روز) */
 function clearAbsencesForDay(studentId,dateStr){
+  // موجه کردن تمام غیبت‌های همان روز — کسر انضباط صفر؛ رکورد برای عملکرد می‌ماند
   var day=normalizeDateToIso(dateStr)||String(dateStr||'');
   if(!studentId||!day)return 0;
-  var before=(schoolData.attendance||[]).length;
-  schoolData.attendance=(schoolData.attendance||[]).filter(function(a){
-    if(a.studentId!==studentId)return true;
-    if((a.type||'')!=='absent')return true;
+  var n=0;
+  (schoolData.attendance||[]).forEach(function(a){
+    if(a.studentId!==studentId)return;
+    if((a.type||'')!=='absent')return;
     var d=normalizeDateToIso(a.date)||String(a.date||'');
-    return d!==day;
+    if(d!==day)return;
+    a.scoreDeduct=0;
+    a.excused=true;
+    a.justified=true;
+    if((a.note||'').indexOf('موجه')<0)a.note=(a.note?a.note+' · ':'')+'موجه / بی‌اثر';
+    n++;
   });
-  return before-schoolData.attendance.length;
+  return n;
 }
+function justifyAbsencesForDay(studentId,dateStr){
+  return clearAbsencesForDay(studentId,dateStr);
+}
+
+function isAbsentExcused(a){
+  return !!(a&&(a.excused||a.justified||parseFloat(a.scoreDeduct)===0&&(a.type||'')==='absent'&&(a.note||'').indexOf('موجه')>=0));
+}
+/** خلاصه غیبت‌ها بر اساس روز — برای مدیر */
+function absentDaysSummary(studentId,from,to){
+  var att=filterAttByRange((schoolData.attendance||[]).filter(function(a){return a.studentId===studentId&&(a.type||'')==='absent'}),from,to);
+  var map={};
+  att.forEach(function(a){
+    var day=normalizeDateToIso(a.date)||String(a.date||'');
+    if(!day)return;
+    if(!map[day])map[day]={date:day,count:0,excused:true,items:[]};
+    map[day].count++;
+    map[day].items.push(a);
+    if(!isAbsentExcused(a))map[day].excused=false;
+  });
+  return Object.keys(map).sort().reverse().map(function(k){return map[k]});
+}
+function countAbsentDays(studentId,from,to){
+  return absentDaysSummary(studentId,from,to).length;
+}
+function countUnexcusedAbsentDays(studentId,from,to){
+  return absentDaysSummary(studentId,from,to).filter(function(d){return !d.excused}).length;
+}
+
+
 function repDateRange(){
   const fromEl=document.getElementById('rep-from');
   const toEl=document.getElementById('rep-to');
@@ -4289,7 +4592,7 @@ function genReport(){
   if(from||to)html+='<p class="hint">بازه: '+(from?formatDateFa(from):'…')+' تا '+(to?formatDateFa(to):'…')+'</p>';
   stus.forEach(s=>{
     const att=filterAttByRange((schoolData.attendance||[]).filter(a=>a.studentId===s.id),from,to);
-    const abs=att.filter(a=>a.type==='absent').length;
+    const abs=countAbsentDays(s.id,from,to);
     const late=att.filter(a=>a.type==='late').length;
     const other=att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
     absT+=abs;lateT+=late;
@@ -4337,9 +4640,12 @@ function openPerformance(id){
     var db=normalizeDateToIso(b.date)||String(b.date||'');
     return db.localeCompare(da);
   });
-  const absN=att.filter(a=>a.type==='absent').length;
   const lateN=att.filter(a=>a.type==='late').length;
   const otherN=hideDisc?0:att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
+  // مدیر: تعداد روز غایب (نه تعداد زنگ)؛ معلم: جزئیات زنگ‌های خودش
+  const absDays=hideDisc?null:absentDaysSummary(id,null,null);
+  const absN=hideDisc?att.filter(a=>a.type==='absent').length:(absDays?absDays.length:0);
+  const absUnexcused=hideDisc?0:(absDays?absDays.filter(function(d){return !d.excused}).length:0);
 
   let examAvg=null,examCnt=0,examSum=0;
   exams.forEach(function(ex){
@@ -4418,15 +4724,40 @@ function openPerformance(id){
     html+='<span>نمره انضباط: <b>'+disc+'</b> از ۲۰</span>';
   }
   html+='</div>';
-  if(att.length){
-    html+='<button type="button" class="btn btn-outline btn-sm" onclick="togglePerfSubject(\'att\')">جزئیات موارد ('+att.length+') ▼</button>';
-    html+='<div class="rep-detail" id="perf-sub-att" style="margin-top:8px">';
-    att.forEach(function(a){
-      html+='<div class="row"><div><strong>'+typeName(a.type)+'</strong><div class="meta">'+formatDateFa(a.date)+(a.note?(' · '+a.note):'')+'</div></div>'+(hideDisc?'':'<div class="meta">کسر '+(a.scoreDeduct||0)+'</div>')+'</div>';
-    });
-    html+='</div>';
+  if(hideDisc){
+    if(att.length){
+      html+='<button type="button" class="btn btn-outline btn-sm" onclick="togglePerfSubject(this.dataset.key)" data-key="att">جزئیات ('+att.length+') ▼</button>';
+      html+='<div class="rep-detail" id="perf-sub-att" style="margin-top:8px">';
+      att.forEach(function(a){
+        var lab=typeName(a.type);
+        if((a.type||'')==='absent'&&isAbsentExcused(a))lab='غیبت موجه';
+        html+='<div class="row"><div><strong>'+lab+'</strong><div class="meta">'+formatDateFa(a.date)+(a.note?(' · '+a.note):'')+'</div></div></div>';
+      });
+      html+='</div>';
+    }else{
+      html+='<p class="hint">غیبت/تأخیری ثبت نشده.</p>';
+    }
   }else{
-    html+='<p class="hint">'+(hideDisc?'غیبت/تأخیری ثبت نشده.':'مورد انضباطی ثبت نشده است.')+'</p>';
+    var days=absDays||absentDaysSummary(id,null,null);
+    var lateOnly=att.filter(function(a){return a.type==='late'});
+    var otherOnly=att.filter(function(a){return a.type!=='absent'&&a.type!=='late'});
+    if(days.length||lateOnly.length||otherOnly.length){
+      html+='<div class="rep-detail" style="display:block;margin-top:8px">';
+      days.forEach(function(d){
+        html+='<div class="row"><div><strong>'+(d.excused?'غیبت موجه':'غایب در این روز')+'</strong><div class="meta">'+formatDateFa(d.date)+(d.excused?' · برای همه معلمان موجه است':' · یک‌بار در روز برای انضباط و پیامک')+'</div></div>';
+        html+='<button type="button" class="btn btn-outline btn-sm" data-sid="'+id+'" data-day="'+d.date+'" onclick="justifyDayForStudent(this.dataset.sid,this.dataset.day)">'+(d.excused?'✓ موجه':'موجه کردن روز')+'</button></div>';
+      });
+      lateOnly.forEach(function(a){
+        html+='<div class="row"><div><strong>تأخیر</strong><div class="meta">'+formatDateFa(a.date)+(a.note?(' · '+a.note):'')+'</div></div><div class="meta">کسر '+(a.scoreDeduct||0)+'</div></div>';
+      });
+      otherOnly.forEach(function(a){
+        html+='<div class="row"><div><strong>'+typeName(a.type)+'</strong><div class="meta">'+formatDateFa(a.date)+(a.note?(' · '+a.note):'')+'</div></div><div class="meta">کسر '+(a.scoreDeduct||0)+'</div></div>';
+      });
+      html+='</div>';
+      html+='<p class="hint">غیبت‌های غیرموجه: '+(typeof absUnexcused!=='undefined'?absUnexcused:days.filter(function(d){return !d.excused}).length)+' روز · پیامک حداکثر یک‌بار در روز.</p>';
+    }else{
+      html+='<p class="hint">مورد انضباطی ثبت نشده است.</p>';
+    }
   }
 
   document.getElementById('perf-report').innerHTML=html;
@@ -4455,15 +4786,36 @@ function openPerformance(id){
   }catch(e){}
   showAppPage('performance');
 }
-function addDisciplineCustom(){if(!currentStudentId)return;const type=document.getElementById('d-type').value;let note=document.getElementById('d-note').value.trim();let score=document.getElementById('d-score').value;const s=schoolData.students.find(x=>x.id===currentStudentId);const dt=(schoolData.disciplineTypes||[]).find(t=>t.id===type);if(!note)note=dt?dt.name:'مورد';const deduct=score!==''?parseFloat(score):(dt?dt.scoreDeduct:1);schoolData.attendance.push({id:uid(),studentId:currentStudentId,classId:s.classId,date:todayStr(),type,note,scoreDeduct:deduct});schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId);toast('ثبت شد')}
+function addDisciplineCustom(){
+  if(!canManage())return toast('فقط مدیر و معاون می‌توانند نمره انضباط را تغییر دهند');
+  if(!currentStudentId)return;const type=document.getElementById('d-type').value;let note=document.getElementById('d-note').value.trim();let score=document.getElementById('d-score').value;const s=schoolData.students.find(x=>x.id===currentStudentId);const dt=(schoolData.disciplineTypes||[]).find(t=>t.id===type);if(!note)note=dt?dt.name:'مورد';const deduct=score!==''?parseFloat(score):(dt?dt.scoreDeduct:1);schoolData.attendance.push({id:uid(),studentId:currentStudentId,classId:s.classId,date:todayStr(),type,note,scoreDeduct:deduct});schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId);toast('ثبت شد')}
 function editAtt(id){const a=schoolData.attendance.find(x=>x.id===id);if(!a)return;const note=prompt('شرح',a.note||'');if(note===null)return;const sc=prompt('کسر نمره',String(a.scoreDeduct||0));if(sc===null)return;a.note=note;a.scoreDeduct=parseFloat(sc)||0;schoolData._cloudUpdatedAtMs=Date.now();saveSchoolData();cloudPushAppData(true).catch(function(){});openPerformance(currentStudentId)}
+
+function justifyDayForStudent(studentId,dateStr){
+  if(!canManage())return toast('فقط مدیر و معاون');
+  if(!confirm('غیبت این روز موجه شود؟ کسر انضباط برداشته می‌شود و برای همه معلمان «غیبت موجه» دیده می‌شود.'))return;
+  var n=clearAbsencesForDay(studentId,dateStr);
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  toast(n?('غیبت '+n+' مورد در این روز موجه شد'):'موردی نبود');
+  openPerformance(studentId);
+}
+
 function delAtt(id){
-  if(!confirm('حذف این مورد؟'))return;
   var a=(schoolData.attendance||[]).find(function(x){return x.id===id});
+  if(!a)return;
+  // معلم حق تغییر نمره انضباط ندارد — فقط مدیر/معاون؛ حضور خود معلم جدا است
+  if(!canManage()){
+    if(!(a.fromTeacher&&userSession&&a.teacherId===userSession.staffId)){
+      return toast('فقط مدیر و معاون می‌توانند موارد انضباطی را حذف کنند');
+    }
+  }
+  if(!confirm('حذف این مورد؟'))return;
   if(a&&(a.type||'')==='absent'){
     // بی‌اثر کردن کل غیبت‌های همان روز
     var n=clearAbsencesForDay(a.studentId,a.date);
-    toast(n>1?('غیبت این روز ('+n+' مورد) بی‌اثر شد'):'حذف شد و نمره به‌روز شد');
+    toast(n>1?('تمام غیبت‌های این روز ('+n+' مورد) موجه شد — کسر انضباط برداشته شد'):'غیبت موجه شد و از انضباط کم نمی‌شود');
   }else{
     schoolData.attendance=(schoolData.attendance||[]).filter(function(x){return x.id!==id});
     toast('حذف شد و نمره به‌روز شد');
@@ -4473,9 +4825,9 @@ function delAtt(id){
   cloudPushAppData(true).catch(function(){});
   if(currentStudentId)openPerformance(currentStudentId);
 }
-function openDiscTypeModal(id){const t=id?(schoolData.disciplineTypes||[]).find(x=>x.id===id):null;document.getElementById('modal-title').textContent=t?'ویرایش مورد':'مورد انضباطی جدید';document.getElementById('modal-body').innerHTML='<div class="form-group"><label>نام مورد</label><input class="form-control" id="dt-name" value="'+(t?.name||'')+'" /></div><div class="form-group"><label>کسر پیش‌فرض</label><input type="number" step="0.25" class="form-control" id="dt-score" value="'+(t?.scoreDeduct??1)+'" /></div><button class="btn btn-primary btn-block" onclick="saveDiscType(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
-function saveDiscType(id){const name=document.getElementById('dt-name').value.trim();const score=parseFloat(document.getElementById('dt-score').value)||0;if(!name)return toast('نام لازم است');if(id){const t=schoolData.disciplineTypes.find(x=>x.id===id);if(t){t.name=name;t.scoreDeduct=score}}else schoolData.disciplineTypes.push({id:uid(),name,scoreDeduct:score});saveSchoolData();closeModal();renderSettings();toast('ذخیره شد')}
-function delDiscType(id){if(['absent','late','other'].includes(id))return toast('مورد پیش‌فرض را نمی‌توان حذف کرد');if(!confirm('حذف؟'))return;schoolData.disciplineTypes=schoolData.disciplineTypes.filter(t=>t.id!==id);saveSchoolData();renderSettings()}
+function openDiscTypeModal(id){if(!canManage())return toast('فقط مدیر و معاون');const t=id?(schoolData.disciplineTypes||[]).find(x=>x.id===id):null;document.getElementById('modal-title').textContent=t?'ویرایش مورد':'مورد انضباطی جدید';document.getElementById('modal-body').innerHTML='<div class="form-group"><label>نام مورد</label><input class="form-control" id="dt-name" value="'+(t?.name||'')+'" /></div><div class="form-group"><label>کسر پیش‌فرض</label><input type="number" step="0.25" class="form-control" id="dt-score" value="'+(t?.scoreDeduct??1)+'" /></div><button class="btn btn-primary btn-block" onclick="saveDiscType(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
+function saveDiscType(id){if(!canManage())return toast('دسترسی ندارید');const name=document.getElementById('dt-name').value.trim();const score=parseFloat(document.getElementById('dt-score').value)||0;if(!name)return toast('نام لازم است');if(id){const t=schoolData.disciplineTypes.find(x=>x.id===id);if(t){t.name=name;t.scoreDeduct=score}}else schoolData.disciplineTypes.push({id:uid(),name,scoreDeduct:score});saveSchoolData();closeModal();renderSettings();toast('ذخیره شد')}
+function delDiscType(id){if(!canManage())return toast('دسترسی ندارید');if(['absent','late','other'].includes(id))return toast('مورد پیش‌فرض را نمی‌توان حذف کرد');if(!confirm('حذف؟'))return;schoolData.disciplineTypes=schoolData.disciplineTypes.filter(t=>t.id!==id);saveSchoolData();renderSettings()}
 function saveRules(){schoolData.rules.absent=parseFloat(document.getElementById('rule-absent').value)||0.5;schoolData.rules.late=parseFloat(document.getElementById('rule-late').value)||0.25;schoolData.rules.other=parseFloat(document.getElementById('rule-other').value)||1;const ab=schoolData.disciplineTypes.find(t=>t.id==='absent');const la=schoolData.disciplineTypes.find(t=>t.id==='late');const ot=schoolData.disciplineTypes.find(t=>t.id==='other');if(ab)ab.scoreDeduct=schoolData.rules.absent;if(la)la.scoreDeduct=schoolData.rules.late;if(ot)ot.scoreDeduct=schoolData.rules.other;saveSchoolData();toast('ذخیره شد')}
 function saveManagerPhoto(){
   if(!isManager())return toast('فقط مدیر');
@@ -4917,6 +5269,11 @@ async function resetSchoolYear(){
   try{renderHome();renderClasses();renderTeam();renderReviewedSheet()}catch(e){}
 }
 function renderSettings(){
+  try{
+    var discCard=document.getElementById('set-disc-types');
+    if(discCard)discCard.style.display=canManage()?'block':'none';
+  }catch(e){}
+
   // میان‌برهای مرتب داخل «بیشتر»
   const hub=document.getElementById('more-hub-grid');
   if(hub){
