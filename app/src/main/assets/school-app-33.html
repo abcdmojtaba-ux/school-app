@@ -4294,21 +4294,27 @@ function clearRepDates(){
 }
 function calcScore(sid,from,to){
   let score=20;
-  let att=filterAttByRange((schoolData.attendance||[]).filter(a=>a.studentId===sid),from,to);
-  // غیبت: حداکثر یک‌بار کسر در هر روز · تأخیر و سایر: هر مورد جدا
-  var absentDays={};
+  let att=filterAttByRange((schoolData.attendance||[]).filter(function(a){return a.studentId===sid}),from,to);
+  // غیبت: حداکثر یک‌بار کسر در هر روز · اگر همه موجه باشند صفر
+  var absentDeductByDay={};
   att.forEach(function(a){
     var t=a.type||'';
     if(t==='absent'){
       var day=normalizeDateToIso(a.date)||String(a.date||'');
       if(!day)return;
-      if(absentDays[day])return; // قبلاً برای این روز کسر شده
-      absentDays[day]=true;
-      score-=parseFloat(a.scoreDeduct)||(schoolData.rules&&schoolData.rules.absent)||0.5;
+      // موجه / بی‌اثر → هیچ کسری برای این رکورد
+      if(a.excused||a.justified||(typeof isAbsentExcused==='function'&&isAbsentExcused(a)))return;
+      var d=parseFloat(a.scoreDeduct);
+      if(isNaN(d))d=(schoolData.rules&&schoolData.rules.absent)!=null?parseFloat(schoolData.rules.absent):0.5;
+      if(!(d>0))return;
+      if(absentDeductByDay[day]==null||d>absentDeductByDay[day])absentDeductByDay[day]=d;
     }else{
-      score-=parseFloat(a.scoreDeduct)||0;
+      var d2=parseFloat(a.scoreDeduct);
+      if(isNaN(d2))d2=0;
+      if(d2>0)score-=d2;
     }
   });
+  Object.keys(absentDeductByDay).forEach(function(day){score-=absentDeductByDay[day]});
   return Math.max(0,Math.round(score*100)/100);
 }
 /** همه غیبت‌های یک دانش‌آموز در یک روز را یکجا بردار (بی‌اثر کردن روز) */
@@ -4325,6 +4331,7 @@ function clearAbsencesForDay(studentId,dateStr){
     a.scoreDeduct=0;
     a.excused=true;
     a.justified=true;
+    a.type=a.type||'absent';
     if((a.note||'').indexOf('موجه')<0)a.note=(a.note?a.note+' · ':'')+'موجه / بی‌اثر';
     n++;
   });
