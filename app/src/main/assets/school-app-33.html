@@ -1549,6 +1549,7 @@ async function cloudPullAppData(force){
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
+      // سرور هنوز چیزی ندارد (اولین راه‌اندازی) — فقط اینجا مجاز است این دستگاه چیزی بفرستد
       if(_dataRichness(schoolData)>0&&canManage()){
         const lastFix=schoolData._lastEmptyPush||0;
         if(Date.now()-lastFix>60000){
@@ -1560,28 +1561,9 @@ async function cloudPullAppData(force){
     }
     const remoteTs=d.updatedAtMs||(data&&data.updatedAt)||0;
     const localTs=schoolData._cloudUpdatedAtMs||0;
-    const rRich=_dataRichness(d);
-    const lRich=_dataRichness(schoolData);
-    // اگر سرور ریست کرده یا خالی‌سازی عمدی — همیشه بپذیر، داده محلی را برنگردان
-    if(d.resetYear===true||d.clearPerformance===true){
-      applyRemoteAppData(d,remoteTs||Date.now(),true);
-      return true;
-    }
-    if(lRich>0&&rRich===0){
-      if(d.replaceAssignments||d.clearAssignments||(remoteTs&&localTs&&remoteTs>=localTs)){
-        applyRemoteAppData(d,remoteTs||Date.now(),true);
-        return true;
-      }
-      if(canManage())cloudPushAppData(true).catch(function(){});
-      return false;
-    }
-    // اگر محلی جدیدتر است و غنی‌تر/مساوی، اول push کن و remote قدیمی‌تر را کامل جایگزین نکن
-    if(!force&&!needFull&&localTs>0&&remoteTs>0&&localTs>remoteTs&&lRich>=rRich){
-      if(canManage())cloudPushAppData(true).catch(function(){});
-      return false;
-    }
-    // اگر سرور جدیدتر یا غنی‌تر یا force → اعمال (با merge بر اساس id)
-    // همیشه smsConfig را از سرور همگام کن (حتی اگر بقیه داده محلی بماند)
+    // سرور همیشه منبع حقیقت است: هیچ دستگاهی اجازه ندارد به‌جای پذیرفتن داده‌ی سرور،
+    // نسخه‌ی محلی خودش را رویش push کند (این همان چیزی بود که باعث پاک شدن برنامه‌ها می‌شد).
+    // پوش فقط جایی اتفاق می‌افتد که خود کاربر روی همین دستگاه چیزی تغییر می‌دهد (saveSchoolData → scheduleCloudPush).
     if(d.smsConfig&&typeof d.smsConfig==='object'){
       try{
         const rem=d.smsConfig,loc=schoolData.smsConfig||{};
@@ -1600,15 +1582,11 @@ async function cloudPullAppData(force){
         }
       }catch(e){}
     }
-    if(force||needFull||lRich===0||remoteTs>=localTs||rRich>=lRich){
-      // اگر سرور جدیدتر است، forceAll تا حذف معلم/کلاس از سرور اعمال شود و از local برنگردد
-      var fullReplace=!!force||!!needFull||lRich===0||(remoteTs>localTs);
-      applyRemoteAppData(d,remoteTs||Date.now(),fullReplace);
+    if(force||needFull||remoteTs!==localTs||_dataRichness(schoolData)===0){
+      applyRemoteAppData(d,remoteTs||Date.now(),true);
       try{fillSmsPanelForm()}catch(e){}
       return true;
     }
-    // محلی جدیدتر و غنی‌تر → بفرست
-    if(canManage()&&lRich>rRich)cloudPushAppData(true).catch(function(){});
   }catch(e){console.warn('pull',e)}
   return false;
 }
