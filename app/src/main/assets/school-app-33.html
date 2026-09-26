@@ -705,7 +705,7 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
           <button type="button" class="btn btn-primary btn-sm" onclick="openAssignModal()">+ اختصاص</button>
         </div>
       </div>
-      <p class="hint">ستون‌های اکسل/CSV: ۱)نام معلم ۲)کلاس ۳)نام زنگ ۴)درس ۵)ساعت شروع ۶)ساعت پایان — ردیف اول می‌تواند عنوان باشد.</p>
+      <p class="hint">ستون‌های اکسل/CSV: ۱)معلم ۲)کلاس ۳)شیفت(صبح/عصر) ۴)روز هفته ۵)نام زنگ ۶)درس ۷)ساعت شروع ۸)ساعت پایان — شیفت روی کلاس هم اعمال می‌شود.</p>
       <div class="form-group" style="margin-top:10px">
         <label>جستجو و انتخاب معلم برای آمار / PDF</label>
         <input class="form-control" id="assign-teacher-search" placeholder="نام معلم را جستجو کنید..." oninput="filterTeacherStatsSelect()" style="margin-bottom:8px" />
@@ -1334,8 +1334,8 @@ async function cloudPushAppData(force){
   if(!SYNC_API||!session||!session.schoolId||!schoolData)return;
   // معلم: با force (ثبت نمره/حضور) همیشه مجاز؛ بدون force فقط اگر داده کافی از سرور دارد
   if(userSession&&userSession.role==='teacher'&&!force&&_dataRichness(schoolData)<30)return;
-  // دستگاه خالی هرگز سرور پر را پاک نکند
-  if(_dataRichness(schoolData)===0){
+  // دستگاه خالی هرگز سرور پر را پاک نکند — مگر force (بازنشانی عمدی)
+  if(_dataRichness(schoolData)===0&&!force&&!schoolData.replaceAssignments&&!schoolData.clearAssignments){
     console.warn('skip empty push');
     return;
   }
@@ -1344,12 +1344,27 @@ async function cloudPushAppData(force){
     var _subAll=schoolData.submissions||[];
     var _attSlim=_attAll.length>800?_attAll.slice(-800):_attAll;
     var _subSlim=_subAll.length>150?_subAll.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,150):_subAll;
+    // عکس‌های دانش‌آموز/مدیر حجم را می‌ترکاند — در push فقط متادیتا
+    var _studentsSlim=(schoolData.students||[]).map(function(s){
+      if(!s)return s;
+      var o={};for(var k in s){if(!Object.prototype.hasOwnProperty.call(s,k))continue;if(k==='photo'||k==='image'||k==='avatar')continue;o[k]=s[k]}
+      return o;
+    });
+    var _staffSlim=(schoolData.staff||[]).map(function(s){
+      if(!s)return s;
+      var o={};for(var k in s){if(!Object.prototype.hasOwnProperty.call(s,k))continue;if(k==='photo'||k==='image'||k==='avatar')continue;o[k]=s[k]}
+      return o;
+    });
     const payload={
       classes:schoolData.classes||[],
-      students:schoolData.students||[],
-      staff:schoolData.staff||[],
+      students:_studentsSlim,
+      staff:_staffSlim,
       assignments:schoolData.assignments||[],
       deletedAssignmentIds:schoolData.deletedAssignmentIds||[],
+      replaceAssignments:!!schoolData.replaceAssignments,
+      clearAssignments:!!schoolData.clearAssignments,
+      resetYear:!!schoolData.resetYear,
+      clearPerformance:!!schoolData.clearPerformance,
       absentSmsSent:schoolData.absentSmsSent||{},
       colleagues:schoolData.colleagues||[],
       attendance:_attSlim,
@@ -1364,11 +1379,13 @@ async function cloudPushAppData(force){
       rules:schoolData.rules||{},
       managerUser:schoolData.managerUser||'',
       managerPass:schoolData.managerPass||'',
-      managerPhoto:schoolData.managerPhoto||'',
+      // managerPhoto عمداً ارسال نمی‌شود تا حجم کم بماند
       shifts:schoolData.shifts||1,
       updatedAtMs:Date.now()
     };
-    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{method:'PUT',body:payload,retries:2});
+    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
+      method:'PUT',body:payload,retries:4,timeoutMs:60000
+    });
     schoolData._cloudUpdatedAtMs=payload.updatedAtMs;
     try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
   }catch(e){console.warn('push',e);if(force)throw e}
@@ -1407,29 +1424,52 @@ function _mergeById(local,remote,preferRemote){
 function _mergeAssignmentsSafe(local,remote,preferRemote){
   local=Array.isArray(local)?local:[];
   remote=Array.isArray(remote)?remote:[];
-  if(!local.length)return remote.slice();
-  if(!remote.length)return local.slice();
+  var del=(schoolData&&schoolData.deletedAssignmentIds)||[];
+  var ds={};del.forEach(function(id){if(id)ds[id]=true});
+  function notDel(a){return a&&a.id&&!ds[a.id]}
+  // preferRemote = سرور مرجع است (همگام اجباری / سرور جدیدتر) → فقط لیست سرور
+  if(preferRemote){
+    return remote.filter(notDel);
+  }
+  if(!local.length)return remote.filter(notDel);
+  if(!remote.length)return local.filter(notDel);
   var map={};
   local.forEach(function(x){if(x&&x.id)map[x.id]=x});
   remote.forEach(function(x){
     if(!x||!x.id)return;
     map[x.id]=Object.assign({},map[x.id]||{},x);
   });
-  if(preferRemote&&remote.length>=local.length){
-    remote.forEach(function(x){if(x&&x.id)map[x.id]=x});
-  }
-  return Object.keys(map).map(function(k){return map[k]});
+  return Object.keys(map).map(function(k){return map[k]}).filter(notDel);
 }
 function applyRemoteAppData(d,remoteTs,forceAll){
   if(!d||typeof d!=='object')return;
   // تیم/معلم: اگر force یا سرور جدیدتر → لیست سرور کامل جایگزین شود تا حذف‌ها پایدار بمانند
   schoolData.classes=_mergeById(schoolData.classes,d.classes,!!forceAll);
-  schoolData.students=_mergeById(schoolData.students,d.students,!!forceAll);
+  // دانش‌آموز: عکس محلی حفظ شود اگر سرور عکس ندارد
+  (function(){
+    var localMap={};
+    (schoolData.students||[]).forEach(function(s){if(s&&s.id)localMap[s.id]=s});
+    var merged=_mergeById(schoolData.students,d.students,!!forceAll);
+    schoolData.students=(merged||[]).map(function(s){
+      if(!s||!s.id)return s;
+      var L=localMap[s.id];
+      if(L&&(L.photo||L.image)&&!(s.photo||s.image)){
+        return Object.assign({},s,{photo:L.photo||'',image:L.image||''});
+      }
+      return s;
+    });
+  })();
   schoolData.staff=_mergeById(schoolData.staff,d.staff,!!forceAll);
-  schoolData.assignments=_mergeAssignmentsSafe(schoolData.assignments,d.assignments,!!forceAll);
+  // حذف‌شده‌های سرور را اول ادغام کن
   if(Array.isArray(d.deletedAssignmentIds)&&d.deletedAssignmentIds.length){
     if(!Array.isArray(schoolData.deletedAssignmentIds))schoolData.deletedAssignmentIds=[];
     d.deletedAssignmentIds.forEach(function(id){if(id&&schoolData.deletedAssignmentIds.indexOf(id)<0)schoolData.deletedAssignmentIds.push(id)});
+  }
+  // اگر سرور گفته جایگزین کامل / ریست برنامه → فقط لیست سرور
+  if(d.replaceAssignments===true||d.clearAssignments===true||forceAll){
+    schoolData.assignments=Array.isArray(d.assignments)?d.assignments.slice():[];
+  }else{
+    schoolData.assignments=_mergeAssignmentsSafe(schoolData.assignments,d.assignments,false);
   }
   if(Array.isArray(schoolData.deletedAssignmentIds)&&schoolData.deletedAssignmentIds.length){
     var _da={};schoolData.deletedAssignmentIds.forEach(function(id){if(id)_da[id]=true});
@@ -1439,8 +1479,16 @@ function applyRemoteAppData(d,remoteTs,forceAll){
     schoolData.absentSmsSent=Object.assign({},schoolData.absentSmsSent||{},d.absentSmsSent);
   }
   schoolData.colleagues=_mergeById(schoolData.colleagues,d.colleagues,!!forceAll);
-  schoolData.attendance=_mergeById(schoolData.attendance,d.attendance,!!forceAll);
-  schoolData.submissions=_mergeById(schoolData.submissions,d.submissions,!!forceAll);
+  if(d.resetYear===true||d.clearPerformance===true||forceAll){
+    schoolData.attendance=Array.isArray(d.attendance)?d.attendance.slice():[];
+    schoolData.submissions=Array.isArray(d.submissions)?d.submissions.slice():[];
+    schoolData.exams=Array.isArray(d.exams)?d.exams.slice():(forceAll?[]:schoolData.exams);
+    schoolData.messages=Array.isArray(d.messages)?d.messages.slice():(forceAll?[]:schoolData.messages);
+    if(d.resetYear||d.clearPerformance)schoolData.absentSmsSent=(d.absentSmsSent&&typeof d.absentSmsSent==='object')?d.absentSmsSent:{};
+  }else{
+    schoolData.attendance=_mergeById(schoolData.attendance,d.attendance,false);
+    schoolData.submissions=_mergeById(schoolData.submissions,d.submissions,false);
+  }
   // ادغام شناسه‌های حذف‌شده و فیلتر
   if(Array.isArray(d.deletedSubmissionIds)&&d.deletedSubmissionIds.length){
     if(!Array.isArray(schoolData.deletedSubmissionIds))schoolData.deletedSubmissionIds=[];
@@ -1482,7 +1530,7 @@ function applyRemoteAppData(d,remoteTs,forceAll){
       };
     }
   }
-  if(d.theme&&typeof d.theme==='object')schoolData.theme=d.theme;
+  if(d.theme&&typeof d.theme==='object'&&Object.keys(d.theme).length){schoolData.theme=Object.assign({},schoolData.theme||{},d.theme);try{if(typeof applyTheme==='function')applyTheme(schoolData.theme)}catch(e){}}
   if(d.rules)schoolData.rules=d.rules;
   if(d.managerUser)schoolData.managerUser=d.managerUser;
   if(d.managerPass)schoolData.managerPass=d.managerPass;
@@ -1514,7 +1562,16 @@ async function cloudPullAppData(force){
     const localTs=schoolData._cloudUpdatedAtMs||0;
     const rRich=_dataRichness(d);
     const lRich=_dataRichness(schoolData);
+    // اگر سرور ریست کرده یا خالی‌سازی عمدی — همیشه بپذیر، داده محلی را برنگردان
+    if(d.resetYear===true||d.clearPerformance===true){
+      applyRemoteAppData(d,remoteTs||Date.now(),true);
+      return true;
+    }
     if(lRich>0&&rRich===0){
+      if(d.replaceAssignments||d.clearAssignments||(remoteTs&&localTs&&remoteTs>=localTs)){
+        applyRemoteAppData(d,remoteTs||Date.now(),true);
+        return true;
+      }
       if(canManage())cloudPushAppData(true).catch(function(){});
       return false;
     }
@@ -3644,6 +3701,8 @@ function prepareColSms(){
 
 /* Assignments */
 
+
+
 function openAssignModal(id){
   var a=id?(schoolData.assignments||[]).find(function(x){return x.id===id}):null;
   var teachers=(schoolData.staff||[]).filter(function(s){return !s.role||s.role==='teacher'||s.role==='معلم'||s.role==='دبیر'});
@@ -3744,6 +3803,228 @@ function delAssign(id){
   toast('حذف شد');
 }
 
+
+function importAssignmentsExcel(ev){
+  var f=ev&&ev.target&&ev.target.files&&ev.target.files[0];
+  if(!f)return;
+  var name=(f.name||'').toLowerCase();
+  if(name.indexOf('.xls')>=0&&name.indexOf('.csv')<0){
+    toast('فایل Excel خام (.xlsx) را مستقیم نفرستید — از Excel گزینه Save As → CSV UTF-8 بگیرید و همان CSV را انتخاب کنید');
+    try{ev.target.value=''}catch(e){}
+    return;
+  }
+  var reader=new FileReader();
+  reader.onload=function(){
+    try{importAssignmentsFromText(String(reader.result||''))}catch(e){toast('خطا در خواندن فایل');console.error(e)}
+  };
+  reader.onerror=function(){toast('خواندن فایل ممکن نشد')};
+  reader.readAsText(f);
+}
+function importAssignmentsFromText(text){
+  if(!canManage())return toast('فقط مدیر');
+  var lines=String(text||'').split(String.fromCharCode(13)).join(String.fromCharCode(10)).split(String.fromCharCode(10)).map(function(l){return l.trim()}).filter(Boolean);
+  if(!lines.length)return toast('فایل خالی است');
+  function splitLine(line){
+    if(line.indexOf('\t')>=0)return line.split('\t').map(function(x){return x.trim()});
+    if(line.indexOf(';')>=0)return line.split(';').map(function(x){return x.trim()});
+    var out=[],cur='',q=false;
+    for(var i=0;i<line.length;i++){
+      var ch=line[i];
+      if(ch==='"'){q=!q;continue}
+      if(ch===','&&!q){out.push(cur.trim());cur='';continue}
+      cur+=ch;
+    }
+    out.push(cur.trim());
+    return out;
+  }
+  function normDay(s){
+    s=String(s||'').split(' ').join('').split('\t').join('');
+    s=s.split('ي').join('ی').split('ك').join('ک');
+    if(s.indexOf('یکشنبه')>=0||s.indexOf('يكشنبه')>=0)return 0;
+    if(s.indexOf('دوشنبه')>=0)return 1;
+    if(s.indexOf('سه‌شنبه')>=0||s.indexOf('سهشنبه')>=0)return 2;
+    if(s.indexOf('چهارشنبه')>=0)return 3;
+    if(s.indexOf('پنجشنبه')>=0||s.indexOf('پنج‌شنبه')>=0)return 4;
+    if(s.indexOf('جمعه')>=0)return 5;
+    if(s.indexOf('شنبه')>=0)return 6;
+    var n=parseInt(s,10);if(!isNaN(n)&&n>=0&&n<=6)return n;
+    return null;
+  }
+  function _normName(s){
+    s=String(s||'').split(String.fromCharCode(0x200c)).join(' ').split('ي').join('ی').split('ك').join('ک');
+    s=s.split(' ').filter(Boolean).join(' ');
+    return s;
+  }
+  function findStaff(name){
+    name=_normName(name);
+    if(!name||name==='نامشخص')return null;
+    var staff=schoolData.staff||[];
+    var exact=staff.find(function(t){return _normName(t.name)===name});
+    if(exact)return exact;
+    var compact=name.split(' ').join('');
+    var byCompact=staff.find(function(t){return _normName(t.name).split(' ').join('')===compact});
+    if(byCompact)return byCompact;
+    // شامل بودن دو طرفه
+    var partial=staff.find(function(t){
+      var tn=_normName(t.name);
+      if(!tn)return false;
+      if(tn.indexOf(name)>=0||name.indexOf(tn)>=0)return true;
+      var tparts=tn.split(' ').filter(function(x){return x.length>1});
+      var nparts=name.split(' ').filter(function(x){return x.length>1});
+      if(nparts.length&&tparts.length){
+        var hit=0;
+        nparts.forEach(function(p){if(tparts.indexOf(p)>=0)hit++});
+        if(hit>=Math.min(2,nparts.length))return true;
+        // فامیل یکسان
+        if(nparts[nparts.length-1]===tparts[tparts.length-1]&&nparts[nparts.length-1].length>=3)return true;
+      }
+      return false;
+    });
+    if(partial)return partial;
+    return null;
+  }
+  function findClass(name){
+    name=String(name||'').trim();
+    var classes=schoolData.classes||[];
+    var exact=classes.find(function(c){return String(c.name||'')===name||String(c.id)===name});
+    if(exact)return exact;
+    return classes.find(function(c){return String(c.name||'').indexOf(name)>=0||name.indexOf(String(c.name||''))>=0})||null;
+  }
+  var start=0;
+  var first=splitLine(lines[0]);
+  if(first.some(function(h){h=String(h||'');return h.indexOf('معلم')>=0||h.indexOf('کلاس')>=0||h.toLowerCase()==='teacher'}))start=1;
+  if(!Array.isArray(schoolData.assignments))schoolData.assignments=[];
+  // واردات جدید = جایگزین کامل لیست برنامه
+  schoolData.assignments=[];
+  schoolData.deletedAssignmentIds=[];
+  var ok=0,fail=0,errors=[];
+  function normShift(s){
+    s=String(s||'').split(' ').join('').split('ي').join('ی').split('ك').join('ک');
+    if(!s)return null;
+    if(s.indexOf('صبح')>=0||s==='1'||s==='morning')return '1';
+    if(s.indexOf('عصر')>=0||s.indexOf('ظهر')>=0||s==='2'||s==='evening')return '2';
+    return null;
+  }
+  for(var li=start;li<lines.length;li++){
+    var cols=splitLine(lines[li]);
+    if(cols.length<4){fail++;errors.push('ردیف '+(li+1)+': ستون کم');continue}
+    var teacherName,className,periodName,subject,startT,endT,dayVal=null,shiftVal=null;
+    // فرمت جدید: معلم | کلاس | شیفت | روز | زنگ | درس | شروع | پایان
+    if(cols.length>=8 && normShift(cols[2])!=null){
+      teacherName=cols[0];className=cols[1];shiftVal=normShift(cols[2]);dayVal=normDay(cols[3]);periodName=cols[4];subject=cols[5];startT=cols[6];endT=cols[7];
+    }else if(cols.length>=7 && normDay(cols[2])!=null){
+      // معلم | کلاس | روز | زنگ | درس | شروع | پایان
+      teacherName=cols[0];className=cols[1];dayVal=normDay(cols[2]);periodName=cols[3];subject=cols[4];startT=cols[5];endT=cols[6];
+    }else if(cols.length>=7 && normDay(cols[6])!=null){
+      teacherName=cols[0];className=cols[1];periodName=cols[2];subject=cols[3];startT=cols[4];endT=cols[5];dayVal=normDay(cols[6]);
+    }else{
+      teacherName=cols[0];className=cols[1];periodName=cols[2];subject=cols[3];startT=cols[4]||'08:00';endT=cols[5]||'09:15';
+      dayVal=cols[6]!=null?normDay(cols[6]):0;
+      if(dayVal==null)dayVal=0;
+      if(cols[7]!=null)shiftVal=normShift(cols[7]);
+    }
+    teacherName=String(teacherName||'').trim();
+    className=String(className||'').trim();
+    periodName=String(periodName||'').trim()||'زنگ ۱';
+    subject=String(subject||'').trim();
+    if(!teacherName||!className||!subject){fail++;errors.push('ردیف '+(li+1)+': معلم/کلاس/درس خالی');continue}
+    var st=findStaff(teacherName);
+    var cl=findClass(className);
+    if(!cl){
+      // کلاس نبود → بساز تا برنامه نپرد
+      if(!Array.isArray(schoolData.classes))schoolData.classes=[];
+      cl={id:uid(),name:className,shift:shiftVal||'1'};
+      schoolData.classes.push(cl);
+      errors.push('ردیف '+(li+1)+': کلاس «'+className+'» ساخته شد');
+    }
+    if(!st){
+      // معلم نبود → بدون قطع برنامه؛ رکورد موقت معلم بساز تا بعداً کامل شود
+      if(!Array.isArray(schoolData.staff))schoolData.staff=[];
+      var pendingId='pending_'+String(teacherName||'x').split(' ').join('_')+'_'+String(li);
+      // اگر قبلاً با همین نام موقت ساخته شده، همان را بگیر
+      st=schoolData.staff.find(function(t){return (t.name||'')===teacherName||t.id===pendingId});
+      if(!st){
+        st={id:uid(),name:teacherName||('معلم ردیف '+(li+1)),role:'teacher',username:'',pass:'123456',pending:true};
+        schoolData.staff.push(st);
+      }
+      errors.push('ردیف '+(li+1)+': معلم «'+teacherName+'» در تیم نبود — موقت ثبت شد (بعداً کامل کنید)');
+    }
+    // شیفت روی کلاس هم ست شود (صبح=1 عصر=2) تا فیلتر شیفت کار کند
+    if(shiftVal){
+      cl.shift=shiftVal;
+    }
+    schoolData.assignments.push({
+      id:uid(),
+      teacherId:st.id,
+      teacherName:st.name||teacherName||'',
+      classId:cl.id,
+      className:cl.name||className||'',
+      dayOfWeek:(dayVal!=null?dayVal:0),
+      periodName:periodName,
+      startTime:startT||'08:00',
+      endTime:endT||'09:15',
+      subject:subject,
+      shift:shiftVal||(cl.shift!=null?String(cl.shift):'1')
+    });
+    ok++;
+  }
+
+  // اتصال مجدد معلم‌ها با نام (اگر در تیم بودند)
+  (schoolData.assignments||[]).forEach(function(a){
+    if(!a)return;
+    var st2=findStaff(a.teacherName||'');
+    if(st2){a.teacherId=st2.id;a.teacherName=st2.name||a.teacherName}
+  });
+
+  schoolData._cloudUpdatedAtMs=Date.now();
+  // ارسال کامل برنامه به سرور (جایگزین، نه ناقص)
+  schoolData.replaceAssignments=true;
+  schoolData.clearAssignments=false;
+  schoolData.deletedAssignmentIds=[];
+  saveSchoolData();
+  renderAssignments();
+  try{renderTeacherScheduleStats()}catch(e){}
+  var msg='وارد شد: '+ok+' مورد';
+  if(errors.length)msg+=' | هشدار: '+errors.length;
+  var totalAssign=(schoolData.assignments||[]).length;
+  toast(msg+' — ارسال '+totalAssign+' برنامه به سرور...');
+  Promise.resolve()
+    .then(function(){return cloudPushAppData(true)})
+    .then(function(){
+      // تأیید از خود Worker
+      return apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{retries:2,timeoutMs:30000});
+    })
+    .then(function(data){
+      var remote=(data&&data.data)||{};
+      var n=Array.isArray(remote.assignments)?remote.assignments.length:0;
+      if(n<totalAssign){
+        throw new Error('سرور فقط '+n+' از '+totalAssign+' برنامه را دارد');
+      }
+      if(typeof cloudPushStaff==='function'&&session&&session.schoolId){
+        return cloudPushStaff(session.schoolId,schoolData.staff||[]).then(function(){return n});
+      }
+      return n;
+    })
+    .then(function(n){
+      schoolData.replaceAssignments=false;
+      schoolData.clearAssignments=false;
+      saveSchoolData();
+      toast('تأیید سرور: '+(n!=null?n:totalAssign)+' برنامه ذخیره شد ✓ — روی بقیه دستگاه‌ها خروج/ورود کنید');
+    })
+    .catch(function(e){
+      var m=(e&&e.message)?String(e.message):'';
+      toast('ورود محلی شد؛ سرور تأیید نکرد'+(m?(' — '+m.slice(0,100)):'')+' — همگام را دوباره بزنید');
+      console.warn(e);
+    });
+  if(errors.length){
+    console.warn(errors);
+    try{
+      var box=document.getElementById('assign-import-errors');
+      if(box){box.style.display='block';box.innerHTML='<div class="hint" style="color:#b00">'+errors.slice(0,15).map(function(e){return '<div>'+e+'</div>'}).join('')+(errors.length>15?'<div>…</div>':'')+'</div>'}
+    }catch(e){}
+  }
+}
+
 function renderAssignments(){
   const list=document.getElementById('assign-list');
   if(!list)return;
@@ -3776,17 +4057,28 @@ function renderAssignments(){
     });
   }
   try{renderTeacherScheduleStats()}catch(e){}
-  if(!arr.length){list.innerHTML='<p class="hint">هنوز کلاسی به معلمی اختصاص داده نشده.</p>';return}
+  var totalAll=(schoolData.assignments||[]).length;
+  if(!arr.length){list.innerHTML='<p class="hint">هنوز کلاسی به معلمی اختصاص داده نشده. (کل ذخیره‌شده: '+totalAll+')</p>';return}
   arr=arr.slice().sort(function(a,b){
+    function classKey(x){
+      var c=(schoolData.classes||[]).find(function(z){return z.id===x.classId});
+      var n=(c&&c.name)||x.className||'';
+      var num=parseInt(String(n).replace(/[^0-9]/g,''),10);
+      return isNaN(num)?9999:num;
+    }
+    var ca=classKey(a),cb=classKey(b);if(ca!==cb)return ca-cb;
     var d=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d)return d;
     return String(a.startTime||'').localeCompare(String(b.startTime||''));
   });
-  list.innerHTML=arr.map(function(a){
+  var head='<p class="hint" style="margin-bottom:8px">نمایش '+arr.length+' از '+totalAll+' برنامه</p>';
+  list.innerHTML=head+arr.map(function(a){
     var t=(schoolData.staff||[]).find(function(x){return x.id===a.teacherId});
+    var tName=(t&&t.name)||a.teacherName||'معلم';
     var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
-    var sh=c&&c.shift!=null?(String(c.shift)==='2'?'عصر':'صبح'):'';
+    var cName=(c&&c.name)||a.className||'کلاس';
+    var sh=a.shift? (String(a.shift)==='2'||a.shift==='عصر'?'عصر':'صبح') : (c&&c.shift!=null?(String(c.shift)==='2'?'عصر':'صبح'):'');
     var idStr=String(a.id||'');
-    return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(sh?' · '+sh:'')+(a.subject?' · '+a.subject:'')+' → '+(t?t.name:'معلم')+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button type="button" class="btn btn-outline btn-sm" data-id="'+idStr+'" onclick="openAssignModal(this.dataset.id)">ویرایش</button><button type="button" class="btn btn-danger btn-sm" data-id="'+idStr+'" onclick="delAssign(this.dataset.id)">حذف</button></div>';
+    return '<div class="list-item"><div><div class="name">'+cName+(sh?' · '+sh:'')+(a.subject?' · '+a.subject:'')+' → '+tName+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button type="button" class="btn btn-outline btn-sm" data-id="'+idStr+'" onclick="openAssignModal(this.dataset.id)">ویرایش</button><button type="button" class="btn btn-danger btn-sm" data-id="'+idStr+'" onclick="delAssign(this.dataset.id)">حذف</button></div>';
   }).join('');
 }
 function renderTeacherScheduleStats(){
@@ -5259,20 +5551,42 @@ async function resetSchoolYear(){
   if(!keepC)schoolData.classes=[];
   if(!keepS)schoolData.students=[];
   if(!keepT){schoolData.staff=[];schoolData.colleagues=[];}
-  if(!keepA)schoolData.assignments=[];
-  // عملکرد همیشه پاک
+  if(!keepA){
+    // همه idهای برنامه را حذف‌شده علامت بزن تا سرور برنگرداند
+    if(!Array.isArray(schoolData.deletedAssignmentIds))schoolData.deletedAssignmentIds=[];
+    (schoolData.assignments||[]).forEach(function(a){
+      if(a&&a.id&&schoolData.deletedAssignmentIds.indexOf(a.id)<0)schoolData.deletedAssignmentIds.push(a.id);
+    });
+    schoolData.assignments=[];
+    schoolData.replaceAssignments=true;
+    schoolData.clearAssignments=true;
+  }
+  // عملکرد همیشه کامل پاک — و به سرور هم اعلام ریست
   schoolData.attendance=[];
   schoolData.submissions=[];
   schoolData.exams=[];
   schoolData.messages=[];
+  schoolData.absentSmsSent={};
+  schoolData.deletedSubmissionIds=[];
+  schoolData.resetYear=true;
+  schoolData.clearPerformance=true;
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
-  toast('در حال ارسال بازنشانی به سرور...');
+  toast('در حال ارسال بازنشانی کامل به سرور...');
   try{
     await cloudPushAppData(true);
+    // پاک کردن جدول جداگانه submissions روی سرور
+    try{
+      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/submissions/clear',{method:'POST',body:{},retries:2,timeoutMs:30000});
+    }catch(e2){console.warn('clear submissions table',e2)}
     if(session&&session.schoolId)await cloudPushStaff(session.schoolId,schoolData.staff||[]);
-    toast('بازنشانی سال انجام شد ✓');
-  }catch(e){toast('محلی پاک شد؛ ارسال سرور ناموفق — دوباره همگام کنید')}
+    schoolData.replaceAssignments=false;
+    schoolData.clearAssignments=false;
+    schoolData.resetYear=false;
+    schoolData.clearPerformance=false;
+    saveSchoolData();
+    toast('بازنشانی کامل انجام شد ✓');
+  }catch(e){var m=(e&&e.message)?String(e.message):'';toast('محلی پاک شد؛ ارسال سرور ناموفق'+(m?(' — '+m.slice(0,80)):'')+' — دوباره همگام کنید')}
   try{renderHome();renderClasses();renderTeam();renderReviewedSheet()}catch(e){}
 }
 function renderSettings(){
