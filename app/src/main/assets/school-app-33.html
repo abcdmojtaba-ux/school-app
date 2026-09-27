@@ -681,7 +681,6 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
         <button type="button" class="qa-item" onclick="showAppPage('exams')"><span class="ic">📝</span><span class="lb">ثبت نمرات</span><span class="ds">امتحان کلاس</span></button>
         <button type="button" class="qa-item" onclick="showAppPage('messages')"><span class="ic">📨</span><span class="lb">اتوماسیون</span><span class="ds">پیام داخلی</span></button>
         <button type="button" class="qa-item" onclick="manualSyncAll()"><span class="ic">☁️</span><span class="lb">همگام‌سازی</span><span class="ds">دریافت از سرور</span></button>
-        <button type="button" class="qa-item" onclick="debugSyncCheck()"><span class="ic">🩺</span><span class="lb">بررسی مشکل</span><span class="ds">اشکال‌یابی سینک</span></button>
       </div>
     </div>
   </div>
@@ -1252,49 +1251,6 @@ async function manualSyncAll(){
   }
 }
 
-async function debugSyncCheck(){
-  if(!session||!session.schoolId)return alert('اول وارد شوید');
-  var NL=String.fromCharCode(10);
-  var lines=[];
-  lines.push('کد/شناسه مدرسه: '+session.schoolId);
-  lines.push('نقش من: '+(userSession?userSession.role:'؟')+' | شناسه کاربری من (staffId): '+(userSession?(userSession.staffId||'(ندارد)'):'؟'));
-  var localAll=(schoolData.assignments||[]).length;
-  var localMine=(schoolData.assignments||[]).filter(function(a){return userSession&&a.teacherId===userSession.staffId}).length;
-  lines.push('روی همین گوشی الان: کل برنامه‌ها='+localAll+' | مربوط به من='+localMine);
-  lines.push('آخرین سینک این گوشی: '+(schoolData._cloudUpdatedAtMs?new Date(schoolData._cloudUpdatedAtMs).toLocaleString('fa-IR'):'(هیچ‌وقت)'));
-  lines.push('آدرس سرور: '+(SYNC_API||'(تنظیم نشده!)'));
-  try{
-    var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{retries:1});
-    var d=data&&data.data;
-    lines.push('---');
-    if(!d){
-      lines.push('پاسخ زنده سرور: هیچ داده‌ای برای این schoolId پیدا نشد. (یعنی احتمالاً روی این گوشی یک مدرسه/حساب متفاوت لاگین است)');
-    }else{
-      var remoteAll=(d.assignments||[]).length;
-      var remoteMine=(d.assignments||[]).filter(function(a){return userSession&&a.teacherId===userSession.staffId}).length;
-      lines.push('پاسخ زنده سرور همین الان: کل برنامه‌ها='+remoteAll+' | مربوط به من='+remoteMine);
-      lines.push('زمان آخرین ذخیره روی سرور: '+new Date(d.updatedAtMs||data.updatedAt||0).toLocaleString('fa-IR'));
-      var mySid=userSession?userSession.staffId:null;
-      var teamList=(d.staff||[]).map(function(s){return (s&&s.id===mySid?('>> '+(s.name||'')+' (خودم)'):((s&&s.name)||'؟'))+' [id='+((s&&s.id)||'?')+']';}).join(NL);
-      lines.push('لیست تیم ثبت‌شده روی سرور:'+NL+teamList);
-      if(remoteAll>0&&remoteMine===0){
-        lines.push('---');
-        lines.push('نتیجه: روی سرور برنامه هست ولی هیچ‌کدام با شناسه (staffId) این کاربر مطابقت ندارد. یعنی یا برای معلم دیگری (رکورد تکراری) تعریف شده، یا این گوشی با حساب/شناسه متفاوتی از همان معلم لاگین کرده.');
-      }else if(remoteAll===0){
-        lines.push('نتیجه: خود سرور هم فعلاً هیچ برنامه‌ای ندارد — یعنی هنوز از طرف مدیر ارسال/ذخیره نشده.');
-      }else if(remoteMine>localMine||remoteAll>localAll){
-        lines.push('نتیجه: سرور داده‌ی جدیدتری دارد ولی هنوز روی این گوشی اعمال نشده. دکمه «همگام‌سازی» را بزنید و دوباره این دکمه را بزنید تا مطمئن شوید اعداد بالا با هم برابر شدند.');
-      }else{
-        lines.push('نتیجه: اعداد سرور و گوشی یکی است — یعنی داده درست رسیده و اگر چیزی دیده نمی‌شود، مشکل در نمایش (فیلتر روز/شیفت) است نه در دریافت داده.');
-      }
-    }
-  }catch(e){
-    lines.push('---');
-    lines.push('خطای دریافت از سرور: '+(e&&e.message?e.message:String(e)));
-    lines.push('این یعنی گوشی اصلاً نتوانسته به سرور وصل شود (اینترنت/فیلترینگ/آدرس سرور اشتباه).');
-  }
-  alert(lines.join(NL));
-}
 async function cloudFindSchoolByLogin(user,pass,code){
   if(!SYNC_API)return null;
   const data=await apiFetch('/api/login',{method:'POST',body:{user:String(user||'').trim(),pass:String(pass||''),code:String(code||'').trim()}});
@@ -1376,24 +1332,59 @@ async function cloudPullStaff(schoolId){
 }
 async function cloudPushAppData(force){
   if(!SYNC_API||!session||!session.schoolId||!schoolData)return;
-  // معلم: با force (ثبت نمره/حضور) همیشه مجاز؛ بدون force فقط اگر داده کافی از سرور دارد
-  if(userSession&&userSession.role==='teacher'&&!force&&_dataRichness(schoolData)<30)return;
-  // دستگاه خالی هرگز سرور پر را پاک نکند
-  if(_dataRichness(schoolData)===0){
+  // دستگاه خالی هرگز سرور پر را پاک نکند — مگر ریست عمدی
+  if(_dataRichness(schoolData)===0&&!force&&!schoolData.replaceAssignments&&!schoolData.clearAssignments&&!schoolData.resetYear){
     console.warn('skip empty push');
     return;
+  }
+  var isTeacher=userSession&&userSession.role==='teacher';
+  // معلم فقط حضور/نمره/ارسال‌های خودش را می‌فرستد — برنامه و کلاس و تیم را دست نمی‌زند
+  if(isTeacher&&!schoolData.replaceAssignments&&!schoolData.resetYear){
+    try{
+      var _attAll=schoolData.attendance||[];
+      var _subAll=schoolData.submissions||[];
+      var _attSlim=_attAll.length>500?_attAll.slice(-500):_attAll;
+      var _subSlim=_subAll.length>100?_subAll.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,100):_subAll;
+      var teacherPayload={
+        attendance:_attSlim,
+        submissions:_subSlim,
+        exams:schoolData.exams||[],
+        updatedAtMs:Date.now(),
+        _teacherPartial:true
+      };
+      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
+        method:'PUT',body:teacherPayload,retries:3,timeoutMs:45000
+      });
+      schoolData._localDirtyAt=0;
+      return;
+    }catch(e){console.warn('teacher push',e);if(force)throw e;return}
   }
   try{
     var _attAll=schoolData.attendance||[];
     var _subAll=schoolData.submissions||[];
     var _attSlim=_attAll.length>800?_attAll.slice(-800):_attAll;
     var _subSlim=_subAll.length>150?_subAll.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,150):_subAll;
+    // عکس‌های دانش‌آموز/مدیر حجم را می‌ترکاند — در push فقط متادیتا
+    var _studentsSlim=(schoolData.students||[]).map(function(s){
+      if(!s)return s;
+      var o={};for(var k in s){if(!Object.prototype.hasOwnProperty.call(s,k))continue;if(k==='photo'||k==='image'||k==='avatar')continue;o[k]=s[k]}
+      return o;
+    });
+    var _staffSlim=(schoolData.staff||[]).map(function(s){
+      if(!s)return s;
+      var o={};for(var k in s){if(!Object.prototype.hasOwnProperty.call(s,k))continue;if(k==='photo'||k==='image'||k==='avatar')continue;o[k]=s[k]}
+      return o;
+    });
     const payload={
       classes:schoolData.classes||[],
-      students:schoolData.students||[],
-      staff:schoolData.staff||[],
+      students:_studentsSlim,
+      staff:_staffSlim,
       assignments:schoolData.assignments||[],
       deletedAssignmentIds:schoolData.deletedAssignmentIds||[],
+      replaceAssignments:!!schoolData.replaceAssignments,
+      clearAssignments:!!schoolData.clearAssignments,
+      resetYear:!!schoolData.resetYear,
+      clearPerformance:!!schoolData.clearPerformance,
       absentSmsSent:schoolData.absentSmsSent||{},
       colleagues:schoolData.colleagues||[],
       attendance:_attSlim,
@@ -1408,11 +1399,13 @@ async function cloudPushAppData(force){
       rules:schoolData.rules||{},
       managerUser:schoolData.managerUser||'',
       managerPass:schoolData.managerPass||'',
-      managerPhoto:schoolData.managerPhoto||'',
+      // managerPhoto عمداً ارسال نمی‌شود تا حجم کم بماند
       shifts:schoolData.shifts||1,
       updatedAtMs:Date.now()
     };
-    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{method:'PUT',body:payload,retries:2});
+    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
+      method:'PUT',body:payload,retries:4,timeoutMs:60000
+    });
     schoolData._cloudUpdatedAtMs=payload.updatedAtMs;
     try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
   }catch(e){console.warn('push',e);if(force)throw e}
@@ -1436,44 +1429,82 @@ function _pickArr(local,remote){
 function _mergeById(local,remote,preferRemote){
   if(!Array.isArray(remote))return Array.isArray(local)?local.slice():[];
   if(!Array.isArray(local)||!local.length)return remote.slice();
-  if(preferRemote)return remote.slice();
+  if(preferRemote){
+    // هرگز لیست پر محلی را با آرایه خالی سرور پاک نکن
+    if(!remote.length&&local.length)return local.slice();
+    return remote.slice();
+  }
   if(!remote.length)return local.slice();
   var map={};
   local.forEach(function(x){if(x&&x.id)map[x.id]=x});
   remote.forEach(function(x){
     if(!x||!x.id)return;
     if(!map[x.id])map[x.id]=x;
+    else map[x.id]=Object.assign({},map[x.id],x);
   });
-  local.forEach(function(x){if(x&&x.id&&map[x.id]===undefined)map[x.id]=x});
   return Object.keys(map).map(function(k){return map[k]});
+}
+/** ادغام ساختاری: کلاس/تیم/دانش‌آموز — خالی سرور محلی را پاک نمی‌کند */
+function _mergeStructural(local,remote,preferRemote){
+  local=Array.isArray(local)?local:[];
+  remote=Array.isArray(remote)?remote:[];
+  if(!remote.length)return local.slice();
+  if(!local.length)return remote.slice();
+  if(preferRemote){
+    // سرور پر است → پایه سرور + حفظ فیلدهای محلی مثل عکس
+    var map={};
+    remote.forEach(function(x){if(x&&x.id)map[x.id]=x});
+    local.forEach(function(x){
+      if(!x||!x.id)return;
+      if(map[x.id]){
+        var r=map[x.id];
+        if((x.photo||x.image)&&!(r.photo||r.image))map[x.id]=Object.assign({},r,{photo:x.photo||'',image:x.image||''});
+        else map[x.id]=Object.assign({},x,r);
+      }
+      // آیتم فقط-محلی را نگه دار مگر preferRemote سخت
+    });
+    return Object.keys(map).map(function(k){return map[k]});
+  }
+  return _mergeById(local,remote,false);
 }
 /** برنامه معلمان: اتحاد بر اساس id — لیست ناقص سرور برنامه را نصف نکند */
 function _mergeAssignmentsSafe(local,remote,preferRemote){
   local=Array.isArray(local)?local:[];
   remote=Array.isArray(remote)?remote:[];
-  if(!local.length)return remote.slice();
-  if(!remote.length)return local.slice();
+  var del=(schoolData&&schoolData.deletedAssignmentIds)||[];
+  var ds={};del.forEach(function(id){if(id)ds[id]=true});
+  function notDel(a){return a&&a.id&&!ds[a.id]}
+  // preferRemote = سرور مرجع است (همگام اجباری / سرور جدیدتر) → فقط لیست سرور
+  if(preferRemote){
+    return remote.filter(notDel);
+  }
+  if(!local.length)return remote.filter(notDel);
+  if(!remote.length)return local.filter(notDel);
   var map={};
   local.forEach(function(x){if(x&&x.id)map[x.id]=x});
   remote.forEach(function(x){
     if(!x||!x.id)return;
     map[x.id]=Object.assign({},map[x.id]||{},x);
   });
-  if(preferRemote&&remote.length>=local.length){
-    remote.forEach(function(x){if(x&&x.id)map[x.id]=x});
-  }
-  return Object.keys(map).map(function(k){return map[k]});
+  return Object.keys(map).map(function(k){return map[k]}).filter(notDel);
 }
 function applyRemoteAppData(d,remoteTs,forceAll){
   if(!d||typeof d!=='object')return;
   // تیم/معلم: اگر force یا سرور جدیدتر → لیست سرور کامل جایگزین شود تا حذف‌ها پایدار بمانند
-  schoolData.classes=_mergeById(schoolData.classes,d.classes,!!forceAll);
-  schoolData.students=_mergeById(schoolData.students,d.students,!!forceAll);
-  schoolData.staff=_mergeById(schoolData.staff,d.staff,!!forceAll);
-  schoolData.assignments=_mergeAssignmentsSafe(schoolData.assignments,d.assignments,!!forceAll);
+  // ساختار مدرسه (کلاس/تیم/دانش‌آموز) هرگز با خالی سرور پاک نمی‌شود
+  schoolData.classes=_mergeStructural(schoolData.classes,d.classes,!!forceAll);
+  schoolData.students=_mergeStructural(schoolData.students,d.students,!!forceAll);
+  schoolData.staff=_mergeStructural(schoolData.staff,d.staff,!!forceAll);
+  // حذف‌شده‌های سرور را اول ادغام کن
   if(Array.isArray(d.deletedAssignmentIds)&&d.deletedAssignmentIds.length){
     if(!Array.isArray(schoolData.deletedAssignmentIds))schoolData.deletedAssignmentIds=[];
     d.deletedAssignmentIds.forEach(function(id){if(id&&schoolData.deletedAssignmentIds.indexOf(id)<0)schoolData.deletedAssignmentIds.push(id)});
+  }
+  // اگر سرور گفته جایگزین کامل / ریست برنامه → فقط لیست سرور
+  if(d.replaceAssignments===true||d.clearAssignments===true||forceAll){
+    schoolData.assignments=Array.isArray(d.assignments)?d.assignments.slice():[];
+  }else{
+    schoolData.assignments=_mergeAssignmentsSafe(schoolData.assignments,d.assignments,false);
   }
   if(Array.isArray(schoolData.deletedAssignmentIds)&&schoolData.deletedAssignmentIds.length){
     var _da={};schoolData.deletedAssignmentIds.forEach(function(id){if(id)_da[id]=true});
@@ -1483,8 +1514,16 @@ function applyRemoteAppData(d,remoteTs,forceAll){
     schoolData.absentSmsSent=Object.assign({},schoolData.absentSmsSent||{},d.absentSmsSent);
   }
   schoolData.colleagues=_mergeById(schoolData.colleagues,d.colleagues,!!forceAll);
-  schoolData.attendance=_mergeById(schoolData.attendance,d.attendance,!!forceAll);
-  schoolData.submissions=_mergeById(schoolData.submissions,d.submissions,!!forceAll);
+  if(d.resetYear===true||d.clearPerformance===true||forceAll){
+    schoolData.attendance=Array.isArray(d.attendance)?d.attendance.slice():[];
+    schoolData.submissions=Array.isArray(d.submissions)?d.submissions.slice():[];
+    schoolData.exams=Array.isArray(d.exams)?d.exams.slice():(forceAll?[]:schoolData.exams);
+    schoolData.messages=Array.isArray(d.messages)?d.messages.slice():(forceAll?[]:schoolData.messages);
+    if(d.resetYear||d.clearPerformance)schoolData.absentSmsSent=(d.absentSmsSent&&typeof d.absentSmsSent==='object')?d.absentSmsSent:{};
+  }else{
+    schoolData.attendance=_mergeById(schoolData.attendance,d.attendance,false);
+    schoolData.submissions=_mergeById(schoolData.submissions,d.submissions,false);
+  }
   // ادغام شناسه‌های حذف‌شده و فیلتر
   if(Array.isArray(d.deletedSubmissionIds)&&d.deletedSubmissionIds.length){
     if(!Array.isArray(schoolData.deletedSubmissionIds))schoolData.deletedSubmissionIds=[];
@@ -1526,7 +1565,7 @@ function applyRemoteAppData(d,remoteTs,forceAll){
       };
     }
   }
-  if(d.theme&&typeof d.theme==='object')schoolData.theme=d.theme;
+  if(d.theme&&typeof d.theme==='object'&&Object.keys(d.theme).length){schoolData.theme=Object.assign({},schoolData.theme||{},d.theme);try{if(typeof applyTheme==='function')applyTheme(schoolData.theme)}catch(e){}}
   if(d.rules)schoolData.rules=d.rules;
   if(d.managerUser)schoolData.managerUser=d.managerUser;
   if(d.managerPass)schoolData.managerPass=d.managerPass;
@@ -1558,13 +1597,40 @@ async function cloudPullAppData(force){
     const localTs=schoolData._cloudUpdatedAtMs||0;
     const rRich=_dataRichness(d);
     const lRich=_dataRichness(schoolData);
-    if(lRich>0&&rRich===0){
-      if(canManage())cloudPushAppData(true).catch(function(){});
+    // اگر سرور ریست کرده یا خالی‌سازی عمدی — همیشه بپذیر، داده محلی را برنگردان
+    // ===== سیاست همگام =====
+    // ریست عملکرد (نه لزوماً کلاس/تیم) از سرور
+    if(d.resetYear===true||d.clearPerformance===true){
+      applyRemoteAppData(d,remoteTs||Date.now(),false);
+      // فقط عملکرد را خالی کن؛ ساختار را اگر سرور خالی فرستاد نگه دار
+      if(Array.isArray(d.attendance))schoolData.attendance=d.attendance.slice();
+      if(Array.isArray(d.submissions))schoolData.submissions=d.submissions.slice();
+      if(Array.isArray(d.exams))schoolData.exams=d.exams.slice();
+      if(Array.isArray(d.messages))schoolData.messages=d.messages.slice();
+      schoolData.absentSmsSent=(d.absentSmsSent&&typeof d.absentSmsSent==='object')?d.absentSmsSent:{};
+      try{schoolData._localDirtyAt=0;schoolData._cloudUpdatedAtMs=remoteTs||Date.now()}catch(e){}
+      try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+      return true;
+    }
+    // سرور کاملاً خالی: اگر محلی داده دارد → سرور را ترمیم کن (پاک نکن)
+    if(rRich===0){
+      if(lRich>0&&canManage()){
+        console.warn('server empty, restoring from local');
+        schoolData._localDirtyAt=Date.now();
+        cloudPushAppData(true).catch(function(){});
+      }
       return false;
     }
-    // اگر محلی جدیدتر است و غنی‌تر/مساوی، اول push کن و remote قدیمی‌تر را کامل جایگزین نکن
-    if(!force&&!needFull&&localTs>0&&remoteTs>0&&localTs>remoteTs&&lRich>=rRich){
-      if(canManage())cloudPushAppData(true).catch(function(){});
+    // سرور داده دارد
+    var dirty=schoolData._localDirtyAt||0;
+    var remoteHasStructure=((d.classes||[]).length+(d.students||[]).length+(d.staff||[]).length)>0;
+    if(force||needFull||!localTs||remoteTs>=localTs||!dirty||remoteTs>=dirty){
+      applyRemoteAppData(d,remoteTs||Date.now(),!!remoteHasStructure);
+      try{if(remoteTs>=dirty)schoolData._localDirtyAt=0}catch(e){}
+      return true;
+    }
+    if(!force&&dirty&&localTs>remoteTs&&lRich>0&&canManage()){
+      cloudPushAppData(true).catch(function(){});
       return false;
     }
     // اگر سرور جدیدتر یا غنی‌تر یا force → اعمال (با merge بر اساس id)
@@ -1602,9 +1668,8 @@ async function cloudPullAppData(force){
 let _pushTimer=null,_pullTimer=null;
 function scheduleCloudPush(){
   if(!SYNC_API||!session||!session.schoolId)return;
-  if(userSession&&userSession.role==='teacher'&&_dataRichness(schoolData)<30)return;
   clearTimeout(_pushTimer);
-  _pushTimer=setTimeout(function(){cloudPushAppData(true).catch(function(){})},2500);
+  _pushTimer=setTimeout(function(){cloudPushAppData(true).catch(function(){})},2000);
 }
 let _pullTick=0,_pullBusy=false;
 function startAutoSync(){
@@ -1670,7 +1735,16 @@ async function autoPullAll(checkSchool){
 function dataKey(){return DATA_PREFIX+(session?.schoolId||session?.code||'local')}
 function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,other:1},theme:{},shifts:1,messages:[]}}
 function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.deletedAssignmentIds)schoolData.deletedAssignmentIds=[];if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
-function saveSchoolData(){localStorage.setItem(dataKey(),JSON.stringify(schoolData));scheduleCloudPush()}
+function saveSchoolData(){
+  try{
+    if(schoolData&&typeof schoolData==='object'){
+      schoolData._localDirtyAt=Date.now();
+      schoolData._cloudUpdatedAtMs=Math.max(schoolData._cloudUpdatedAtMs||0,Date.now());
+    }
+  }catch(e){}
+  localStorage.setItem(dataKey(),JSON.stringify(schoolData));
+  scheduleCloudPush();
+}
 function isExpired(exp){return exp&&exp<todayStr()}
 function toEnDigits(s){s=String(s||'');const fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩';let o='';for(const ch of s){let i=fa.indexOf(ch);if(i>=0){o+=i;continue}i=ar.indexOf(ch);if(i>=0){o+=i;continue}o+=ch}return o}
 function fixPhone(s){
@@ -1965,7 +2039,7 @@ function classesForRole(){
   if(isTeacher()&&userSession&&userSession.staffId){
     const ids={};
     (schoolData.assignments||[]).forEach(function(a){
-      if(a.teacherId===userSession.staffId&&a.classId)ids[a.classId]=true;
+      if((a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)&&a.classId)ids[a.classId]=true;
     });
     list=list.filter(function(c){return ids[c.id]});
     return sortClassesList(list);
@@ -1980,7 +2054,7 @@ function classesForRole(){
 }
 function teacherClassIds(){
   if(!isTeacher()||!userSession||!userSession.staffId)return [];
-  return [...new Set((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).map(a=>a.classId))];
+  return [...new Set((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).map(a=>a.classId))];
 }
 function classTitle(c){
   if(!c)return '';
@@ -1990,7 +2064,7 @@ function classTitle(c){
 function canAccessClass(classId){
   if(isManager())return true;
   if(isTeacher()){
-    return (schoolData.assignments||[]).some(a=>a.teacherId===userSession.staffId&&a.classId===classId);
+    return (schoolData.assignments||[]).some(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)&&a.classId===classId);
   }
   const c=(schoolData.classes||[]).find(x=>x.id===classId);
   if(!c)return false;
@@ -2305,7 +2379,13 @@ async function doLogin(){
   if(!Array.isArray(schoolData.staff))schoolData.staff=[];
   const staffList=schoolData.staff||[];
   if(!staffList.length){hideLoginLoading();return toast('هنوز معلم/معاونی ثبت نشده یا به سرور ارسال نشده. اول با مدیر وارد شوید و تیم را ذخیره کنید',5000)}
-  const st=staffList.find(u=>String(u.username||'')===String(user)&&String(u.pass||'')===String(pass)&&u.role===loginRole&&u.active!==false);
+  function _roleOk(r){
+    r=String(r||'');
+    if(loginRole==='teacher')return r==='teacher'||r==='معلم'||r==='دبیر';
+    if(loginRole==='deputy')return r==='deputy'||r==='معاون'||r==='assistant';
+    return r===loginRole;
+  }
+  const st=staffList.find(u=>String(u.username||'')===String(user)&&String(u.pass||'')===String(pass)&&_roleOk(u.role)&&u.active!==false);
   if(!st){
     hideLoginLoading();
     const sameUser=staffList.find(u=>String(u.username||'')===String(user));
@@ -2313,7 +2393,10 @@ async function doLogin(){
     if(sameUser)return toast('رمز عبور اشتباه است');
     return toast('کاربر یافت نشد. نام کاربری را دقیق مثل تعریف در تیم وارد کنید');
   }
-  saveUserSession({role:st.role,username:st.username,name:st.name,schoolId:session.schoolId,staffId:st.id,shift:st.shift||null,photo:st.photo||''});
+  var _role=st.role;
+  if(_role==='معلم'||_role==='دبیر')_role='teacher';
+  if(_role==='معاون'||_role==='assistant')_role='deputy';
+  saveUserSession({role:_role,username:st.username,name:st.name,schoolId:session.schoolId,staffId:st.id,id:st.id,shift:st.shift||null,photo:st.photo||''});
   showLoginLoading('ورود موفق','در حال آماده‌سازی پنل...');
   toast('ورود '+(st.role==='deputy'?'معاون':'معلم'),3500);
   await enterApp();
@@ -2404,6 +2487,8 @@ async function enterApp(){
     return;
   }
   loadSchoolData();
+  // اول داده را از سرور بگیر — گوشی داده قدیمی را روی سرور برنگرداند
+  try{await cloudPullAppData(true)}catch(e){console.warn('enter pull',e)}
   // هم‌تراز کردن شیفت با لایسنس/مادر (تک‌شیفت اجباری می‌ماند)
   if(session){
     if(Number(session.shifts)===2||(session.modules&&session.modules.indexOf('dual_shift')>=0)){
@@ -2620,7 +2705,7 @@ function renderHome(){
   const stuN=schoolData.students.filter(s=>_vids.includes(s.classId)).length;
   document.getElementById('st-classes').textContent=_vc.length;
   document.getElementById('st-students').textContent=stuN;
-  document.getElementById('st-days').textContent=isTeacher()?String((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).length):daysLeft();
+  document.getElementById('st-days').textContent=isTeacher()?String((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).length):daysLeft();
   document.getElementById('st-days-label').textContent=isTeacher()?'زنگ/جلسه':'روز مانده';
   const badge=session.plan==='trial'?'<span class="badge badge-trial">آزمایشی</span>':'<span class="badge badge-ok">فعال</span>';
   const roleFa={manager:'مدیر',deputy:'معاون',teacher:'معلم'};
@@ -3016,7 +3101,7 @@ function loadMgrAttStudents(){
   var stus=(schoolData.students||[]).filter(function(s){return s.classId===cid});
   if(!stus.length){list.innerHTML='<p class="hint">دانش‌آموزی نیست</p>';return}
   list.innerHTML=stus.map(function(s){
-    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><select class="form-control mgr-att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present">حاضر</option><option value="absent">غایب</option><option value="late">تأخیر</option></select></div>';
+    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div><select class="form-control mgr-att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present">حاضر</option><option value="absent">غایب</option><option value="late">تأخیر</option></select></div>';
   }).join('');
 }
 async function submitManagerClassAtt(){
@@ -3269,7 +3354,11 @@ async function saveClass(id){
 function delClass(id){if(!confirm('حذف کلاس؟'))return;schoolData.classes=schoolData.classes.filter(c=>c.id!==id);schoolData.students=schoolData.students.filter(s=>s.classId!==id);schoolData.assignments=(schoolData.assignments||[]).filter(a=>a.classId!==id);saveSchoolData();renderClasses();renderHome()}
 function openClassStudents(id){if(!canAccessClass(id))return toast('به این کلاس دسترسی ندارید');currentClassId=id;const c=schoolData.classes.find(x=>x.id===id);document.getElementById('students-title').textContent='دانش‌آموزان '+classTitle(c);document.getElementById('btn-add-stu').style.display=canManage()?'':'none';showAppPage('students');renderStudents()}
 function renderStudents(){const list=document.getElementById('students-list');const st=schoolData.students.filter(s=>s.classId===currentClassId);if(!st.length){list.innerHTML='<p class="hint">خالی</p>';return}list.innerHTML=st.map(s=>'<div class="list-item"><div class="who clickable" onclick="'+(canManage()?'openPerformance(\''+s.id+'\')':'')+'">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">'+(s.phones||[]).join(' | ')+(s.note?' — '+s.note:'')+'</div></div></div>'+(canManage()?'<button class="btn btn-outline btn-sm" onclick="openStudentModal(\''+s.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStudent(\''+s.id+'\')">حذف</button>':'')+'</div>').join('')}
-function openStudentModal(id){if(!canManage())return;const s=id?schoolData.students.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=s?'ویرایش':'دانش‌آموز جدید';window._pendingPhoto=(s&&s.photo)||'';document.getElementById('modal-body').innerHTML='<div class="photo-pick"><div id="s-photo-prev">'+avatarHtml(s&&s.photo,s&&s.name,'avatar-lg')+'</div>'+photoButtons('s-photo','s-photo-prev')+'</div><p class="hint">عکس همگام با سرور می‌شود</p><div class="form-group"><label>نام</label><input class="form-control" id="s-name" value="'+(s?.name||'')+'" /></div><div class="form-group"><label>شماره پدر</label><input class="form-control" id="s-p1" value="'+((s?.phones||[])[0]||'')+'" /></div><div class="form-group"><label>شماره مادر</label><input class="form-control" id="s-p2" value="'+((s?.phones||[])[1]||'')+'" /></div><div class="form-group"><label>توضیحات</label><textarea class="form-control" id="s-note">'+(s?.note||'')+'</textarea></div><button class="btn btn-primary btn-block" onclick="saveStudent(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
+function openStudentModal(id){if(!canManage())return;const s=id?schoolData.students.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=s?'ویرایش':'دانش‌آموز جدید';window._pendingPhoto=(s&&s.photo)||'';document.getElementById('modal-body').innerHTML='<div class="photo-pick"><div id="s-photo-prev">'+avatarHtml(s&&s.photo,s&&s.name,'avatar-lg')+'</div>'+photoButtons('s-photo','s-photo-prev')+'</div><p class="hint">عکس همگام با سرور می‌شود</p><div class="form-group"><label>نام</label><input class="form-control" id="s-name" value="'+(s?.name||'')+'" /></div><div class="form-group"><label>شماره پدر</label><input class="form-control" id="s-p1" value="'+((s?.phones||[])[0]||'')+'" /></div><div class="form-group"><label>شماره مادر</label><input class="form-control" id="s-p2" value="'+((s?.phones||[])[1]||'')+'" /></div><div class="form-group"><label>گروه (برای دروس دو قسمتی)</label><select class="form-control" id="s-group">'+
+'<option value=""'+((!s||!s.group)?' selected':'')+'>— بدون گروه —</option>'+
+'<option value="الف"'+(s&&s.group==='الف'?' selected':'')+'>گروه الف</option>'+
+'<option value="ب"'+(s&&s.group==='ب'?' selected':'')+'>گروه ب</option>'+
+'</select></div><div class="form-group"><label>توضیحات</label><textarea class="form-control" id="s-note">'+(s?.note||'')+'</textarea></div><button class="btn btn-primary btn-block" onclick="saveStudent(\''+(id||'')+'\')">ذخیره</button>';document.getElementById('modal').classList.add('show')}
 function saveStudent(id){
   try{
     const nameEl=document.getElementById('s-name');
@@ -3278,6 +3367,7 @@ function saveStudent(id){
     const p1=fixPhone((document.getElementById('s-p1')||{}).value||'');
     const p2=fixPhone((document.getElementById('s-p2')||{}).value||'');
     const note=((document.getElementById('s-note')||{}).value||'').trim();
+    const group=((document.getElementById('s-group')||{}).value||'').trim();
     if(!name)return toast('نام لازم است');
     if(!schoolData)loadSchoolData();
     if(!Array.isArray(schoolData.students))schoolData.students=[];
@@ -3286,14 +3376,14 @@ function saveStudent(id){
     const photo=(typeof window._pendingPhoto!=='undefined'&&window._pendingPhoto!==null)?window._pendingPhoto:'';
     if(id){
       const s=schoolData.students.find(x=>x.id===id);
-      if(s){s.name=name;s.phones=phones;s.note=note;s.photo=photo||'';}
+      if(s){s.name=name;s.phones=phones;s.note=note;s.group=group;s.photo=photo||'';}
       else return toast('دانش‌آموز یافت نشد');
     }else{
       const lim=maxStudentsAllowed();
       if(lim>0&&schoolData.students.length>=lim){
         return toast('سقف دانش‌آموز این مدرسه '+lim+' نفر است (از پنل مادر). برای افزایش با پشتیبانی تماس بگیرید.');
       }
-      schoolData.students.push({id:uid(),classId:currentClassId,name:name,phones:phones,note:note,photo:photo||''});
+      schoolData.students.push({id:uid(),classId:currentClassId,name:name,phones:phones,note:note,group:group,photo:photo||''});
     }
     schoolData._cloudUpdatedAtMs=Date.now();
     saveSchoolData();
@@ -3696,39 +3786,31 @@ function openAssignModal(id){
   if(!teachers.length)teachers=schoolData.staff||[];
   if(!teachers.length)return toast('اول معلم/همکار تعریف کنید');
   if(!(schoolData.classes||[]).length)return toast('اول کلاس تعریف کنید');
-  document.getElementById('modal-title').textContent=a?'ویرایش اختصاص':'اختصاص کلاس به معلم';
+  document.getElementById('modal-title').textContent=a?'ویرایش زنگ / درس':'تعریف زنگ در برنامه هفتگی';
   var tOpts=teachers.map(function(t){return '<option value="'+t.id+'"'+(a&&a.teacherId===t.id?' selected':'')+'>'+(t.name||t.username||t.id)+'</option>'}).join('');
+  var t2Opts='<option value="">— ندارد —</option>'+teachers.map(function(t){return '<option value="'+t.id+'"'+(a&&a.teacherId2===t.id?' selected':'')+'>'+(t.name||t.username||t.id)+'</option>'}).join('');
   var cOpts=(schoolData.classes||[]).map(function(c){return '<option value="'+c.id+'"'+(a&&a.classId===c.id?' selected':'')+'>'+(typeof classTitle==='function'?classTitle(c):(c.name||c.id))+'</option>'}).join('');
   var dOpts=DAYS.map(function(d,i){return '<option value="'+i+'"'+(a&&a.dayOfWeek===i?' selected':'')+'>'+d+'</option>'}).join('');
+  var g=a&&a.group?String(a.group):'';
   var idStr=id?String(id):'';
   document.getElementById('modal-body').innerHTML=
-    '<div class="form-group"><label>جستجوی معلم</label><input class="form-control" id="as-teacher-search" placeholder="نام معلم را بنویسید..." oninput="filterAssignTeacherSelect()" /></div>'+
-    '<div class="form-group"><label>معلم</label><select class="form-control" id="as-teacher">'+tOpts+'</select></div>'+
-    '<div class="form-group"><label>کلاس</label><select class="form-control" id="as-class">'+cOpts+'</select></div>'+
-    '<div class="form-group"><label>نام درس *</label><input class="form-control" id="as-subject" value="'+(a&&a.subject?a.subject:'')+'" placeholder="مثلاً ریاضی" /></div>'+
+    '<p class="hint" style="margin-bottom:10px">یک <b>درس</b> می‌تواند چند <b>زنگ</b> در هفته داشته باشد (همان نام درس را تکرار کنید). هر زنگ حضورغیاب جدا دارد.</p>'+
+    '<div class="form-group"><label>جستجوی معلم</label><input class="form-control" id="as-teacher-search" placeholder="نام معلم..." oninput="filterAssignTeacherSelect()" /></div>'+
+    '<div class="form-group"><label>معلم اصلی *</label><select class="form-control" id="as-teacher">'+tOpts+'</select></div>'+
+    '<div class="form-group"><label>معلم دوم (اختیاری — کلاس دو قسمتی)</label><select class="form-control" id="as-teacher2">'+t2Opts+'</select></div>'+
+    '<div class="form-group"><label>کلاس *</label><select class="form-control" id="as-class">'+cOpts+'</select></div>'+
+    '<div class="form-group"><label>گروه کلاس</label><select class="form-control" id="as-group">'+
+      '<option value=""'+(!g?' selected':'')+'>همه دانش‌آموزان کلاس</option>'+
+      '<option value="الف"'+(g==='الف'||g==='1'?' selected':'')+'>گروه الف</option>'+
+      '<option value="ب"'+(g==='ب'||g==='2'?' selected':'')+'>گروه ب</option>'+
+    '</select><p class="hint">برای تقسیم کلاس: یک زنگ با گروه الف + یک زنگ با گروه ب (همان ساعت/درس)</p></div>'+
+    '<div class="form-group"><label>نام درس *</label><input class="form-control" id="as-subject" value="'+(a&&a.subject?a.subject:'')+'" placeholder="مثلاً ریاضی — در همه زنگ‌های این درس یکسان بنویسید" /></div>'+
     '<div class="form-group"><label>روز هفته</label><select class="form-control" id="as-day">'+dOpts+'</select></div>'+
-    '<div class="form-group"><label>عنوان زنگ / جلسه</label><input class="form-control" id="as-period" value="'+(a&&a.periodName?a.periodName:'زنگ ۱')+'" placeholder="مثلاً زنگ ۱" /></div>'+
+    '<div class="form-group"><label>عنوان زنگ</label><input class="form-control" id="as-period" value="'+(a&&a.periodName?a.periodName:'زنگ ۱')+'" placeholder="زنگ ۱ یا زنگ 1-2" /></div>'+
     '<div class="form-group"><label>از ساعت</label><input class="form-control" id="as-start" type="time" value="'+(a&&a.startTime?a.startTime:'08:00')+'" /></div>'+
     '<div class="form-group"><label>تا ساعت</label><input class="form-control" id="as-end" type="time" value="'+(a&&a.endTime?a.endTime:'09:30')+'" /></div>'+
     '<button type="button" class="btn btn-primary btn-block" data-id="'+idStr+'" onclick="saveAssign(this.dataset.id||null)">ذخیره</button>';
-  document.getElementById('modal').classList.add('show');
-}
-
-function filterTeacherStatsSelect(){
-  var q=(document.getElementById('assign-teacher-search')&&document.getElementById('assign-teacher-search').value||'').trim().toLowerCase();
-  var filt=document.getElementById('assign-teacher-filter');
-  if(!filt)return;
-  var cur=filt.value||'';
-  var allStaff=schoolData.staff||[];
-  var opts='<option value="">— انتخاب معلم —</option>';
-  allStaff.forEach(function(t){
-    var n=(t.name||'')+' '+(t.username||'');
-    if(q&&n.toLowerCase().indexOf(q)<0)return;
-    opts+='<option value="'+t.id+'"'+(cur===t.id?' selected':'')+'>'+(t.name||t.username||t.id)+'</option>';
-  });
-  filt.innerHTML=opts;
-  if(cur){try{filt.value=cur}catch(e){}}
-  renderTeacherScheduleStats();
+  openModal();
 }
 
 function filterAssignTeacherSelect(){
@@ -3749,7 +3831,9 @@ function filterAssignTeacherSelect(){
 function saveAssign(id){
   if(id==='null'||id==='undefined')id='';
   var teacherId=document.getElementById('as-teacher').value;
+  var teacherId2=(document.getElementById('as-teacher2')&&document.getElementById('as-teacher2').value)||'';
   var classId=document.getElementById('as-class').value;
+  var group=(document.getElementById('as-group')&&document.getElementById('as-group').value)||'';
   var dayOfWeek=parseInt(document.getElementById('as-day').value,10);
   var periodName=(document.getElementById('as-period').value||'').trim();
   var startTime=document.getElementById('as-start').value;
@@ -3757,13 +3841,15 @@ function saveAssign(id){
   var subject=(document.getElementById('as-subject').value||'').trim();
   if(!teacherId||!classId||!periodName)return toast('فیلدها را کامل کنید');
   if(!subject)return toast('نام درس را وارد کنید');
+  if(teacherId2&&teacherId2===teacherId)teacherId2='';
   if(!Array.isArray(schoolData.assignments))schoolData.assignments=[];
+  var fields={teacherId:teacherId,teacherId2:teacherId2||null,classId:classId,group:group||'',dayOfWeek:dayOfWeek,periodName:periodName,startTime:startTime,endTime:endTime,subject:subject};
   if(id){
     var a=schoolData.assignments.find(function(x){return x.id===id});
-    if(a)Object.assign(a,{teacherId:teacherId,classId:classId,dayOfWeek:dayOfWeek,periodName:periodName,startTime:startTime,endTime:endTime,subject:subject});
-    else schoolData.assignments.push({id:id,teacherId:teacherId,classId:classId,dayOfWeek:dayOfWeek,periodName:periodName,startTime:startTime,endTime:endTime,subject:subject});
+    if(a)Object.assign(a,fields);
+    else schoolData.assignments.push(Object.assign({id:id},fields));
   }else{
-    schoolData.assignments.push({id:uid(),teacherId:teacherId,classId:classId,dayOfWeek:dayOfWeek,periodName:periodName,startTime:startTime,endTime:endTime,subject:subject});
+    schoolData.assignments.push(Object.assign({id:uid()},fields));
   }
   if(id&&Array.isArray(schoolData.deletedAssignmentIds)){
     schoolData.deletedAssignmentIds=schoolData.deletedAssignmentIds.filter(function(x){return x!==id});
@@ -3776,6 +3862,7 @@ function saveAssign(id){
   toast('ذخیره شد — ارسال به سرور...');
   cloudPushAppData(true).then(function(){toast('برنامه روی سرور ذخیره شد')}).catch(function(){toast('محلی ذخیره شد')});
 }
+
 function delAssign(id){
   if(!id)return;
   if(!confirm('حذف این برنامه؟'))return;
@@ -3794,6 +3881,12 @@ function delAssign(id){
 function importAssignmentsExcel(ev){
   var f=ev&&ev.target&&ev.target.files&&ev.target.files[0];
   if(!f)return;
+  var name=(f.name||'').toLowerCase();
+  if(name.indexOf('.xls')>=0&&name.indexOf('.csv')<0){
+    toast('فایل Excel خام (.xlsx) را مستقیم نفرستید — از Excel گزینه Save As → CSV UTF-8 بگیرید و همان CSV را انتخاب کنید');
+    try{ev.target.value=''}catch(e){}
+    return;
+  }
   var reader=new FileReader();
   reader.onload=function(){
     try{importAssignmentsFromText(String(reader.result||''))}catch(e){toast('خطا در خواندن فایل');console.error(e)}
@@ -3831,20 +3924,37 @@ function importAssignmentsFromText(text){
     var n=parseInt(s,10);if(!isNaN(n)&&n>=0&&n<=6)return n;
     return null;
   }
+  function _normName(s){
+    s=String(s||'').split(String.fromCharCode(0x200c)).join(' ').split('ي').join('ی').split('ك').join('ک');
+    s=s.split(' ').filter(Boolean).join(' ');
+    return s;
+  }
   function findStaff(name){
-    name=String(name||'').trim();
-    if(!name)return null;
+    name=_normName(name);
+    if(!name||name==='نامشخص')return null;
     var staff=schoolData.staff||[];
-    var exact=staff.find(function(t){return (t.name||'')===name});
+    var exact=staff.find(function(t){return _normName(t.name)===name});
     if(exact)return exact;
-    var partial=staff.find(function(t){return (t.name||'').indexOf(name)>=0||name.indexOf(t.name||'')>=0});
+    var compact=name.split(' ').join('');
+    var byCompact=staff.find(function(t){return _normName(t.name).split(' ').join('')===compact});
+    if(byCompact)return byCompact;
+    // شامل بودن دو طرفه
+    var partial=staff.find(function(t){
+      var tn=_normName(t.name);
+      if(!tn)return false;
+      if(tn.indexOf(name)>=0||name.indexOf(tn)>=0)return true;
+      var tparts=tn.split(' ').filter(function(x){return x.length>1});
+      var nparts=name.split(' ').filter(function(x){return x.length>1});
+      if(nparts.length&&tparts.length){
+        var hit=0;
+        nparts.forEach(function(p){if(tparts.indexOf(p)>=0)hit++});
+        if(hit>=Math.min(2,nparts.length))return true;
+        // فامیل یکسان
+        if(nparts[nparts.length-1]===tparts[tparts.length-1]&&nparts[nparts.length-1].length>=3)return true;
+      }
+      return false;
+    });
     if(partial)return partial;
-    var parts=name.split(' ').filter(Boolean);
-    var last=parts.length?parts[parts.length-1]:'';
-    if(last.length>=3){
-      var byLast=staff.find(function(t){return (t.name||'').indexOf(last)>=0});
-      if(byLast)return byLast;
-    }
     return null;
   }
   function findClass(name){
@@ -3858,6 +3968,9 @@ function importAssignmentsFromText(text){
   var first=splitLine(lines[0]);
   if(first.some(function(h){h=String(h||'');return h.indexOf('معلم')>=0||h.indexOf('کلاس')>=0||h.toLowerCase()==='teacher'}))start=1;
   if(!Array.isArray(schoolData.assignments))schoolData.assignments=[];
+  // واردات جدید = جایگزین کامل لیست برنامه
+  schoolData.assignments=[];
+  schoolData.deletedAssignmentIds=[];
   var ok=0,fail=0,errors=[];
   function normShift(s){
     s=String(s||'').split(' ').join('').split('ي').join('ی').split('ك').join('ک');
@@ -3891,27 +4004,92 @@ function importAssignmentsFromText(text){
     if(!teacherName||!className||!subject){fail++;errors.push('ردیف '+(li+1)+': معلم/کلاس/درس خالی');continue}
     var st=findStaff(teacherName);
     var cl=findClass(className);
-    if(!st){fail++;errors.push('ردیف '+(li+1)+': معلم «'+teacherName+'» پیدا نشد');continue}
-    if(!cl){fail++;errors.push('ردیف '+(li+1)+': کلاس «'+className+'» پیدا نشد');continue}
+    if(!cl){
+      // کلاس نبود → بساز تا برنامه نپرد
+      if(!Array.isArray(schoolData.classes))schoolData.classes=[];
+      cl={id:uid(),name:className,shift:shiftVal||'1'};
+      schoolData.classes.push(cl);
+      errors.push('ردیف '+(li+1)+': کلاس «'+className+'» ساخته شد');
+    }
+    if(!st){
+      // معلم نبود → بدون قطع برنامه؛ رکورد موقت معلم بساز تا بعداً کامل شود
+      if(!Array.isArray(schoolData.staff))schoolData.staff=[];
+      var pendingId='pending_'+String(teacherName||'x').split(' ').join('_')+'_'+String(li);
+      // اگر قبلاً با همین نام موقت ساخته شده، همان را بگیر
+      st=schoolData.staff.find(function(t){return (t.name||'')===teacherName||t.id===pendingId});
+      if(!st){
+        st={id:uid(),name:teacherName||('معلم ردیف '+(li+1)),role:'teacher',username:'',pass:'123456',pending:true};
+        schoolData.staff.push(st);
+      }
+      errors.push('ردیف '+(li+1)+': معلم «'+teacherName+'» در تیم نبود — موقت ثبت شد (بعداً کامل کنید)');
+    }
     // شیفت روی کلاس هم ست شود (صبح=1 عصر=2) تا فیلتر شیفت کار کند
     if(shiftVal){
       cl.shift=shiftVal;
     }
     schoolData.assignments.push({
-      id:uid(),teacherId:st.id,classId:cl.id,dayOfWeek:(dayVal!=null?dayVal:0),
-      periodName:periodName,startTime:startT||'08:00',endTime:endT||'09:15',subject:subject,
-      shift:shiftVal||(cl.shift!=null?String(cl.shift):null)
+      id:uid(),
+      teacherId:st.id,
+      teacherName:st.name||teacherName||'',
+      classId:cl.id,
+      className:cl.name||className||'',
+      dayOfWeek:(dayVal!=null?dayVal:0),
+      periodName:periodName,
+      startTime:startT||'08:00',
+      endTime:endT||'09:15',
+      subject:subject,
+      shift:shiftVal||(cl.shift!=null?String(cl.shift):'1')
     });
     ok++;
   }
+
+  // اتصال مجدد معلم‌ها با نام (اگر در تیم بودند)
+  (schoolData.assignments||[]).forEach(function(a){
+    if(!a)return;
+    var st2=findStaff(a.teacherName||'');
+    if(st2){a.teacherId=st2.id;a.teacherName=st2.name||a.teacherName}
+  });
+
   schoolData._cloudUpdatedAtMs=Date.now();
+  // ارسال کامل برنامه به سرور (جایگزین، نه ناقص)
+  schoolData.replaceAssignments=true;
+  schoolData.clearAssignments=false;
+  schoolData.deletedAssignmentIds=[];
   saveSchoolData();
-  try{cloudPushAppData(true).catch(function(){})}catch(e){}
   renderAssignments();
   try{renderTeacherScheduleStats()}catch(e){}
   var msg='وارد شد: '+ok+' مورد';
-  if(fail)msg+=' | خطا: '+fail;
-  toast(msg);
+  if(errors.length)msg+=' | هشدار: '+errors.length;
+  var totalAssign=(schoolData.assignments||[]).length;
+  toast(msg+' — ارسال '+totalAssign+' برنامه به سرور...');
+  Promise.resolve()
+    .then(function(){return cloudPushAppData(true)})
+    .then(function(){
+      // تأیید از خود Worker
+      return apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{retries:2,timeoutMs:30000});
+    })
+    .then(function(data){
+      var remote=(data&&data.data)||{};
+      var n=Array.isArray(remote.assignments)?remote.assignments.length:0;
+      if(n<totalAssign){
+        throw new Error('سرور فقط '+n+' از '+totalAssign+' برنامه را دارد');
+      }
+      if(typeof cloudPushStaff==='function'&&session&&session.schoolId){
+        return cloudPushStaff(session.schoolId,schoolData.staff||[]).then(function(){return n});
+      }
+      return n;
+    })
+    .then(function(n){
+      schoolData.replaceAssignments=false;
+      schoolData.clearAssignments=false;
+      saveSchoolData();
+      toast('تأیید سرور: '+(n!=null?n:totalAssign)+' برنامه ذخیره شد ✓ — روی بقیه دستگاه‌ها خروج/ورود کنید');
+    })
+    .catch(function(e){
+      var m=(e&&e.message)?String(e.message):'';
+      toast('ورود محلی شد؛ سرور تأیید نکرد'+(m?(' — '+m.slice(0,100)):'')+' — همگام را دوباره بزنید');
+      console.warn(e);
+    });
   if(errors.length){
     console.warn(errors);
     try{
@@ -3953,17 +4131,31 @@ function renderAssignments(){
     });
   }
   try{renderTeacherScheduleStats()}catch(e){}
-  if(!arr.length){list.innerHTML='<p class="hint">هنوز کلاسی به معلمی اختصاص داده نشده.</p>';return}
+  var totalAll=(schoolData.assignments||[]).length;
+  if(!arr.length){list.innerHTML='<p class="hint">هنوز کلاسی به معلمی اختصاص داده نشده. (کل ذخیره‌شده: '+totalAll+')</p>';return}
   arr=arr.slice().sort(function(a,b){
+    function classKey(x){
+      var c=(schoolData.classes||[]).find(function(z){return z.id===x.classId});
+      var n=(c&&c.name)||x.className||'';
+      var num=parseInt(String(n).replace(/[^0-9]/g,''),10);
+      return isNaN(num)?9999:num;
+    }
+    var ca=classKey(a),cb=classKey(b);if(ca!==cb)return ca-cb;
     var d=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d)return d;
     return String(a.startTime||'').localeCompare(String(b.startTime||''));
   });
-  list.innerHTML=arr.map(function(a){
+  var head='<p class="hint" style="margin-bottom:8px">نمایش '+arr.length+' از '+totalAll+' برنامه</p>';
+  list.innerHTML=head+arr.map(function(a){
     var t=(schoolData.staff||[]).find(function(x){return x.id===a.teacherId});
+    var tName=(t&&t.name)||a.teacherName||'معلم';
+    var t2=(schoolData.staff||[]).find(function(x){return x.id===a.teacherId2});
+    if(t2&&t2.name)tName+=' + '+t2.name;
     var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
-    var sh=c&&c.shift!=null?(String(c.shift)==='2'?'عصر':'صبح'):'';
+    var cName=(c&&c.name)||a.className||'کلاس';
+    if(a.group)cName+=' (گروه '+a.group+')';
+    var sh=a.shift? (String(a.shift)==='2'||a.shift==='عصر'?'عصر':'صبح') : (c&&c.shift!=null?(String(c.shift)==='2'?'عصر':'صبح'):'');
     var idStr=String(a.id||'');
-    return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(sh?' · '+sh:'')+(a.subject?' · '+a.subject:'')+' → '+(t?t.name:'معلم')+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button type="button" class="btn btn-outline btn-sm" data-id="'+idStr+'" onclick="openAssignModal(this.dataset.id)">ویرایش</button><button type="button" class="btn btn-danger btn-sm" data-id="'+idStr+'" onclick="delAssign(this.dataset.id)">حذف</button></div>';
+    return '<div class="list-item"><div><div class="name">'+cName+(sh?' · '+sh:'')+(a.subject?' · '+a.subject:'')+' → '+tName+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button type="button" class="btn btn-outline btn-sm" data-id="'+idStr+'" onclick="openAssignModal(this.dataset.id)">ویرایش</button><button type="button" class="btn btn-danger btn-sm" data-id="'+idStr+'" onclick="delAssign(this.dataset.id)">حذف</button></div>';
   }).join('');
 }
 function renderTeacherScheduleStats(){
@@ -4012,7 +4204,14 @@ function openTakeAtt(assignId){
   const c=schoolData.classes.find(x=>x.id===currentAssign.classId);
   const done=isSlotSubmittedToday(assignId);
   document.getElementById('take-title').textContent=(c?c.name:'کلاس')+(currentAssign.subject?' · '+currentAssign.subject:'')+' — '+(currentAssign.periodName||'')+(done?' (قبلاً ثبت شده)':'');
-  const st=schoolData.students.filter(s=>s.classId===currentAssign.classId);
+  const st=schoolData.students.filter(function(s){
+    if(s.classId!==currentAssign.classId)return false;
+    var g=currentAssign.group||'';
+    if(!g||g==='همه'||g==='all')return true;
+    var sg=String(s.group||s.section||'').trim();
+    if(!sg)return true;
+    return sg===String(g)||sg==='گروه '+g;
+  });
   // prefill from last submission today if any
   let lastMap={};
   if(done){
@@ -4021,7 +4220,7 @@ function openTakeAtt(assignId){
   }
   document.getElementById('take-list').innerHTML=st.length?st.map(s=>{
     const cur=lastMap[s.id]||'present';
-    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><select class="form-control att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present"'+(cur==='present'?' selected':'')+'>حاضر</option><option value="absent"'+(cur==='absent'?' selected':'')+'>غایب</option><option value="late"'+(cur==='late'?' selected':'')+'>تأخیر</option></select></div>';
+    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div><select class="form-control att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present"'+(cur==='present'?' selected':'')+'>حاضر</option><option value="absent"'+(cur==='absent'?' selected':'')+'>غایب</option><option value="late"'+(cur==='late'?' selected':'')+'>تأخیر</option></select></div>';
   }).join(''):'<p class="hint">دانش‌آموزی در این کلاس نیست</p>';
   const btn=document.querySelector('#page-take-att .btn-success');
   if(btn){btn.disabled=false;btn.textContent=done?'به‌روزرسانی و ارسال مجدد':'ثبت و ارسال برای مدیر/معاون';btn.onclick=submitAttendance}
@@ -4033,7 +4232,7 @@ let teacherPerfClassId=null;
 function renderTeacherClassList(){
   const box=document.getElementById('teacher-class-list');
   if(!box||!userSession)return;
-  const myClassIds=[...new Set((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).map(a=>a.classId))];
+  const myClassIds=[...new Set((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).map(a=>a.classId))];
   if(!myClassIds.length){box.innerHTML='<p class="hint">کلاسی اختصاص داده نشده</p>';return}
   box.innerHTML=myClassIds.map(cid=>{
     const c=(schoolData.classes||[]).find(x=>x.id===cid);
@@ -4181,7 +4380,7 @@ function renderTeacherJournal(){
   return;
   const box=document.getElementById('teacher-journal');
   if(!box||!userSession)return;
-  const myClassIds=[...new Set((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).map(a=>a.classId))];
+  const myClassIds=[...new Set((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).map(a=>a.classId))];
   if(!myClassIds.length){box.innerHTML='<p class="hint">کلاسی به شما اختصاص داده نشده.</p>';return}
   let html='';
   myClassIds.forEach(cid=>{
@@ -4991,7 +5190,7 @@ function delAtt(id){
   if(!a)return;
   // معلم حق تغییر نمره انضباط ندارد — فقط مدیر/معاون؛ حضور خود معلم جدا است
   if(!canManage()){
-    if(!(a.fromTeacher&&userSession&&a.teacherId===userSession.staffId)){
+    if(!(a.fromTeacher&&userSession&&(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id))){
       return toast('فقط مدیر و معاون می‌توانند موارد انضباطی را حذف کنند');
     }
   }
@@ -5193,7 +5392,7 @@ function smsModeAllowsSim(){const m=getSmsCfg().mode;return m==='sim'||m==='both
 
 
 function teacherClassOptions(){
-  return [...new Set((schoolData.assignments||[]).filter(a=>a.teacherId===userSession.staffId).map(a=>a.classId))]
+  return [...new Set((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).map(a=>a.classId))]
     .map(id=>(schoolData.classes||[]).find(c=>c.id===id)).filter(Boolean);
 }
 function teacherSubjectsForClass(classId){
@@ -5224,7 +5423,7 @@ function canEditExam(ex){
   if(ex.teacherId&&ex.teacherId===userSession.staffId)return true;
   // امتحان‌های قدیمی بدون teacherId: اگر کلاس در برنامه معلم باشد
   if(!ex.teacherId){
-    return (schoolData.assignments||[]).some(function(a){return a.teacherId===userSession.staffId&&a.classId===ex.classId});
+    return (schoolData.assignments||[]).some(function(a){return (a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)&&a.classId===ex.classId});
   }
   return false;
 }
@@ -5240,7 +5439,7 @@ function renderExams(){
   if(isTeacher()&&userSession){
     list=list.filter(function(ex){
       return ex.teacherId===userSession.staffId||
-        (!ex.teacherId&&(schoolData.assignments||[]).some(function(a){return a.teacherId===userSession.staffId&&a.classId===ex.classId}));
+        (!ex.teacherId&&(schoolData.assignments||[]).some(function(a){return (a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)&&a.classId===ex.classId}));
     });
   }
   if(!list.length){
@@ -5333,9 +5532,9 @@ function openExamScores(id){
   document.getElementById('exam-scores-list').innerHTML=stus.map(function(s){
     const sc=(ex.scores&&ex.scores[s.id]!=null)?ex.scores[s.id]:'';
     if(editable){
-      return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><input type="number" step="0.25" class="form-control ex-score" data-sid="'+s.id+'" value="'+sc+'" style="width:90px" placeholder="—" /></div>';
+      return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div><input type="number" step="0.25" class="form-control ex-score" data-sid="'+s.id+'" value="'+sc+'" style="width:90px" placeholder="—" /></div>';
     }
-    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+'</div></div><strong style="color:var(--primary)">'+(sc!==''?sc:'—')+'</strong></div>';
+    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div><strong style="color:var(--primary)">'+(sc!==''?sc:'—')+'</strong></div>';
   }).join('')||'<p class="hint">دانش‌آموزی نیست</p>';
 }
 async function saveExamScores(){
@@ -5436,20 +5635,42 @@ async function resetSchoolYear(){
   if(!keepC)schoolData.classes=[];
   if(!keepS)schoolData.students=[];
   if(!keepT){schoolData.staff=[];schoolData.colleagues=[];}
-  if(!keepA)schoolData.assignments=[];
-  // عملکرد همیشه پاک
+  if(!keepA){
+    // همه idهای برنامه را حذف‌شده علامت بزن تا سرور برنگرداند
+    if(!Array.isArray(schoolData.deletedAssignmentIds))schoolData.deletedAssignmentIds=[];
+    (schoolData.assignments||[]).forEach(function(a){
+      if(a&&a.id&&schoolData.deletedAssignmentIds.indexOf(a.id)<0)schoolData.deletedAssignmentIds.push(a.id);
+    });
+    schoolData.assignments=[];
+    schoolData.replaceAssignments=true;
+    schoolData.clearAssignments=true;
+  }
+  // عملکرد همیشه کامل پاک — و به سرور هم اعلام ریست
   schoolData.attendance=[];
   schoolData.submissions=[];
   schoolData.exams=[];
   schoolData.messages=[];
+  schoolData.absentSmsSent={};
+  schoolData.deletedSubmissionIds=[];
+  schoolData.resetYear=true;
+  schoolData.clearPerformance=true;
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
-  toast('در حال ارسال بازنشانی به سرور...');
+  toast('در حال ارسال بازنشانی کامل به سرور...');
   try{
     await cloudPushAppData(true);
+    // پاک کردن جدول جداگانه submissions روی سرور
+    try{
+      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/submissions/clear',{method:'POST',body:{},retries:2,timeoutMs:30000});
+    }catch(e2){console.warn('clear submissions table',e2)}
     if(session&&session.schoolId)await cloudPushStaff(session.schoolId,schoolData.staff||[]);
-    toast('بازنشانی سال انجام شد ✓');
-  }catch(e){toast('محلی پاک شد؛ ارسال سرور ناموفق — دوباره همگام کنید')}
+    schoolData.replaceAssignments=false;
+    schoolData.clearAssignments=false;
+    schoolData.resetYear=false;
+    schoolData.clearPerformance=false;
+    saveSchoolData();
+    toast('بازنشانی کامل انجام شد ✓');
+  }catch(e){var m=(e&&e.message)?String(e.message):'';toast('محلی پاک شد؛ ارسال سرور ناموفق'+(m?(' — '+m.slice(0,80)):'')+' — دوباره همگام کنید')}
   try{renderHome();renderClasses();renderTeam();renderReviewedSheet()}catch(e){}
 }
 function renderSettings(){
