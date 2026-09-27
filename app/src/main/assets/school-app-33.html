@@ -2036,10 +2036,10 @@ function moveClass(id,dir){
 function classesForRole(){
   let list=(schoolData.classes||[]).slice();
   // معلم: فقط کلاس‌هایی که در برنامه به او اختصاص داده شده
-  if(isTeacher()&&userSession&&userSession.staffId){
+  if(isTeacher()&&userSession){
     const ids={};
     (schoolData.assignments||[]).forEach(function(a){
-      if((a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)&&a.classId)ids[a.classId]=true;
+      if(a&&a.classId&&isMyAssignment(a))ids[a.classId]=true;
     });
     list=list.filter(function(c){return ids[c.id]});
     return sortClassesList(list);
@@ -2053,8 +2053,8 @@ function classesForRole(){
   return sortClassesList(list);
 }
 function teacherClassIds(){
-  if(!isTeacher()||!userSession||!userSession.staffId)return [];
-  return [...new Set((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).map(a=>a.classId))];
+  if(!isTeacher()||!userSession)return [];
+  return [...new Set((schoolData.assignments||[]).filter(function(a){return isMyAssignment(a);}).map(function(a){return a.classId;}))];
 }
 function classTitle(c){
   if(!c)return '';
@@ -2064,7 +2064,7 @@ function classTitle(c){
 function canAccessClass(classId){
   if(isManager())return true;
   if(isTeacher()){
-    return (schoolData.assignments||[]).some(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)&&a.classId===classId);
+    return (schoolData.assignments||[]).some(function(a){return a&&a.classId===classId&&isMyAssignment(a);});
   }
   const c=(schoolData.classes||[]).find(x=>x.id===classId);
   if(!c)return false;
@@ -4198,6 +4198,76 @@ function renderTeacherScheduleStats(){
     return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(sh?' · '+sh:'')+(a.subject?' · '+a.subject:'')+' → '+(t?t.name:'معلم')+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button type="button" class="btn btn-outline btn-sm" data-id="'+idStr+'" onclick="openAssignModal(this.dataset.id)">ویرایش</button><button type="button" class="btn btn-danger btn-sm" data-id="'+idStr+'" onclick="delAssign(this.dataset.id)">حذف</button></div>';
   }).join('');
 }
+function isMyAssignment(a){
+  if(!a||!userSession)return false;
+  var ids={};
+  if(userSession.staffId)ids[String(userSession.staffId)]=true;
+  if(userSession.id)ids[String(userSession.id)]=true;
+  if(a.teacherId&&ids[String(a.teacherId)])return true;
+  if(a.teacherId2&&ids[String(a.teacherId2)])return true;
+  var myName=String(userSession.name||'').trim();
+  var myUser=String(userSession.username||'').trim();
+  if(myName&&(String(a.teacherName||'')===myName||String(a.teacherName2||'')===myName))return true;
+  if(myUser&&(String(a.teacherUsername||'')===myUser||String(a.teacherUsername2||'')===myUser))return true;
+  return false;
+}
+function isSlotSubmittedToday(assignId){
+  if(!assignId||!userSession)return false;
+  var tid=userSession.staffId||userSession.id||'';
+  return (schoolData.submissions||[]).some(function(s){
+    if(!s||s.assignId!==assignId||s.date!==todayStr())return false;
+    if(s.status==='rejected')return false;
+    if(!tid)return true;
+    return String(s.teacherId)===String(tid)||String(s.teacherId)===String(userSession.staffId)||String(s.teacherId)===String(userSession.id);
+  });
+}
+function renderTeacherDay(){
+  var box=document.getElementById('teacher-slots');
+  var label=document.getElementById('teacher-day-label');
+  if(!box)return;
+  if(!userSession||!isTeacher()){
+    box.innerHTML='<p class="hint">فقط برای معلم</p>';
+    return;
+  }
+  var now=new Date();
+  var dow=now.getDay();
+  var dayNames=(typeof DAYS!=='undefined'&&DAYS.length)?DAYS:['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
+  var dayName=dayNames[dow]||'';
+  if(label)label.textContent='امروز: '+dayName+' · '+formatDateFa(todayStr());
+  var mine=(schoolData.assignments||[]).filter(function(a){
+    if(!isMyAssignment(a))return false;
+    if(a.dayOfWeek===''||a.dayOfWeek==null||typeof a.dayOfWeek==='undefined')return true;
+    return parseInt(a.dayOfWeek,10)===dow;
+  });
+  mine.sort(function(a,b){return String(a.startTime||a.periodName||'').localeCompare(String(b.startTime||b.periodName||''),'fa');});
+  if(!mine.length){
+    var anyMine=(schoolData.assignments||[]).filter(isMyAssignment);
+    if(!anyMine.length){
+      box.innerHTML='<p class="hint">در برنامه کلاسی به شما اختصاص داده نشده. مدیر باید در بخش برنامه شما را به کلاس/زنگ وصل کند و «ارسال به سرور» بزند. بعد شما دکمه همگام‌سازی را بزنید.</p>';
+    }else{
+      box.innerHTML='<p class="hint">برای <b>امروز ('+dayName+')</b> زنگی ندارید. در برنامه شما '+anyMine.length+' زنگ در روزهای دیگر ثبت شده است.</p>';
+    }
+    return;
+  }
+  box.innerHTML=mine.map(function(a){
+    var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
+    var done=isSlotSubmittedToday(a.id);
+    var stus=(schoolData.students||[]).filter(function(s){
+      if(s.classId!==a.classId)return false;
+      var g=a.group||'';
+      if(!g||g==='همه'||g==='all')return true;
+      var sg=String(s.group||s.section||'').trim();
+      if(!sg)return true;
+      return sg===String(g)||sg==='گروه '+g;
+    });
+    return '<div class="list-item" style="flex-wrap:wrap;gap:8px">'+
+      '<div style="flex:1;min-width:140px"><div class="name">'+(c?c.name:'کلاس')+(a.subject?(' · '+a.subject):'')+'</div>'+
+      '<div class="meta">'+(a.periodName||'زنگ')+(a.startTime?(' · '+a.startTime):'')+(a.group&&a.group!=='همه'&&a.group!=='all'?(' · گروه '+a.group):'')+' · '+stus.length+' دانش‌آموز</div></div>'+
+      (done?'<span class="badge badge-ok">ثبت‌شده</span>':'<span class="badge badge-wait">ثبت نشده</span>')+
+      '<button class="btn btn-sm '+(done?'btn-outline':'btn-primary')+'" type="button" onclick="openTakeAtt(\''+a.id+'\')">'+(done?'ویرایش':'حضور و غیاب')+'</button>'+
+      '</div>';
+  }).join('');
+}
 function openTakeAtt(assignId){
   currentAssign=(schoolData.assignments||[]).find(a=>a.id===assignId);
   if(!currentAssign)return;
@@ -4232,7 +4302,7 @@ let teacherPerfClassId=null;
 function renderTeacherClassList(){
   const box=document.getElementById('teacher-class-list');
   if(!box||!userSession)return;
-  const myClassIds=[...new Set((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).map(a=>a.classId))];
+  const myClassIds=[...new Set((schoolData.assignments||[]).filter(function(a){return isMyAssignment(a);}).map(function(a){return a.classId;}))];
   if(!myClassIds.length){box.innerHTML='<p class="hint">کلاسی اختصاص داده نشده</p>';return}
   box.innerHTML=myClassIds.map(cid=>{
     const c=(schoolData.classes||[]).find(x=>x.id===cid);
@@ -4257,13 +4327,17 @@ function parseFaDateInput(s){
 /** آیا این رکورد حضور متعلق به معلم فعلی است؟ */
 function isMyTeacherAttendance(a){
   if(!a)return false;
-  if(!isTeacher()||!userSession||!userSession.staffId)return true;
+  if(!isTeacher()||!userSession)return true;
+  var myIds={};
+  if(userSession.staffId)myIds[String(userSession.staffId)]=true;
+  if(userSession.id)myIds[String(userSession.id)]=true;
+  if(!Object.keys(myIds).length)return true;
   // صریح teacherId روی رکورد
-  if(a.teacherId)return String(a.teacherId)===String(userSession.staffId);
+  if(a.teacherId)return !!myIds[String(a.teacherId)];
   // از طریق submission
   if(a.submissionId){
     var sub=(schoolData.submissions||[]).find(function(x){return x.id===a.submissionId});
-    if(sub&&sub.teacherId)return String(sub.teacherId)===String(userSession.staffId);
+    if(sub&&sub.teacherId)return !!myIds[String(sub.teacherId)];
   }
   // حضور معلم بدون شناسه: فقط اگر fromTeacher نباشد (موارد مدیر) را به معلم نشان نده؛
   // موارد fromTeacher بدون submissionId را به معلم فعلی نشان نده تا حضور معلم دیگر لو نرود
