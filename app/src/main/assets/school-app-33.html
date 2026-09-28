@@ -1393,13 +1393,34 @@ async function cloudPushAppData(force){
       var remote=(remoteChk&&remoteChk.data)||null;
       var remoteRich=remote?_dataRichness(remote):0;
       // اگر سرور خیلی پرتر است و این یک پاک‌سازی عمدی نیست → ارسال را متوقف کن و از سرور بگیر
-      if(remote&&remoteRich>0&&localRich<remoteRich*0.5&&!schoolData.resetYear&&!schoolData.clearStructure&&!schoolData.replaceAssignments){
-        console.warn('refuse destructive push',localRich,remoteRich);
-        applyRemoteAppData(remote,remote.updatedAtMs||Date.now(),true);
-        schoolData._localDirtyAt=0;
-        try{renderHome()}catch(e){}
-        toast('داده سرور کامل‌تر بود — از سرور بازیابی شد (ارسال لغو شد)',5000);
+      if(schoolData._blockStructurePushUntil&&Date.now()<schoolData._blockStructurePushUntil&&!schoolData.replaceStructure){
+        console.warn('block structure push after pull');
         return;
+      }
+      if(remote){
+        var rSt=((remote.students)||[]).length,lSt=((schoolData.students)||[]).length;
+        var rCl=((remote.classes)||[]).length,lCl=((schoolData.classes)||[]).length;
+        // دانش‌آموز سرور بیشتر → هرگز با لیست محلی ناقص ارسال نکن
+        if(rSt>lSt&&!schoolData.replaceStructure){
+          console.warn('refuse student shrink push',lSt,rSt);
+          applyRemoteAppData(remote,remote.updatedAtMs||Date.now(),true);
+          if(Array.isArray(remote.students))schoolData.students=remote.students.slice();
+          if(Array.isArray(remote.staff))schoolData.staff=remote.staff.slice();
+          if(Array.isArray(remote.classes))schoolData.classes=remote.classes.slice();
+          schoolData._localDirtyAt=0;
+          try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+          try{renderHome()}catch(e){}
+          toast('سرور دانش‌آموز بیشتری داشت — از سرور گرفته شد',4500);
+          return;
+        }
+        if(remoteRich>0&&localRich<remoteRich*0.5&&!schoolData.resetYear&&!schoolData.clearStructure&&!schoolData.replaceAssignments){
+          console.warn('refuse destructive push',localRich,remoteRich);
+          applyRemoteAppData(remote,remote.updatedAtMs||Date.now(),true);
+          schoolData._localDirtyAt=0;
+          try{renderHome()}catch(e){}
+          toast('داده سرور کامل‌تر بود — از سرور بازیابی شد (ارسال لغو شد)',5000);
+          return;
+        }
       }
     }catch(e){console.warn('pre-push check',e)}
   }
@@ -1419,7 +1440,7 @@ async function cloudPushAppData(force){
       return o;
     });
     // فقط مدیر می‌تواند ساختار کامل را با replace بفرستد
-    var allowReplace=!!isMgr&&(!!schoolData.replaceStructure||!!force);
+    var allowReplace=!!isMgr&&!!schoolData.replaceStructure;
     const payload={
       classes:schoolData.classes||[],
       students:_studentsSlim,
@@ -1690,7 +1711,23 @@ async function cloudPullAppData(force){
       try{if(remoteTs>=dirty)schoolData._localDirtyAt=0}catch(e){}
       return true;
     }
-    if(!force&&dirty&&localTs>remoteTs&&lRich>0&&canManage()){
+    if(!force&&dirty&&localTs>remoteTs&&lRich>0&&userSession&&userSession.role==='manager'){
+      // فقط اگر واقعاً کاربر همین دستگاه چیزی ذخیره کرده — نه دادهٔ کهنهٔ کش
+      if(schoolData._blockStructurePushUntil&&Date.now()<schoolData._blockStructurePushUntil){
+        applyRemoteAppData(d,remoteTs||Date.now(),true);
+        schoolData._localDirtyAt=0;
+        return true;
+      }
+      // اگر سرور دانش‌آموز بیشتری دارد، push نکن
+      var rSt=((d.students)||[]).length,lSt=((schoolData.students)||[]).length;
+      if(rSt>lSt){
+        applyRemoteAppData(d,remoteTs||Date.now(),true);
+        if(Array.isArray(d.students))schoolData.students=d.students.slice();
+        if(Array.isArray(d.staff))schoolData.staff=d.staff.slice();
+        schoolData._localDirtyAt=0;
+        try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+        return true;
+      }
       cloudPushAppData(true).catch(function(){});
       return false;
     }
@@ -1715,14 +1752,31 @@ async function cloudPullAppData(force){
       }catch(e){}
     }
     if(force||needFull||lRich===0||remoteTs>=localTs||rRich>=lRich){
-      // اگر سرور جدیدتر است، forceAll تا حذف معلم/کلاس از سرور اعمال شود و از local برنگردد
       var fullReplace=!!force||!!needFull||lRich===0||(remoteTs>localTs);
+      var isMgr=userSession&&userSession.role==='manager';
+      // مدیر با force: داده سرور مطلق است — گوشی قدیمی چیزی برنمی‌گرداند
+      if(isMgr&&force){
+        fullReplace=true;
+        applyRemoteAppData(d,remoteTs||Date.now(),true);
+        if(Array.isArray(d.classes))schoolData.classes=d.classes.slice();
+        if(Array.isArray(d.students))schoolData.students=d.students.slice();
+        if(Array.isArray(d.staff))schoolData.staff=d.staff.slice();
+        if(Array.isArray(d.assignments)&&d.assignments.length)schoolData.assignments=d.assignments.slice();
+        if(Array.isArray(d.colleagues))schoolData.colleagues=d.colleagues.slice();
+        schoolData._localDirtyAt=0;
+        schoolData.replaceStructure=false;
+        schoolData._blockStructurePushUntil=Date.now()+8000;
+        schoolData._cloudUpdatedAtMs=remoteTs||Date.now();
+        try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+        try{fillSmsPanelForm()}catch(e){}
+        return true;
+      }
       applyRemoteAppData(d,remoteTs||Date.now(),fullReplace);
+      try{if(remoteTs>=(schoolData._localDirtyAt||0))schoolData._localDirtyAt=0}catch(e){}
       try{fillSmsPanelForm()}catch(e){}
       return true;
     }
-    // محلی جدیدتر و غنی‌تر → بفرست
-    if(userSession&&userSession.role==='manager'&&lRich>rRich&&lRich>0)cloudPushAppData(true).catch(function(){});
+    // هرگز بعد از pull خودکار push نکن — باعث برگشت داده قدیمی گوشی می‌شد
   }catch(e){console.warn('pull',e)}
   return false;
 }
@@ -3399,7 +3453,7 @@ async function saveClass(id){
     // شیفت فقط از لایسنس مادر می‌آید — ذخیره کلاس نباید دو شیفت را روشن کند
     schoolData.shifts=dualShift()?2:1;
     schoolData._cloudUpdatedAtMs=Date.now();
-    saveSchoolData();
+    schoolData.replaceStructure=true;saveSchoolData();
     closeModal();
     try{renderClasses();renderHome();}catch(e){}
     toast('ذخیره محلی شد — در حال ارسال به سرور...');
@@ -3463,7 +3517,7 @@ function saveStudent(id){
       schoolData.students.push({id:uid(),classId:currentClassId,name:name,phones:phones,note:note,group:group,photo:photo||''});
     }
     schoolData._cloudUpdatedAtMs=Date.now();
-    saveSchoolData();
+    schoolData.replaceStructure=true;saveSchoolData();
     if(canManage())cloudPushAppData(true).catch(function(){});
     closeModal();
     try{renderStudents();renderHome();}catch(e){}
@@ -3678,7 +3732,7 @@ function saveStaff(id){
       schoolData.staff.push({id:uid(),name:name,role:role,username:username,pass:pass,phone:phone,shift:shift,photo:photo||'',active:true});
     }
     schoolData._cloudUpdatedAtMs=Date.now();
-    saveSchoolData();
+    schoolData.replaceStructure=true;saveSchoolData();
     if(session&&session.schoolId){
       try{cloudPushStaff(session.schoolId,schoolData.staff);}catch(e){}
       cloudPushAppData(true).catch(function(){});
@@ -3697,7 +3751,7 @@ async function delStaff(id){
   schoolData.staff=(schoolData.staff||[]).filter(x=>x.id!==id);
   schoolData.assignments=(schoolData.assignments||[]).filter(a=>a.teacherId!==id);
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData();
+  schoolData.replaceStructure=true;saveSchoolData();
   renderTeam();
   toast('حذف محلی شد — در حال ارسال به سرور...');
   if(session&&session.schoolId){
