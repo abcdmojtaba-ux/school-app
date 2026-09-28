@@ -2206,9 +2206,9 @@ function classesForRole(){
   if(isTeacher()&&userSession){
     const ids={};
     (schoolData.assignments||[]).forEach(function(a){
-      if(a&&a.classId&&isMyAssignment(a))ids[a.classId]=true;
+      if(a&&a.classId&&isMyAssignment(a))ids[String(a.classId)]=true;
     });
-    list=list.filter(function(c){return ids[c.id]});
+    list=list.filter(function(c){return c&&ids[String(c.id)]});
     return sortClassesList(list);
   }
   const sh=myShift();
@@ -2230,10 +2230,11 @@ function classTitle(c){
 }
 function canAccessClass(classId){
   if(isManager())return true;
+  classId=String(classId||'');
   if(isTeacher()){
-    return (schoolData.assignments||[]).some(function(a){return a&&a.classId===classId&&isMyAssignment(a);});
+    return (schoolData.assignments||[]).some(function(a){return a&&String(a.classId)===classId&&isMyAssignment(a);});
   }
-  const c=(schoolData.classes||[]).find(x=>x.id===classId);
+  const c=(schoolData.classes||[]).find(function(x){return x&&String(x.id)===classId});
   if(!c)return false;
   const sh=myShift();
   if(sh){
