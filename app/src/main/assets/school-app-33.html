@@ -1332,6 +1332,11 @@ async function cloudPullStaff(schoolId){
 }
 async function cloudPushAppData(force){
   if(!SYNC_API||!session||!session.schoolId||!schoolData)return;
+  // فاز ورود: هیچ pushی مگر ترمیم صریح سرور خالی (allowLoginRestore)
+  if(window._loginPulling && !window._allowLoginRestore){
+    console.warn('cloudPush blocked during login pull');
+    return;
+  }
   var role=(userSession&&userSession.role)||'';
   var isTeach=role==='teacher';
   var isMgr=role==='manager';
@@ -1440,7 +1445,12 @@ async function cloudPushAppData(force){
       return o;
     });
     // فقط مدیر می‌تواند ساختار کامل را با replace بفرستد
-    var allowReplace=!!isMgr&&!!schoolData.replaceStructure;
+    // در فاز ورود یا تا ۲ دقیقه بعد از pull ورود، replaceStructure ممنوع
+    var blockStruct=!!window._loginPulling||(schoolData._blockStructurePushUntil&&Date.now()<schoolData._blockStructurePushUntil);
+    var allowReplace=!!isMgr&&!!schoolData.replaceStructure&&!blockStruct;
+    if(blockStruct&&schoolData.replaceStructure){
+      console.warn('structure replace blocked during login/sync gate');
+    }
     const payload={
       classes:schoolData.classes||[],
       students:_studentsSlim,
@@ -1485,7 +1495,10 @@ async function cloudPushAppData(force){
     schoolData.replaceStructure=false;
     schoolData.replaceAssignments=false;
     schoolData.clearAssignments=false;
-    try{saveSchoolData()}catch(e){}
+    schoolData.clearPerformance=false;
+    schoolData.resetYear=false;
+    schoolData.clearStructure=false;
+    try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
   }catch(e){
     console.warn('cloudPushAppData',e);
     if(force)throw e;
@@ -1718,7 +1731,8 @@ async function cloudPullAppData(force){
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
-      if(_dataRichness(schoolData)>0&&canManage()){
+      // فقط وقتی ورود تمام شده و سرور خالی است — ترمیم؛ در فاز login هرگز
+      if(!window._loginPulling&&_dataRichness(schoolData)>0&&canManage()){
         const lastFix=schoolData._lastEmptyPush||0;
         if(Date.now()-lastFix>60000){
           schoolData._lastEmptyPush=Date.now();
@@ -1748,7 +1762,8 @@ async function cloudPullAppData(force){
     }
     // سرور کاملاً خالی: اگر محلی داده دارد → سرور را ترمیم کن (پاک نکن)
     if(rRich===0){
-      if(lRich>0&&userSession&&userSession.role==='manager'){
+      // ترمیم سرور خالی فقط خارج از فاز ورود
+      if(!window._loginPulling&&lRich>0&&userSession&&userSession.role==='manager'){
         console.warn('server empty, restoring from local');
         schoolData._localDirtyAt=Date.now();
         cloudPushAppData(true).catch(function(){});
@@ -1758,12 +1773,20 @@ async function cloudPullAppData(force){
     // سرور داده دارد
     var dirty=schoolData._localDirtyAt||0;
     var remoteHasStructure=((d.classes||[]).length+(d.students||[]).length+(d.staff||[]).length)>0;
-    if(force||needFull||!localTs||remoteTs>=localTs||!dirty||remoteTs>=dirty){
-      applyRemoteAppData(d,remoteTs||Date.now(),!!remoteHasStructure);
-      try{if(remoteTs>=dirty)schoolData._localDirtyAt=0}catch(e){}
+    // force یا فاز ورود: همیشه سرور مرجع است — داده محلی کهنه جایگزین نشود
+    if(force||needFull||window._loginPulling||!localTs||remoteTs>=localTs||!dirty||remoteTs>=dirty){
+      applyRemoteAppData(d,remoteTs||Date.now(),true);
+      if(force||window._loginPulling){
+        if(Array.isArray(d.classes)&&d.classes.length)schoolData.classes=d.classes.slice();
+        if(Array.isArray(d.students)&&d.students.length)schoolData.students=d.students.slice();
+        if(Array.isArray(d.staff)&&d.staff.length)schoolData.staff=d.staff.slice();
+        if(Array.isArray(d.assignments))schoolData.assignments=d.assignments.slice();
+      }
+      try{schoolData._localDirtyAt=0}catch(e){}
+      try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
       return true;
     }
-    if(!force&&dirty&&localTs>remoteTs&&lRich>0&&userSession&&userSession.role==='manager'){
+    if(!force&&!window._loginPulling&&dirty&&localTs>remoteTs&&lRich>0&&userSession&&userSession.role==='manager'){
       // فقط اگر واقعاً کاربر همین دستگاه چیزی ذخیره کرده — نه دادهٔ کهنهٔ کش
       if(schoolData._blockStructurePushUntil&&Date.now()<schoolData._blockStructurePushUntil){
         applyRemoteAppData(d,remoteTs||Date.now(),true);
@@ -1804,20 +1827,23 @@ async function cloudPullAppData(force){
       }catch(e){}
     }
     if(force||needFull||lRich===0||remoteTs>=localTs||rRich>=lRich){
-      var fullReplace=!!force||!!needFull||lRich===0||(remoteTs>localTs);
-      var isMgr=userSession&&userSession.role==='manager';
-      // مدیر با force: داده سرور مطلق است — گوشی قدیمی چیزی برنمی‌گرداند
-      if(isMgr&&force){
+      var fullReplace=!!force||!!needFull||lRich===0||(remoteTs>localTs)||!!window._loginPulling;
+      // force یا ورود: برای همه نقش‌ها داده سرور مطلق است — گوشی قدیمی چیزی برنمی‌گرداند
+      if(force||window._loginPulling){
         fullReplace=true;
         applyRemoteAppData(d,remoteTs||Date.now(),true);
         if(Array.isArray(d.classes))schoolData.classes=d.classes.slice();
         if(Array.isArray(d.students))schoolData.students=d.students.slice();
         if(Array.isArray(d.staff))schoolData.staff=d.staff.slice();
-        if(Array.isArray(d.assignments)&&d.assignments.length)schoolData.assignments=d.assignments.slice();
+        if(Array.isArray(d.assignments))schoolData.assignments=d.assignments.slice();
         if(Array.isArray(d.colleagues))schoolData.colleagues=d.colleagues.slice();
+        if(Array.isArray(d.attendance))schoolData.attendance=d.attendance.slice();
+        if(Array.isArray(d.submissions))schoolData.submissions=d.submissions.slice();
+        if(Array.isArray(d.exams))schoolData.exams=d.exams.slice();
+        if(Array.isArray(d.messages))schoolData.messages=d.messages.slice();
         schoolData._localDirtyAt=0;
         schoolData.replaceStructure=false;
-        schoolData._blockStructurePushUntil=Date.now()+8000;
+        schoolData._blockStructurePushUntil=Date.now()+120000;
         schoolData._cloudUpdatedAtMs=remoteTs||Date.now();
         try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
         try{fillSmsPanelForm()}catch(e){}
@@ -1835,6 +1861,7 @@ async function cloudPullAppData(force){
 let _pushTimer=null,_pullTimer=null;
 function scheduleCloudPush(){
   if(!SYNC_API||!session||!session.schoolId)return;
+  if(window._loginPulling)return; // ورود در جریان — push نکن
   clearTimeout(_pushTimer);
   _pushTimer=setTimeout(function(){cloudPushAppData(true).catch(function(){})},2000);
 }
@@ -1905,12 +1932,16 @@ function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolDa
 function saveSchoolData(){
   try{
     if(schoolData&&typeof schoolData==='object'){
-      schoolData._localDirtyAt=Date.now();
-      schoolData._cloudUpdatedAtMs=Math.max(schoolData._cloudUpdatedAtMs||0,Date.now());
+      // در فاز ورود/دریافت اولیه از سرور، dirty نکن تا داده قدیمی push نشود
+      if(!window._loginPulling){
+        schoolData._localDirtyAt=Date.now();
+        schoolData._cloudUpdatedAtMs=Math.max(schoolData._cloudUpdatedAtMs||0,Date.now());
+      }
     }
   }catch(e){}
-  localStorage.setItem(dataKey(),JSON.stringify(schoolData));
-  scheduleCloudPush();
+  try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  // فقط بعد از اتمام ورود و فقط اگر واقعاً تغییر کاربر بوده
+  if(!window._loginPulling) scheduleCloudPush();
 }
 function isExpired(exp){return exp&&exp<todayStr()}
 function toEnDigits(s){s=String(s||'');const fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩';let o='';for(const ch of s){let i=fa.indexOf(ch);if(i>=0){o+=i;continue}i=ar.indexOf(ch);if(i>=0){o+=i;continue}o+=ch}return o}
@@ -2542,8 +2573,10 @@ async function doLogin(){
     if(exists==='inactive'){hideLoginLoading();return toast('مدرسه خاموش است')}
   }
   showLoginLoading('در حال دریافت تیم...','دریافت لیست معلمان و معاونان از سرور');
+  window._loginPulling=true;
   await cloudPullStaff(session.schoolId);
   try{ await cloudPullAppData(true); }catch(e){}
+  try{if(schoolData){schoolData._localDirtyAt=0}}catch(e){}
   if(!Array.isArray(schoolData.staff))schoolData.staff=[];
   const staffList=schoolData.staff||[];
   if(!staffList.length){hideLoginLoading();return toast('هنوز معلم/معاونی ثبت نشده یا به سرور ارسال نشده. اول با مدیر وارد شوید و تیم را ذخیره کنید',5000)}
@@ -2649,14 +2682,22 @@ async function enterApp(){
   await syncLicenseFromServer();
   session=loadSession();
   if(session.active===false||(session.expireDate&&isExpired(session.expireDate))){
+    window._loginPulling=false;
     hideLoginLoading();
     document.getElementById('locked-info').innerHTML='<div><strong>'+(session.name||'')+'</strong></div><div>انقضا: '+formatDateFa(session.expireDate)+'</div><p class="hint" style="margin-top:8px">در صورت خرید لایسنس، از پنل پشتیبانی تمدید می‌شود. یک‌بار خارج و دوباره وارد شوید.</p><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="recheckLicense()">بررسی مجدد لایسنس</button>';
     showScreen('locked');
     return;
   }
   loadSchoolData();
-  // اول داده را از سرور بگیر — گوشی داده قدیمی را روی سرور برنگرداند
+  // اول فقط از سرور بخوان — در این فاز هیچ pushی مجاز نیست
+  window._loginPulling=true;
   try{await cloudPullAppData(true)}catch(e){console.warn('enter pull',e)}
+  try{
+    if(schoolData){
+      schoolData._localDirtyAt=0;
+      schoolData._blockStructurePushUntil=Date.now()+120000;
+    }
+  }catch(e){}
   // هم‌تراز کردن شیفت با لایسنس/مادر (تک‌شیفت اجباری می‌ماند)
   if(session){
     if(Number(session.shifts)===2||(session.modules&&session.modules.indexOf('dual_shift')>=0)){
@@ -2699,11 +2740,8 @@ async function enterApp(){
     if(canManage()&&session.schoolId){
       cloudPullSubmissions(session.schoolId).then(()=>{try{renderHome()}catch(e){}});
     }
-    // فقط اگر داده محلی پر است به سرور بفرست — دستگاه خالی سرور را پاک نکند
-    if(isManager()&&session.schoolId&&_dataRichness(schoolData)>0){
-      cloudPushStaff(session.schoolId,schoolData.staff||[]);
-      scheduleCloudPush();
-    }
+    // روی ورود هیچ push خودکاری نیست — فقط بعد از ویرایش کاربر
+    // (قبلاً scheduleCloudPush اینجا سرور را با داده کهنه خراب می‌کرد)
     showAppPage(isTeacher()?'teacher':'home');
     const nC=(schoolData.classes||[]).length,nS=(schoolData.students||[]).length,nT=(schoolData.staff||[]).length;
     if(nC||nS||nT)toast('اطلاعات مدرسه: '+nC+' کلاس · '+nS+' دانش‌آموز · '+nT+' کاربر',4000);
@@ -2714,32 +2752,53 @@ async function enterApp(){
     toast('در حال دریافت اطلاعات از سرور...',5000);
     assertSchoolExistsOnServer(session.schoolId).then(async function(st){
       if(st===false){
+        window._loginPulling=false;
         hideLoginLoading();
         forceKickDeletedSchool('این مدرسه از پنل مادر حذف شده است');
         return;
       }
       if(st==='inactive'){
+        window._loginPulling=false;
         hideLoginLoading();
         session.active=false;saveSession(session);
         showScreen('locked');
         return;
       }
-      // اول تغییرات ذخیره‌نشده‌ی محلی (مثلاً برنامه معلمی که هنوز به سرور نرسیده) را بفرست
-      // تا در ادامه، دریافت کامل (force) آن‌ها را پاک نکند — مخصوصاً روی اینترنت کند/ناپایدار
-      if(_dataRichness(schoolData)>0&&canManage()){
-        try{await cloudPushAppData(true)}catch(e){}
-      }
+      // فقط دریافت از سرور — هرگز قبل از pull داده محلی را push نکن
+      // (باگ قبلی: مرورگر با داده قدیمی، سرور را نابود می‌کرد)
+      window._loginPulling=true;
       let ok=false;
       for(let i=0;i<3&&!ok;i++){
         try{ok=await cloudPullAppData(true)}catch(e){ok=false}
         if(!ok&&i<2)await new Promise(r=>setTimeout(r,700));
       }
-      if(!ok&&_dataRichness(schoolData)>0&&canManage()){
-        try{await cloudPushAppData(true)}catch(e){}
+      // بعد از pull موفق: dirty محلی را پاک کن تا داده کهنه push نشود
+      try{
+        if(ok&&schoolData){
+          schoolData._localDirtyAt=0;
+          schoolData._blockStructurePushUntil=Date.now()+120000; // ۲ دقیقه فقط سرور مرجع
+          localStorage.setItem(dataKey(),JSON.stringify(schoolData));
+        }
+      }catch(e){}
+      // فقط اگر سرور واقعاً خالی بود و محلی داده دارد → ترمیم (نه جایگزینی اجباری)
+      if(!ok&&_dataRichness(schoolData)>0&&isManager()){
+        var rCheck=null;
+        try{rCheck=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{retries:1})}catch(e){}
+        var rd=(rCheck&&rCheck.data)||null;
+        var rEmpty=!rd||_dataRichness(rd)===0;
+        if(rEmpty){
+          try{
+            window._allowLoginRestore=true;
+            await cloudPushAppData(true);
+          }catch(e){}
+          window._allowLoginRestore=false;
+        }
       }
+      window._loginPulling=false;
       try{if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}}catch(e){}
       afterSync(ok);
     }).catch(function(){
+      window._loginPulling=false;
       hideLoginLoading();
       forceKickDeletedSchool('امکان تأیید مدرسه روی سرور نیست — دوباره وارد شوید');
     });
