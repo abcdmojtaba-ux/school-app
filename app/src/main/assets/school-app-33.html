@@ -1446,10 +1446,10 @@ async function cloudPushAppData(force){
     });
     // فقط مدیر می‌تواند ساختار کامل را با replace بفرستد
     // در فاز ورود یا تا ۲ دقیقه بعد از pull ورود، replaceStructure ممنوع
-    var blockStruct=!!window._loginPulling||(schoolData._blockStructurePushUntil&&Date.now()<schoolData._blockStructurePushUntil);
-    var allowReplace=!!isMgr&&!!schoolData.replaceStructure&&!blockStruct;
-    if(blockStruct&&schoolData.replaceStructure){
-      console.warn('structure replace blocked during login/sync gate');
+    // فقط وسط ورود push ساختار ممنوع؛ بعد از ورود تغییرات کاربر آزاد است
+    var allowReplace=!!isMgr&&!!schoolData.replaceStructure&&!window._loginPulling;
+    if(window._loginPulling&&schoolData.replaceStructure){
+      console.warn('structure replace blocked only during login pull');
     }
     const payload={
       classes:schoolData.classes||[],
@@ -1843,7 +1843,7 @@ async function cloudPullAppData(force){
         if(Array.isArray(d.messages))schoolData.messages=d.messages.slice();
         schoolData._localDirtyAt=0;
         schoolData.replaceStructure=false;
-        schoolData._blockStructurePushUntil=Date.now()+120000;
+        schoolData._blockStructurePushUntil=Date.now()+15000;
         schoolData._cloudUpdatedAtMs=remoteTs||Date.now();
         try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
         try{fillSmsPanelForm()}catch(e){}
@@ -2572,11 +2572,20 @@ async function doLogin(){
     }
     if(exists==='inactive'){hideLoginLoading();return toast('مدرسه خاموش است')}
   }
-  showLoginLoading('در حال دریافت تیم...','دریافت لیست معلمان و معاونان از سرور');
+  showLoginLoading('در حال دریافت تیم...','دریافت اطلاعات به‌روز از سرور');
   window._loginPulling=true;
+  window._allowLoginRestore=false;
+  // پاک کردن کش محلی قبل از دریافت
+  try{
+    var _sid=session&&session.schoolId,_scode=session&&session.code;
+    if(_sid)localStorage.removeItem(DATA_PREFIX+_sid);
+    if(_scode)localStorage.removeItem(DATA_PREFIX+_scode);
+    try{localStorage.removeItem(dataKey())}catch(e2){}
+  }catch(e){}
+  schoolData=defaultData();
   await cloudPullStaff(session.schoolId);
   try{ await cloudPullAppData(true); }catch(e){}
-  try{if(schoolData){schoolData._localDirtyAt=0}}catch(e){}
+  try{if(schoolData){schoolData._localDirtyAt=0;localStorage.setItem(dataKey(),JSON.stringify(schoolData))}}catch(e){}
   if(!Array.isArray(schoolData.staff))schoolData.staff=[];
   const staffList=schoolData.staff||[];
   if(!staffList.length){hideLoginLoading();return toast('هنوز معلم/معاونی ثبت نشده یا به سرور ارسال نشده. اول با مدیر وارد شوید و تیم را ذخیره کنید',5000)}
@@ -2688,14 +2697,35 @@ async function enterApp(){
     showScreen('locked');
     return;
   }
-  loadSchoolData();
-  // اول فقط از سرور بخوان — در این فاز هیچ pushی مجاز نیست
+  // ورود: کش محلی این مدرسه را کامل پاک کن، فقط سرور مرجع است
   window._loginPulling=true;
+  window._allowLoginRestore=false;
+  try{
+    var _sid=session&&session.schoolId;
+    var _scode=session&&session.code;
+    if(_sid)localStorage.removeItem(DATA_PREFIX+_sid);
+    if(_scode)localStorage.removeItem(DATA_PREFIX+_scode);
+    try{localStorage.removeItem(dataKey())}catch(e2){}
+    // هر کلید مرتبط با این مدرسه
+    try{
+      var _rm=[];
+      for(var _i=0;_i<localStorage.length;_i++){
+        var _k=localStorage.key(_i);
+        if(!_k||_k.indexOf(DATA_PREFIX)!==0)continue;
+        if((_sid&&_k.indexOf(String(_sid))>=0)||(_scode&&_k.indexOf(String(_scode))>=0))_rm.push(_k);
+      }
+      _rm.forEach(function(k){try{localStorage.removeItem(k)}catch(e){}});
+    }catch(e3){}
+  }catch(e){}
+  schoolData=defaultData();
+  try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  // فقط از سرور بخوان
   try{await cloudPullAppData(true)}catch(e){console.warn('enter pull',e)}
   try{
     if(schoolData){
       schoolData._localDirtyAt=0;
-      schoolData._blockStructurePushUntil=Date.now()+120000;
+      schoolData._blockStructurePushUntil=Date.now()+15000;
+      localStorage.setItem(dataKey(),JSON.stringify(schoolData));
     }
   }catch(e){}
   // هم‌تراز کردن شیفت با لایسنس/مادر (تک‌شیفت اجباری می‌ماند)
@@ -2776,7 +2806,7 @@ async function enterApp(){
       try{
         if(ok&&schoolData){
           schoolData._localDirtyAt=0;
-          schoolData._blockStructurePushUntil=Date.now()+120000; // ۲ دقیقه فقط سرور مرجع
+          schoolData._blockStructurePushUntil=Date.now()+15000; // ۲ دقیقه فقط سرور مرجع
           localStorage.setItem(dataKey(),JSON.stringify(schoolData));
         }
       }catch(e){}
