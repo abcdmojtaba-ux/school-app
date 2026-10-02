@@ -3176,11 +3176,22 @@ function renderHome(){
   if(canManage()){
     ensureAllSubmissionsInAttendance();
     const pending=(schoolData.submissions||[]).filter(s=>s.status==='pending'&&canAccessClass(s.classId)).slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
-    const done=(schoolData.submissions||[]).filter(s=>s.status&&s.status!=='pending'&&canAccessClass(s.classId)).slice().sort(function(a,b){return (b.reviewedAt||b.createdAt||0)-(a.reviewedAt||a.createdAt||0)}).slice(0,40);
+    const todayIso=todayStr();
+    const doneToday=(schoolData.submissions||[]).filter(function(s){
+      if(!s||!s.status||s.status==='pending'||s.archived)return false;
+      if(!canAccessClass(s.classId))return false;
+      return (normalizeDateToIso(s.date)||s.date)===todayIso;
+    });
+    const archiveCount=(schoolData.submissions||[]).filter(function(s){
+      if(!s||!s.status||s.status==='pending')return false;
+      if(!canAccessClass(s.classId))return false;
+      var d=normalizeDateToIso(s.date)||s.date;
+      return d&&d!==todayIso;
+    }).length;
     let html='';
     html+='<button type="button" class="btn btn-primary btn-block" style="margin-bottom:10px" onclick="showAppPage(\'att-log\')">✏️ حضور و غیاب مدیر/معاون · تأخیر ورود</button>';
     if(pending.length){
-      html+='<div class="card-title">در انتظار بررسی ('+pending.length+')</div><p class="hint">بعد از بررسی از این لیست حذف و به شیت پایین می‌رود.</p>';
+      html+='<div class="card-title">در انتظار بررسی ('+pending.length+')</div><p class="hint">بعد از بررسی از این لیست حذف و به «بررسی‌شده‌های امروز» می‌رود.</p>';
       html+=pending.map(s=>{
         const te=(schoolData.staff||[]).find(x=>x.id===s.teacherId);
         const c=(schoolData.classes||[]).find(x=>x.id===s.classId);
@@ -3193,11 +3204,17 @@ function renderHome(){
     }else{
       html+='<p class="hint" style="margin-bottom:10px">مورد در انتظاری نیست.</p>';
     }
-    // شیت پایین: بررسی‌شده‌ها
+    // شیت پایین: بررسی‌شده‌های امروز + آرشیو
     html+='<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">';
-    html+='<button type="button" class="btn btn-outline btn-block" onclick="toggleReviewedSheet()"><span id="rev-sheet-label">▼ بررسی‌شده‌ها ('+done.length+')</span></button>';
+    html+='<button type="button" class="btn btn-outline btn-block" onclick="toggleReviewedSheet()"><span id="rev-sheet-label">▼ بررسی‌شده‌های امروز ('+doneToday.length+')</span></button>';
     html+='<div id="reviewed-sheet" style="display:none;margin-top:10px">';
-    html+='<div class="form-group"><label>تاریخ شمسی (خالی=همه روزها — مثلاً هفته قبل)</label><input class="form-control" id="home-rev-date" placeholder="1404/06/25" inputmode="numeric" onchange="renderReviewedSheet()" oninput="if(this.value.length>=8)renderReviewedSheet()" /></div>';
+    html+='<p class="hint">به‌صورت پیش‌فرض فقط <b>امروز</b> نمایش داده می‌شود. روزهای قبل در آرشیو است.</p>';
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
+    html+='<button type="button" class="btn btn-primary btn-sm" onclick="showReviewedToday()">امروز</button>';
+    html+='<button type="button" class="btn btn-outline btn-sm" onclick="showReviewedArchive()">آرشیو روزهای قبل'+(archiveCount?(' ('+archiveCount+')'):'')+'</button>';
+    html+='</div>';
+    html+='<div class="form-group"><label>تاریخ شمسی آرشیو (خالی = همه روزهای قبل)</label><input class="form-control" id="home-rev-date" placeholder="مثلاً 1404/07/10" inputmode="numeric" onchange="renderReviewedSheet()" oninput="if(this.value.length>=8)renderReviewedSheet()" /></div>';
+    html+='<input type="hidden" id="home-rev-mode" value="today" />';
     html+='<div id="reviewed-sheet-list"></div>';
     html+='</div></div>';
     pend.style.display='block';
@@ -3395,48 +3412,127 @@ function markSubmissionDone(){
   },200);
 }
 
+function countReviewedToday(){
+  var todayIso=todayStr();
+  return (schoolData.submissions||[]).filter(function(s){
+    if(!s||!s.status||s.status==='pending'||s.archived)return false;
+    if(!canAccessClass(s.classId))return false;
+    return (normalizeDateToIso(s.date)||s.date)===todayIso;
+  }).length;
+}
+function showReviewedToday(){
+  var mode=document.getElementById('home-rev-mode');
+  if(mode)mode.value='today';
+  var inp=document.getElementById('home-rev-date');
+  if(inp)inp.value='';
+  renderReviewedSheet();
+}
+function showReviewedArchive(){
+  var mode=document.getElementById('home-rev-mode');
+  if(mode)mode.value='archive';
+  var inp=document.getElementById('home-rev-date');
+  if(inp)inp.value='';
+  renderReviewedSheet();
+}
 function toggleReviewedSheet(){
   var sh=document.getElementById('reviewed-sheet');
   if(!sh)return;
   var open=sh.style.display==='none'||!sh.style.display;
   sh.style.display=open?'block':'none';
   var lb=document.getElementById('rev-sheet-label');
-  var n=(schoolData.submissions||[]).filter(function(s){return s.status&&s.status!=='pending'&&canAccessClass(s.classId)}).length;
-  if(lb)lb.textContent=(open?'▲':'▼')+' بررسی‌شده‌ها ('+n+')';
-  if(open)renderReviewedSheet();
+  var n=countReviewedToday();
+  if(lb)lb.textContent=(open?'▲':'▼')+' بررسی‌شده‌های امروز ('+n+')';
+  if(open){
+    var mode=document.getElementById('home-rev-mode');
+    if(mode)mode.value='today';
+    renderReviewedSheet();
+  }
 }
 function renderReviewedSheet(){
   var box=document.getElementById('reviewed-sheet-list');
   if(!box)return;
+  var modeEl=document.getElementById('home-rev-mode');
+  var mode=modeEl?(modeEl.value||'today'):'today';
   var raw=((document.getElementById('home-rev-date')||{}).value||'').trim();
   var dayIso=raw?normalizeDateToIso(raw):null;
+  if(dayIso&&mode==='today'){
+    mode='archive';
+    if(modeEl)modeEl.value='archive';
+  }
+  var todayIso=todayStr();
   var list=(schoolData.submissions||[]).filter(function(s){
-    if(!s.status||s.status==='pending')return false;
+    if(!s||!s.status||s.status==='pending')return false;
     if(!canAccessClass(s.classId))return false;
-    if(dayIso){
-      var d=normalizeDateToIso(s.date)||s.date;
-      return d===dayIso;
+    var d=normalizeDateToIso(s.date)||s.date||'';
+    if(mode==='today'){
+      if(s.archived)return false;
+      return d===todayIso;
     }
-    return true;
-  }).slice().sort(function(a,b){return (b.reviewedAt||b.createdAt||0)-(a.reviewedAt||a.createdAt||0)}).slice(0,80);
-  if(!list.length){box.innerHTML='<p class="hint">بررسی‌شده‌ای'+(dayIso?' برای این تاریخ':'')+' نیست. تاریخ را خالی بگذارید تا همه را ببینید.</p>';return}
-  var head='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
-    '<button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById(\'home-rev-date\').value=\'\';renderReviewedSheet()">همه تاریخ‌ها</button>'+
-    '<button type="button" class="btn btn-danger btn-sm" onclick="deleteAllReviewedFiltered()">حذف موارد این لیست</button>'+
+    if(dayIso)return d===dayIso;
+    return d&&d!==todayIso;
+  }).slice().sort(function(a,b){return (b.reviewedAt||b.createdAt||0)-(a.reviewedAt||a.createdAt||0)}).slice(0,100);
+  var title=mode==='today'?('بررسی‌شده‌های امروز ('+formatDateFa(todayIso)+')'):(dayIso?('آرشیو '+formatDateFa(dayIso)):('آرشیو روزهای قبل'));
+  if(!list.length){
+    box.innerHTML='<p class="hint">'+title+' — موردی نیست.'+(mode==='today'?' برای روزهای قبل «آرشیو» را بزنید.':'')+'</p>';
+    return;
+  }
+  var head='<div class="card-title" style="margin-bottom:8px">'+title+' · '+list.length+' مورد</div>'+
+    '<p class="hint" style="margin-bottom:8px">حذف کامل، حضور وابسته‌به‌همین ارسال را هم پاک می‌کند. اگر فقط نمی‌خواهید در لیست ببینید «بایگانی» بزنید (حضور می‌ماند).</p>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
+    '<button type="button" class="btn btn-outline btn-sm" onclick="archiveAllReviewedFiltered()">بایگانی این لیست (حضور می‌ماند)</button>'+
+    '<button type="button" class="btn btn-danger btn-sm" onclick="deleteAllReviewedFiltered()">حذف کامل این لیست (+ حضور وابسته)</button>'+
     '</div>';
   box.innerHTML=head+list.map(function(s){
     var te=(schoolData.staff||[]).find(function(x){return x.id===s.teacherId});
-    var c=(schoolData.classes||[]).find(function(x){return x.id===s.classId});
+    var cl=(schoolData.classes||[]).find(function(x){return x.id===s.classId});
     var abs=(s.rows||[]).filter(function(r){return r.status==='absent'}).length;
     var late=(s.rows||[]).filter(function(r){return r.status==='late'}).length;
     var who=s.fromManager?'مدیر/معاون':(te?te.name:'معلم');
     var src=s.fromManager?'از سمت مدیریت':'از سمت معلم';
-    return '<div class="list-item"><div style="flex:1;cursor:pointer" onclick="openSubmission(\''+s.id+'\')"><div class="name">'+who+' — '+(s.periodName||'')+'</div><div class="meta">'+src+' · '+(c?c.name:'')+(s.subject?(' · درس '+s.subject):'')+' · '+formatDateFa(s.date)+'</div><div class="meta">غایب '+abs+' · تأخیر '+late+(s.reviewedBy?(' · بررسی: '+s.reviewedBy):'')+'</div></div><button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteSubmission(\''+s.id+'\')">حذف</button></div>';
+    return '<div class="list-item"><div style="flex:1;cursor:pointer" onclick="openSubmission(\''+s.id+'\')"><div class="name">'+who+' — '+(s.periodName||'')+(s.archived?' · بایگانی':'')+'</div><div class="meta">'+src+' · '+(cl?cl.name:'')+(s.subject?(' · درس '+s.subject):'')+' · '+formatDateFa(s.date)+'</div><div class="meta">غایب '+abs+' · تأخیر '+late+(s.reviewedBy?(' · بررسی: '+s.reviewedBy):'')+'</div></div>'+
+      '<button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation();archiveSubmission(\''+s.id+'\')">بایگانی</button>'+
+      '<button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteSubmission(\''+s.id+'\')">حذف</button></div>';
   }).join('');
+}
+async function archiveSubmission(id){
+  if(!canManage())return toast('دسترسی ندارید');
+  var s=(schoolData.submissions||[]).find(function(x){return x&&x.id===id});
+  if(!s)return;
+  s.archived=true;
+  s.archivedAt=Date.now();
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  try{await cloudPushAppData(true)}catch(e){}
+  toast('بایگانی شد — حضور دانش‌آموزان سر جایش است');
+  try{renderHome();renderReviewedSheet()}catch(e){}
+}
+async function archiveAllReviewedFiltered(){
+  if(!canManage())return toast('دسترسی ندارید');
+  var modeEl=document.getElementById('home-rev-mode');
+  var mode=modeEl?(modeEl.value||'today'):'today';
+  var raw=((document.getElementById('home-rev-date')||{}).value||'').trim();
+  var dayIso=raw?normalizeDateToIso(raw):null;
+  var todayIso=todayStr();
+  var n=0;
+  (schoolData.submissions||[]).forEach(function(s){
+    if(!s||!s.status||s.status==='pending')return;
+    if(!canAccessClass(s.classId))return;
+    var d=normalizeDateToIso(s.date)||s.date||'';
+    if(mode==='today'){if(d!==todayIso)return;}
+    else if(dayIso){if(d!==dayIso)return;}
+    else{if(d===todayIso)return;}
+    if(!s.archived){s.archived=true;s.archivedAt=Date.now();n++;}
+  });
+  if(!n)return toast('موردی برای بایگانی نیست');
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  try{await cloudPushAppData(true)}catch(e){}
+  toast(n+' مورد بایگانی شد — حضورها حفظ شدند');
+  try{renderHome();renderReviewedSheet()}catch(e){}
 }
 async function deleteSubmission(id){
   if(!canManage())return toast('دسترسی ندارید');
-  if(!confirm('این مورد بررسی‌شده حذف شود؟'))return;
+  if(!confirm('حذف کامل این ارسال؟\n\n• از لیست بررسی‌شده‌ها پاک می‌شود\n• رکورد حضور وابسته‌به‌همین ارسال هم پاک می‌شود\n\nاگر فقط نمی‌خواهید ببینید، به‌جای حذف «بایگانی» بزنید.'))return;
   var sub=(schoolData.submissions||[]).find(function(x){return x.id===id});
   rememberDeletedSubmission(id);
   schoolData.submissions=(schoolData.submissions||[]).filter(function(x){return x.id!==id});
@@ -3453,21 +3549,24 @@ async function deleteSubmission(id){
 }
 async function deleteAllReviewedFiltered(){
   if(!canManage())return toast('دسترسی ندارید');
+  var modeEl=document.getElementById('home-rev-mode');
+  var mode=modeEl?(modeEl.value||'today'):'today';
   var raw=((document.getElementById('home-rev-date')||{}).value||'').trim();
   var dayIso=raw?normalizeDateToIso(raw):null;
+  var todayIso=todayStr();
   var ids=[];
   (schoolData.submissions||[]).forEach(function(s){
-    if(!s.status||s.status==='pending')return;
+    if(!s||!s.status||s.status==='pending')return;
     if(!canAccessClass(s.classId))return;
-    if(dayIso){
-      var d=normalizeDateToIso(s.date)||s.date;
-      if(d!==dayIso)return;
-    }
+    var d=normalizeDateToIso(s.date)||s.date||'';
+    if(mode==='today'){if(d!==todayIso)return;}
+    else if(dayIso){if(d!==dayIso)return;}
+    else{if(d===todayIso)return;}
     if(s.id)ids.push(s.id);
   });
   var n=ids.length;
   if(!n)return toast('موردی برای حذف نیست');
-  if(!confirm(n+' مورد بررسی‌شده'+(dayIso?' در این تاریخ':'')+' حذف شود؟\nحضور وابسته هم پاک می‌شود.'))return;
+  if(!confirm(n+' مورد حذف کامل شود؟\n\nحضور وابسته‌به‌همین ارسال‌ها هم پاک می‌شود.\nبرای نگه‌داشتن حضور از «بایگانی» استفاده کنید.'))return;
   var idset={};ids.forEach(function(id){idset[id]=true;rememberDeletedSubmission(id)});
   schoolData.submissions=(schoolData.submissions||[]).filter(function(s){return !idset[s.id]});
   schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return !a.submissionId||!idset[a.submissionId]});
