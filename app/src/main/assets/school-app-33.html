@@ -443,6 +443,35 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
 
 </style>
 
+
+<script>
+/* bootstrap — حتی اگر اسکریپت اصلی دیر/ناقص لود شود دکمه‌های ورود کار کنند */
+window.showScreen=window.showScreen||function(n){
+  try{
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+    var el=document.getElementById('screen-'+n);
+    if(el)el.classList.add('active');
+  }catch(e){console.warn(e)}
+};
+window.toast=window.toast||function(m){
+  try{
+    var e=document.getElementById('toast');
+    if(!e){alert(m);return}
+    e.textContent=m;e.classList.add('show');
+    clearTimeout(window._toastT);
+    window._toastT=setTimeout(function(){e.classList.remove('show')},2800);
+  }catch(e){try{alert(m)}catch(x){}}
+};
+window.openContactSalesModal=window.openContactSalesModal||function(){
+  try{
+    if(typeof contactSalesHtml==='function'){
+      document.getElementById('modal-title').textContent='ارتباط با واحد فروش و کارشناسی';
+      document.getElementById('modal-body').innerHTML=contactSalesHtml();
+      document.getElementById('modal').classList.add('show');
+    }else toast('در حال بارگذاری... یک لحظه صبر کنید');
+  }catch(e){toast('لطفاً صفحه را کامل رفرش کنید')}
+};
+</script>
 </head>
 <body class="theme-dark">
 
@@ -1145,7 +1174,7 @@ function hideLoginLoading(){
   const btn=document.getElementById('btn-login');
   if(btn){btn.disabled=false;btn.textContent='ورود'}
 }
-function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');if(n==='login'){try{fillRememberedLogin()}catch(e){}}hideLoginLoading()}
+function showScreen(n){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});var el=document.getElementById('screen-'+n);if(el)el.classList.add('active');if(n==='login'){try{fillRememberedLogin()}catch(e){}}try{hideLoginLoading()}catch(e){}}window.showScreen=showScreen;
 function loadSession(){try{return JSON.parse(localStorage.getItem(APP_KEY)||'null')}catch(e){return null}}
 function saveSession(d){localStorage.setItem(APP_KEY,JSON.stringify(d));session=d}
 function loadUserSession(){try{return JSON.parse(localStorage.getItem(SESSION_USER)||'null')}catch(e){return null}}
