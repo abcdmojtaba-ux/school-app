@@ -1416,7 +1416,8 @@ async function cloudPushAppData(force){
           submissions:_subSlim,
           exams:schoolData.exams||[],
           messages:schoolData.messages||[],
-          updatedAtMs:Date.now()
+          updatedAtMs:Date.now(),
+          _teacherPartial:true
         },
         retries:3,timeoutMs:45000
       });
@@ -1542,6 +1543,7 @@ async function cloudPushAppData(force){
       clearPerformance:!!schoolData.clearPerformance&&!!isMgr,
       clearStructure:!!schoolData.clearStructure&&!!isMgr&&!!structToken,
       managerAuthority:!!isMgr,
+      deputyAuthority:!!isDep,
       absentSmsSent:schoolData.absentSmsSent||{},
       colleagues:schoolData.colleagues||[],
       attendance:_attSlim,
@@ -1806,10 +1808,11 @@ async function cloudPullAppData(force){
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
-      // سرور واقعاً خالی است — خواندن موفق بود، ولی محلی را به سرور هل نده
+      // سرور واقعاً خالی است — خواندن شبکه OK، ولی ساختار روی سرور نیست
       schoolData._localDirtyAt=0;
       try{window._serverPullOk=true}catch(e){}
-      return true; // خواندن OK؛ سرور خالی است نه «خطا»
+      try{window._serverStructOk=false}catch(e){}
+      return true;
     }
     const remoteTs=d.updatedAtMs||(data&&data.updatedAt)||0;
     const localTs=schoolData._cloudUpdatedAtMs||0;
@@ -1832,9 +1835,10 @@ async function cloudPullAppData(force){
     }
     // سرور کاملاً خالی: اگر محلی داده دارد → سرور را ترمیم کن (پاک نکن)
     if(rRich===0){
-      // سرور خالی — خواندن موفق؛ هل نده
+      // سرور از نظر داده خالی/ناقص — محلی را پاک نکن
       schoolData._localDirtyAt=0;
       try{window._serverPullOk=true}catch(e){}
+      try{window._serverStructOk=false}catch(e){}
       return true;
     }
     // سرور داده دارد
@@ -1851,6 +1855,10 @@ async function cloudPullAppData(force){
         if(Array.isArray(d.assignments)&&d.assignments.length)schoolData.assignments=d.assignments.slice();
       }
       try{schoolData._localDirtyAt=0}catch(e){}
+      try{
+        var rs=((schoolData.classes||[]).length+(schoolData.students||[]).length+(schoolData.staff||[]).length);
+        window._serverStructOk = rs>0;
+      }catch(e){}
       try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
       return true;
     }
@@ -2848,8 +2856,8 @@ async function enterApp(){
     window._serverPullOk=false;
     console.warn('login pull FAILED — push locked, will not empty server');
   }
-  // تا ۶۰ ثانیه بعد از ورود هیچ ذخیره ساختاری ارسال نشود (حتی مدیر)
-  window._blockStructUntil=Date.now()+60000;
+  // تا ۲۰ ثانیه بعد از ورود ساختار قفل است — مگر ترمیم خودکار
+  window._blockStructUntil=Date.now()+20000;
   try{
     if(schoolData){
       schoolData.replaceStructure=false;
@@ -2910,6 +2918,24 @@ async function enterApp(){
     const nC=(schoolData.classes||[]).length,nS=(schoolData.students||[]).length,nT=(schoolData.staff||[]).length;
     if(nC||nS||nT)toast('اطلاعات مدرسه: '+nC+' کلاس · '+nS+' دانش‌آموز · '+nT+' کاربر',4000);
     else if(pulled===false)toast('روی سرور هنوز داده‌ای نیست — از دستگاه قبلی «ارسال به سرور» بزنید',4500);
+    // ترمیم خودکار: اگر مدیر داده محلی دارد ولی سرور ساختار ندارد → یک‌بار ساختار را بفرست
+    try{
+      if(isManager() && (nC||nS||nT) && window._serverStructOk===false){
+        toast('در حال ارسال ساختار مدرسه به سرور (ترمیم)...',4000);
+        schoolData.replaceStructure=true;
+        schoolData._structureWriteToken=true;
+        window._blockStructUntil=0;
+        window._serverPullOk=true;
+        cloudPushAppData(true).then(function(){
+          window._serverStructOk=true;
+          schoolData.replaceStructure=false;
+          schoolData._structureWriteToken=false;
+          toast('ساختار مدرسه روی سرور ذخیره شد ✓',3500);
+        }).catch(function(){
+          toast('ترمیم سرور ناموفق — دکمه «ارسال به سرور» را بزنید',4000);
+        });
+      }
+    }catch(e){}
   };
   startAutoSync();
   if(session.schoolId){
@@ -3085,7 +3111,7 @@ function renderHome(){
   const stuN=schoolData.students.filter(s=>_vids.includes(s.classId)).length;
   document.getElementById('st-classes').textContent=_vc.length;
   document.getElementById('st-students').textContent=stuN;
-  document.getElementById('st-days').textContent=isTeacher()?String((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).length):daysLeft();
+  document.getElementById('st-days').textContent=isTeacher()?String((schoolData.assignments||[]).filter(function(a){return isMyAssignment(a);}).length):daysLeft();
   document.getElementById('st-days-label').textContent=isTeacher()?'زنگ/جلسه':'روز مانده';
   const badge=session.plan==='trial'?'<span class="badge badge-trial">آزمایشی</span>':'<span class="badge badge-ok">فعال</span>';
   const roleFa={manager:'مدیر',deputy:'معاون',teacher:'معلم'};
@@ -4262,10 +4288,10 @@ function openAssignModal(id){
     '<p class="hint" style="margin-bottom:10px">یک <b>درس</b> می‌تواند چند <b>زنگ</b> در هفته داشته باشد (همان نام درس را تکرار کنید). هر زنگ حضورغیاب جدا دارد.</p>'+
     '<div class="form-group"><label>جستجوی معلم</label><input class="form-control" id="as-teacher-search" placeholder="نام معلم..." oninput="filterAssignTeacherSelect()" /></div>'+
     '<div class="form-group"><label>معلم اصلی *</label><select class="form-control" id="as-teacher">'+tOpts+'</select></div>'+
-    '<div class="form-group"><label>معلم دوم (اختیاری — کلاس دو قسمتی)</label><select class="form-control" id="as-teacher2">'+t2Opts+'</select></div>'+
+    '<div class="form-group"><label>معلم دوم (اختیاری — هر دو معلم به کلاس دسترسی دارند؛ گروه فقط اگر کلاس دو قسمتی است)</label><select class="form-control" id="as-teacher2">'+t2Opts+'</select></div>'+
     '<div class="form-group"><label>کلاس *</label><select class="form-control" id="as-class">'+cOpts+'</select></div>'+
     '<div class="form-group"><label>گروه کلاس</label><select class="form-control" id="as-group">'+
-      '<option value=""'+(!g?' selected':'')+'>همه دانش‌آموزان کلاس</option>'+
+      '<option value=""'+(!g?' selected':'')+'>همه دانش‌آموزان کلاس (پیشنهادی برای معلم دوم)</option>'+
       '<option value="الف"'+(g==='الف'||g==='1'?' selected':'')+'>گروه الف</option>'+
       '<option value="ب"'+(g==='ب'||g==='2'?' selected':'')+'>گروه ب</option>'+
     '</select><p class="hint">برای تقسیم کلاس: یک زنگ با گروه الف + یک زنگ با گروه ب (همان ساعت/درس)</p></div>'+
@@ -4306,9 +4332,28 @@ function saveAssign(id){
   var subject=(document.getElementById('as-subject').value||'').trim();
   if(!teacherId||!classId||!periodName)return toast('فیلدها را کامل کنید');
   if(!subject)return toast('نام درس را وارد کنید');
-  if(teacherId2&&teacherId2===teacherId)teacherId2='';
+  if(teacherId2&&String(teacherId2)===String(teacherId))teacherId2='';
   if(!Array.isArray(schoolData.assignments))schoolData.assignments=[];
-  var fields={teacherId:teacherId,teacherId2:teacherId2||null,classId:classId,group:group||'',dayOfWeek:dayOfWeek,periodName:periodName,startTime:startTime,endTime:endTime,subject:subject};
+  // گروه فقط برای کلاس دو قسمتی است — اگر خالی باشد هر دو معلم به کل کلاس دسترسی دارند
+  group=String(group||'').trim();
+  if(group==='همه'||group==='all')group='';
+  var t1=(schoolData.staff||[]).find(function(x){return x&&String(x.id)===String(teacherId)});
+  var t2=teacherId2?(schoolData.staff||[]).find(function(x){return x&&String(x.id)===String(teacherId2)}):null;
+  var fields={
+    teacherId:teacherId,
+    teacherId2:teacherId2||null,
+    teacherName:t1?(t1.name||t1.username||''):'',
+    teacherUsername:t1?(t1.username||''):'',
+    teacherName2:t2?(t2.name||t2.username||''):'',
+    teacherUsername2:t2?(t2.username||''):'',
+    classId:classId,
+    group:group||'',
+    dayOfWeek:dayOfWeek,
+    periodName:periodName,
+    startTime:startTime,
+    endTime:endTime,
+    subject:subject
+  };
   if(id){
     var a=schoolData.assignments.find(function(x){return x.id===id});
     if(a)Object.assign(a,fields);
@@ -4693,13 +4738,44 @@ function isMyAssignment(a){
   var ids={};
   if(userSession.staffId)ids[String(userSession.staffId)]=true;
   if(userSession.id)ids[String(userSession.id)]=true;
-  if(a.teacherId&&ids[String(a.teacherId)])return true;
-  if(a.teacherId2&&ids[String(a.teacherId2)])return true;
+  // تطبیق id معلم اصلی و معلم دوم (بدون الزام گروه)
+  if(a.teacherId!=null&&a.teacherId!==''&&ids[String(a.teacherId)])return true;
+  if(a.teacherId2!=null&&a.teacherId2!==''&&ids[String(a.teacherId2)])return true;
   var myName=String(userSession.name||'').trim();
-  var myUser=String(userSession.username||'').trim();
-  if(myName&&(String(a.teacherName||'')===myName||String(a.teacherName2||'')===myName))return true;
-  if(myUser&&(String(a.teacherUsername||'')===myUser||String(a.teacherUsername2||'')===myUser))return true;
+  var myUser=String(userSession.username||'').trim().toLowerCase();
+  if(myName&&(String(a.teacherName||'').trim()===myName||String(a.teacherName2||'').trim()===myName))return true;
+  if(myUser){
+    if(String(a.teacherUsername||'').trim().toLowerCase()===myUser)return true;
+    if(String(a.teacherUsername2||'').trim().toLowerCase()===myUser)return true;
+  }
+  // تطبیق از روی لیست staff (اگر id جلسه با id برنامه فرق داشته باشد)
+  try{
+    var staff=(schoolData&&schoolData.staff)||[];
+    var me=staff.find(function(s){
+      if(!s)return false;
+      if(userSession.staffId&&String(s.id)===String(userSession.staffId))return true;
+      if(userSession.id&&String(s.id)===String(userSession.id))return true;
+      if(myUser&&String(s.username||'').trim().toLowerCase()===myUser)return true;
+      return false;
+    });
+    if(me&&me.id){
+      if(a.teacherId!=null&&String(a.teacherId)===String(me.id))return true;
+      if(a.teacherId2!=null&&String(a.teacherId2)===String(me.id))return true;
+    }
+  }catch(e){}
   return false;
+}
+/** دانش‌آموزان یک زنگ: اگر گروه خالی باشد کل کلاس — معلم دوم هم بدون گروه به همه دسترسی دارد */
+function studentsForAssignment(a){
+  if(!a)return [];
+  var list=(schoolData.students||[]).filter(function(s){return s&&s.classId===a.classId});
+  var g=String(a.group||'').trim();
+  if(!g||g==='همه'||g==='all'||g==='0')return list;
+  return list.filter(function(s){
+    var sg=String(s.group||s.section||'').trim();
+    if(!sg)return true; // دانش‌آموز بدون گروه در هر دو حالت دیده می‌شود
+    return sg===g||sg==='گروه '+g||sg===('گروه'+g);
+  });
 }
 function isSlotSubmittedToday(assignId){
   if(!assignId||!userSession)return false;
@@ -4742,14 +4818,7 @@ function renderTeacherDay(){
   box.innerHTML=mine.map(function(a){
     var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
     var done=isSlotSubmittedToday(a.id);
-    var stus=(schoolData.students||[]).filter(function(s){
-      if(s.classId!==a.classId)return false;
-      var g=a.group||'';
-      if(!g||g==='همه'||g==='all')return true;
-      var sg=String(s.group||s.section||'').trim();
-      if(!sg)return true;
-      return sg===String(g)||sg==='گروه '+g;
-    });
+    var stus=studentsForAssignment(a);
     return '<div class="list-item" style="flex-wrap:wrap;gap:8px">'+
       '<div style="flex:1;min-width:140px"><div class="name">'+(c?c.name:'کلاس')+(a.subject?(' · '+a.subject):'')+'</div>'+
       '<div class="meta">'+(a.periodName||'زنگ')+(a.startTime?(' · '+a.startTime):'')+(a.group&&a.group!=='همه'&&a.group!=='all'?(' · گروه '+a.group):'')+' · '+stus.length+' دانش‌آموز</div></div>'+
@@ -4759,19 +4828,13 @@ function renderTeacherDay(){
   }).join('');
 }
 function openTakeAtt(assignId){
-  currentAssign=(schoolData.assignments||[]).find(a=>a.id===assignId);
-  if(!currentAssign)return;
+  currentAssign=(schoolData.assignments||[]).find(function(a){return a&&a.id===assignId});
+  if(!currentAssign)return toast('این زنگ یافت نشد');
+  if(isTeacher()&&!isMyAssignment(currentAssign))return toast('این زنگ به شما اختصاص ندارد');
   const c=schoolData.classes.find(x=>x.id===currentAssign.classId);
   const done=isSlotSubmittedToday(assignId);
   document.getElementById('take-title').textContent=(c?c.name:'کلاس')+(currentAssign.subject?' · '+currentAssign.subject:'')+' — '+(currentAssign.periodName||'')+(done?' (قبلاً ثبت شده)':'');
-  const st=schoolData.students.filter(function(s){
-    if(s.classId!==currentAssign.classId)return false;
-    var g=currentAssign.group||'';
-    if(!g||g==='همه'||g==='all')return true;
-    var sg=String(s.group||s.section||'').trim();
-    if(!sg)return true;
-    return sg===String(g)||sg==='گروه '+g;
-  });
+  const st=studentsForAssignment(currentAssign);
   // prefill from last submission today if any
   let lastMap={};
   if(done){
@@ -4945,7 +5008,7 @@ function renderTeacherJournal(){
   return;
   const box=document.getElementById('teacher-journal');
   if(!box||!userSession)return;
-  const myClassIds=[...new Set((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).map(a=>a.classId))];
+  const myClassIds=[...new Set((schoolData.assignments||[]).filter(function(a){return isMyAssignment(a);}).map(a=>a.classId))];
   if(!myClassIds.length){box.innerHTML='<p class="hint">کلاسی به شما اختصاص داده نشده.</p>';return}
   let html='';
   myClassIds.forEach(cid=>{
@@ -6031,8 +6094,8 @@ function smsModeAllowsSim(){const m=getSmsCfg().mode;return m==='sim'||m==='both
 
 
 function teacherClassOptions(){
-  return [...new Set((schoolData.assignments||[]).filter(a=>(a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)).map(a=>a.classId))]
-    .map(id=>(schoolData.classes||[]).find(c=>c.id===id)).filter(Boolean);
+  return [...new Set((schoolData.assignments||[]).filter(function(a){return isMyAssignment(a);}).map(function(a){return a.classId}))]
+    .map(function(id){return (schoolData.classes||[]).find(function(c){return c.id===id})}).filter(Boolean);
 }
 function teacherSubjectsForClass(classId){
   const set=[];
@@ -6062,7 +6125,7 @@ function canEditExam(ex){
   if(ex.teacherId&&ex.teacherId===userSession.staffId)return true;
   // امتحان‌های قدیمی بدون teacherId: اگر کلاس در برنامه معلم باشد
   if(!ex.teacherId){
-    return (schoolData.assignments||[]).some(function(a){return (a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)&&a.classId===ex.classId});
+    return (schoolData.assignments||[]).some(function(a){return isMyAssignment(a)&&a.classId===ex.classId});
   }
   return false;
 }
@@ -6078,7 +6141,7 @@ function renderExams(){
   if(isTeacher()&&userSession){
     list=list.filter(function(ex){
       return ex.teacherId===userSession.staffId||
-        (!ex.teacherId&&(schoolData.assignments||[]).some(function(a){return (a.teacherId===userSession.staffId||a.teacherId2===userSession.staffId||a.teacherId===userSession.id||a.teacherId2===userSession.id)&&a.classId===ex.classId}));
+        (!ex.teacherId&&(schoolData.assignments||[]).some(function(a){return isMyAssignment(a)&&a.classId===ex.classId}));
     });
   }
   if(!list.length){
