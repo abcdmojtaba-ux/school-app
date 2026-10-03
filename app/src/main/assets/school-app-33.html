@@ -1909,7 +1909,11 @@ function applyRemoteAppData(d,remoteTs,forceAll){
   }
   if(Array.isArray(d.disciplineTypes)&&d.disciplineTypes.length)schoolData.disciplineTypes=d.disciplineTypes;
   if(Array.isArray(d.smsTemplates)&&d.smsTemplates.length)schoolData.smsTemplates=d.smsTemplates;
-  schoolData.exams=_mergeById(schoolData.exams,d.exams,!!forceAll);
+  // exams already merged above when not reset; if reset already replaced
+  // never preferRemote=true for exams on normal force (prevents wiping local new scores)
+  if(!(d.resetYear===true||d.clearPerformance===true)){
+    schoolData.exams=_mergeById(schoolData.exams,d.exams,false);
+  }
   schoolData.messages=(function(){
     const loc=Array.isArray(schoolData.messages)?schoolData.messages:[];
     const rem=Array.isArray(d.messages)?d.messages:[];
@@ -2077,22 +2081,22 @@ async function cloudPullAppData(force){
       var fullReplace=!!force||!!needFull||lRich===0||(remoteTs>localTs)||!!window._loginPulling;
       // force یا ورود: برای همه نقش‌ها داده سرور مطلق است — گوشی قدیمی چیزی برنمی‌گرداند
       if(force||window._loginPulling){
-        fullReplace=true;
-        // صبح و عصر یکسان: آرایه خالی سرور هرگز داده محلی را پاک نکند
+        // ورود/force: ساختار از سرور؛ عملکرد همیشه merge تا داده جدید محلی نپرد
         applyRemoteAppData(d,remoteTs||Date.now(),true);
         if(Array.isArray(d.classes)&&d.classes.length)schoolData.classes=d.classes.slice();
         if(Array.isArray(d.students)&&d.students.length)schoolData.students=d.students.slice();
         if(Array.isArray(d.staff)&&d.staff.length)schoolData.staff=d.staff.slice();
         if(Array.isArray(d.assignments)&&d.assignments.length)schoolData.assignments=d.assignments.slice();
         if(Array.isArray(d.colleagues)&&d.colleagues.length)schoolData.colleagues=d.colleagues.slice();
-        if(Array.isArray(d.attendance)&&d.attendance.length)schoolData.attendance=d.attendance.slice();
-        if(Array.isArray(d.submissions)&&d.submissions.length)schoolData.submissions=d.submissions.slice();
-        if(Array.isArray(d.exams)&&d.exams.length)schoolData.exams=d.exams.slice();
-        if(Array.isArray(d.messages)&&d.messages.length)schoolData.messages=d.messages.slice();
-        schoolData._localDirtyAt=0;
+        // حضور، ارسال، امتحان، پیام: merge نه slice
+        if(Array.isArray(d.attendance)&&d.attendance.length)schoolData.attendance=_mergeById(schoolData.attendance,d.attendance,false);
+        if(Array.isArray(d.submissions)&&d.submissions.length)schoolData.submissions=_mergeById(schoolData.submissions,d.submissions,false);
+        if(Array.isArray(d.exams)&&d.exams.length)schoolData.exams=_mergeById(schoolData.exams,d.exams,false);
+        // messages: applyRemoteAppData IIFE handles unionRead — don't overwrite here
+        if(!dirty) schoolData._localDirtyAt=0;
         schoolData.replaceStructure=false;
         schoolData._blockStructurePushUntil=Date.now()+15000;
-        schoolData._cloudUpdatedAtMs=remoteTs||Date.now();
+        schoolData._cloudUpdatedAtMs=Math.max(remoteTs||0, schoolData._cloudUpdatedAtMs||0, Date.now());
         try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
         try{fillSmsPanelForm()}catch(e){}
         return true;
