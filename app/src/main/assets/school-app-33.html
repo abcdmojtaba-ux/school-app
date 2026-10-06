@@ -326,7 +326,9 @@ body.theme-light .btn-outline{border-color:#93c5fd;color:#1d4ed8}
   border-color:rgba(56,189,248,.3);
   color:var(--blue);
   border-radius:999px;
-  padding:7px 12px;
+  padding:7px 10px;
+  font-size:.72rem;
+  white-space:nowrap;
 }
 body.theme-light .topbar .btn-outline{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
 
@@ -567,7 +569,8 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
     <div><h1 id="app-title">سامانه نیکان</h1><div class="sub" id="app-role"></div></div>
     <div style="display:flex;gap:6px;align-items:center">
       <button type="button" class="btn btn-sm btn-outline" onclick="toggleThemeQuick()" title="ظاهر">◐</button>
-      <button type="button" class="btn btn-sm btn-outline" onclick="manualSyncAll()">ارسال به سرور</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="pullFromServer()" title="آخرین داده از سرور">⬇ دریافت از سرور</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="manualSyncAll()" title="ارسال تغییرات به سرور">⬆ ارسال به سرور</button>
       <button type="button" class="btn btn-sm btn-danger" onclick="doLogout()" style="min-width:64px">خروج</button>
     </div>
   </div>
@@ -600,6 +603,9 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <div class="card-title" style="margin-top:14px;color:#f57f17">پیامک تأخیرها</div>
       <div class="form-group"><textarea class="form-control" id="sub-msg-late">ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.</textarea></div>
       <button class="btn btn-warning btn-block" onclick="prepareSmsFromSubmission('late')">آماده‌سازی پیامک گروهی تأخیرها</button>
+      <div class="card-title" style="margin-top:14px;color:#c62828">پیامک فرار</div>
+      <div class="form-group"><textarea class="form-control" id="sub-msg-escape">ولی محترم {نام} در تاریخ {تاریخ} بدون اجازه از مدرسه خارج شده (فرار) است.</textarea></div>
+      <button class="btn btn-danger btn-block" style="background:#c62828;border-color:#c62828" onclick="prepareSmsFromSubmission('escape')">آماده‌سازی پیامک گروهی فرار</button>
       <button class="btn btn-success btn-block" style="margin-top:12px" onclick="markSubmissionDone()">✓ بررسی شد — برو به بررسی‌شده‌ها</button>
       <div id="sub-sms-out" style="margin-top:12px"></div>
     </div>
@@ -619,6 +625,9 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       </div>
       <div class="form-group"><label>عنوان زنگ / توضیح</label>
         <input class="form-control" id="mgr-att-period" placeholder="مثلاً زنگ اول یا حضور صبح" />
+      </div>
+      <div class="form-group"><label>کسر نمره «فرار» (فقط اگر کسی فرار علامت شود)</label>
+        <input type="number" step="0.25" min="0" class="form-control" id="mgr-escape-score" placeholder="پیش‌فرض از قوانین" />
       </div>
       <div id="mgr-att-list" style="max-height:280px;overflow-y:auto;margin:8px 0"></div>
       <button class="btn btn-primary btn-block" type="button" onclick="submitManagerClassAtt()">ثبت حضور و غیاب کلاس</button>
@@ -646,6 +655,37 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       </div>
       <button class="btn btn-outline btn-block" type="button" onclick="renderAttLog()">نمایش این روز</button>
       <div id="att-log-out" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+
+  <!-- ثبت گروهی مورد انضباطی — فقط مدیر/معاون -->
+  <div id="page-bulk-disc" class="page">
+    <div class="card">
+      <button class="btn btn-outline btn-sm" onclick="showAppPage('home')">← خانه</button>
+      <div class="card-title" style="margin-top:10px">ثبت گروهی مورد انضباطی</div>
+      <p class="hint">یک مورد را برای چند دانش‌آموز یک کلاس یک‌جا ثبت کنید (مثلاً همه‌ی کلاس یا فقط انتخاب‌شده‌ها).</p>
+      <div class="form-group"><label>کلاس</label>
+        <select class="form-control" id="bulk-disc-class" onchange="loadBulkDiscStudents()"></select>
+      </div>
+      <div class="form-group"><label>نوع / مورد انضباطی</label>
+        <select class="form-control" id="bulk-disc-type" onchange="bulkDiscTypeChanged()"></select>
+      </div>
+      <div class="form-group"><label>کسر نمره (خالی = پیش‌فرض مورد)</label>
+        <input type="number" step="0.25" class="form-control" id="bulk-disc-score" placeholder="مثلاً ۱" />
+      </div>
+      <div class="form-group"><label>تاریخ شمسی (خالی=امروز)</label>
+        <input class="form-control" id="bulk-disc-date" placeholder="1404/06/31" inputmode="numeric" />
+      </div>
+      <div class="form-group"><label>توضیح (اختیاری)</label>
+        <input class="form-control" id="bulk-disc-note" placeholder="مثلاً بی‌نظمی گروهی در زنگ ورزش" />
+      </div>
+      <div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap">
+        <button type="button" class="btn btn-outline btn-sm" onclick="bulkDiscSelectAll(true)">انتخاب همه</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="bulkDiscSelectAll(false)">لغو همه</button>
+      </div>
+      <div id="bulk-disc-list" style="max-height:300px;overflow-y:auto;margin:8px 0"></div>
+      <button class="btn btn-danger btn-block" type="button" onclick="submitBulkDiscipline()">ثبت گروهی برای انتخاب‌شده‌ها</button>
     </div>
   </div>
 
@@ -731,7 +771,7 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <div class="qa-grid">
         <button type="button" class="qa-item" onclick="showAppPage('exams')"><span class="ic">📝</span><span class="lb">ثبت نمرات</span><span class="ds">امتحان کلاس</span></button>
         <button type="button" class="qa-item" onclick="showAppPage('messages')"><span class="ic">📨</span><span class="lb">اتوماسیون</span><span class="ds">پیام داخلی</span></button>
-        <button type="button" class="qa-item" onclick="manualSyncAll()"><span class="ic">☁️</span><span class="lb">همگام‌سازی</span><span class="ds">دریافت از سرور</span></button>
+        <button type="button" class="qa-item" onclick="pullFromServer()"><span class="ic">🔄</span><span class="lb">به‌روزرسانی از سرور</span><span class="ds">آخرین کلاس و برنامه</span></button>
       </div>
     </div>
   </div>
@@ -999,6 +1039,7 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <div class="card-title">قوانین پایه (از ۲۰)</div>
       <div class="form-group"><label>غیبت</label><input type="number" step="0.25" class="form-control" id="rule-absent" onchange="saveRules()" /></div>
       <div class="form-group"><label>تأخیر</label><input type="number" step="0.25" class="form-control" id="rule-late" onchange="saveRules()" /></div>
+      <div class="form-group"><label>فرار</label><input type="number" step="0.25" class="form-control" id="rule-escape" onchange="saveRules()" /></div>
       <div class="form-group"><label>سایر (پیش‌فرض)</label><input type="number" step="0.25" class="form-control" id="rule-other" onchange="saveRules()" /></div>
     </div>
     <div class="card" id="set-theme-card">
@@ -1109,7 +1150,7 @@ const APP_KEY='school_app_v1',MOTHER_KEY='mother_panel_v1',DATA_PREFIX='school_d
 const DAYS=['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
 let session=null,userSession=null,schoolData=null,currentClassId=null,currentStudentId=null,loginRole='manager',currentAssign=null;
 
-const TPL={absent:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.',late:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.',encourage:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'};
+const TPL={absent:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.',late:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.',escape:'ولی محترم {نام} در تاریخ {تاریخ} بدون اجازه از مدرسه خارج شده (فرار) است.',encourage:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'};
 
 function uid(){return 'id_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function todayStr(){return new Date().toISOString().slice(0,10)}
@@ -1221,6 +1262,21 @@ const DEFAULT_SYNC_API='https://panel.nikan-school.top';
 const FALLBACK_SYNC_API='https://panel.nikan-school.top';
 const SYNC_API=(function(u){u=String(u||'');while(u.length&&u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u})(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API);
 function setSyncApi(url){url=String(url||'').trim();while(url.length&&url.charAt(url.length-1)==='/')url=url.slice(0,-1);localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
+function getWriteAuth(){
+  var u=userSession||{};
+  var s=(typeof session!=='undefined'&&session)?session:{};
+  var sd=(typeof schoolData!=='undefined'&&schoolData)?schoolData:{};
+  var role=String(u.role||'manager');
+  if(role==='مدیر')role='manager';
+  if(role==='معاون'||role==='assistant')role='deputy';
+  if(role==='معلم'||role==='دبیر')role='teacher';
+  var user=String(u.username||s.managerUsername||s.managerUser||sd.managerUser||sd.managerUsername||'').trim();
+  var pass=String(u.pass||u.password||s.managerPassword||s.managerPass||sd.managerPass||sd.managerPassword||'').trim();
+  if((role==='manager'||!u.role)&&!pass) pass=String(sd.managerPass||sd.managerPassword||s.managerPassword||s.managerPass||'').trim();
+  if((role==='manager'||!u.role)&&!user) user=String(sd.managerUser||sd.managerUsername||s.managerUsername||s.managerUser||'').trim();
+  if(pass&&u&&!u.pass&&role==='manager'){try{u.pass=pass;if(typeof saveUserSession==='function')saveUserSession(u)}catch(e){}}
+  return {user:user,pass:pass,role:role,schoolId:String(s.schoolId||u.schoolId||'')};
+}
 async function apiFetch(path,options){
   const opts=options||{};
   const maxTry=opts.retries!=null?opts.retries:1;
@@ -1258,10 +1314,27 @@ async function apiFetch(path,options){
       try{
         const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
         const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},tOut):null;
+        var _auth=(typeof getWriteAuth==='function')?getWriteAuth():{user:'',pass:'',role:'manager',schoolId:''};
+        var _hdrs=Object.assign({
+          'Content-Type':'application/json',
+          'Accept':'application/json',
+          'X-Auth-User':_auth.user||'',
+          'X-Auth-Pass':_auth.pass||'',
+          'X-Auth-Role':_auth.role||'manager',
+          'X-School-Id':_auth.schoolId||''
+        },opts.headers||{});
+        var _body=opts.body;
+        if(_body&&typeof _body==='object'){
+          _body=Object.assign({},_body,{
+            auth:{user:_auth.user,pass:_auth.pass,role:_auth.role},
+            schoolId:_body.schoolId||_auth.schoolId||'',
+            _compatNoAuth:true
+          });
+        }
         const res=await fetch(base+path,{
           method:opts.method||'GET',
-          headers:Object.assign({'Content-Type':'application/json','Accept':'application/json'},opts.headers||{}),
-          body:opts.body?JSON.stringify(opts.body):undefined,
+          headers:_hdrs,
+          body:_body?JSON.stringify(_body):undefined,
           signal:ctrl?ctrl.signal:undefined,
           cache:'no-store'
         });
@@ -1279,6 +1352,58 @@ async function apiFetch(path,options){
     }
   }
   throw lastErr||new Error('خطای سرور');
+}
+
+async function pullFromServer(){
+  if(!session||!session.schoolId)return toast('اول وارد شوید');
+  try{
+    window._loginPulling=false;
+    window._blockStructUntil=0;
+    if(schoolData){
+      try{schoolData._localDirtyAt=0;schoolData._blockStructurePushUntil=0}catch(e){}
+    }
+  }catch(e){}
+  toast('در حال دریافت آخرین داده از سرور...',4000);
+  var ok=false, lastErr=null;
+  for(var i=0;i<3&&!ok;i++){
+    try{
+      ok=!!(await cloudPullAppData(true));
+      if(ok)break;
+    }catch(e){
+      lastErr=e;
+      ok=false;
+    }
+    if(!ok&&i<2)await new Promise(function(r){setTimeout(r,900*(i+1));});
+  }
+  try{
+    if(ok&&canManage()&&session.schoolId)await cloudPullSubmissions(session.schoolId);
+  }catch(e){}
+  try{
+    if(isTeacher()){
+      renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal();
+    }else{
+      renderHome();renderClasses();renderAssignments();renderTeam();
+      try{if(typeof renderSettings==='function')renderSettings()}catch(e){}
+    }
+  }catch(e){}
+  var nC=(schoolData&&schoolData.classes||[]).length;
+  var nS=(schoolData&&schoolData.students||[]).length;
+  var nT=(schoolData&&schoolData.staff||[]).length;
+  var nA=(schoolData&&schoolData.assignments||[]).length;
+  if(ok){
+    window._serverPullOk=true;
+    window._serverStructOk=(nC+nS+nT+nA)>0;
+    if(nC||nS||nT||nA){
+      toast('به‌روز شد ✓ · کلاس '+nC+' · دانش‌آموز '+nS+' · کاربر '+nT+' · برنامه '+nA,4500);
+    }else{
+      toast('از سرور خوانده شد — ساختار روی سرور خالی است. از دستگاهی که داده دارد «ارسال» بزنید.',5000);
+    }
+  }else{
+    window._serverPullOk=false;
+    var msg=(lastErr&&lastErr.message)?String(lastErr.message).slice(0,80):'';
+    toast('ارتباط با سرور برقرار نشد'+(msg?(' — '+msg):'')+' — اینترنت/فیلترشکن را چک کنید و دوباره بزنید',5000);
+  }
+  return ok;
 }
 
 async function manualSyncAll(){
@@ -2118,7 +2243,7 @@ async function cloudPullAppData(force){
     // همیشه برای همگام‌سازی چنددستگاهی full بکش اگر force یا معلم
     const needFull=!!force||(userSession&&userSession.role==='teacher');
     const since=(!needFull&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
-    const data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:2});
+    const data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:needFull?3:2,timeoutMs:needFull?45000:20000});
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
@@ -2328,8 +2453,10 @@ async function autoPullAll(checkSchool){
   finally{_pullBusy=false}
 }
 function dataKey(){return DATA_PREFIX+(session?.schoolId||session?.code||'local')}
-function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,other:1},theme:{},shifts:1,messages:[]}}
-function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.deletedClassIds))schoolData.deletedClassIds=[];if(!Array.isArray(schoolData.deletedStudentIds))schoolData.deletedStudentIds=[];if(!Array.isArray(schoolData.deletedStaffIds))schoolData.deletedStaffIds=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.deletedAssignmentIds)schoolData.deletedAssignmentIds=[];if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;applyTheme()}
+function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'escape',name:'فرار',text:'ولی محترم {نام} در تاریخ {تاریخ} بدون اجازه از مدرسه خارج شده (فرار) است.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'escape',name:'فرار',scoreDeduct:1},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,escape:1,other:1},theme:{},shifts:1,messages:[]}}
+function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.deletedClassIds))schoolData.deletedClassIds=[];if(!Array.isArray(schoolData.deletedStudentIds))schoolData.deletedStudentIds=[];if(!Array.isArray(schoolData.deletedStaffIds))schoolData.deletedStaffIds=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.deletedAssignmentIds)schoolData.deletedAssignmentIds=[];if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;
+try{if(!(schoolData.smsTemplates||[]).some(function(t){return t&&t.id==='escape'})){schoolData.smsTemplates.push({id:'escape',name:'فرار',text:(typeof TPL!=='undefined'&&TPL.escape)?TPL.escape:'ولی محترم {نام} در تاریخ {تاریخ} بدون اجازه از مدرسه خارج شده (فرار) است.'});}}catch(e){}
+try{if(schoolData.rules&&schoolData.rules.escape==null)schoolData.rules.escape=1;}catch(e){}applyTheme()}
 function saveSchoolData(){
   try{
     if(schoolData&&typeof schoolData==='object'){
@@ -3271,7 +3398,7 @@ async function enterApp(){
     }else{
       window._serverStructOk=false;
       window._serverPullOk=false;
-      toast('داده ساختار روی این دستگاه خالی است. اگر مدرسه داده دارد، از دستگاه قبلی «ارسال به سرور» بزنید؛ این دستگاه چیزی را پاک نمی‌کند.',6000);
+      toast('ساختار خالی است. «🔄 از سرور» را بزنید — این دستگاه سرور را پاک نمی‌کند.',5000);
     }
     // ترمیم خودکار: اگر مدیر داده محلی دارد ولی سرور ساختار ندارد → یک‌بار ساختار را بفرست
     try{
@@ -3333,7 +3460,7 @@ async function enterApp(){
       if(!structN){
         window._serverPullOk=false;
         try{schoolData.replaceStructure=false;schoolData._structureWriteToken=false;}catch(e){}
-        toast('ساختار مدرسه روی این دستگاه/سرور خالی است. از دستگاهی که داده دارد «ارسال به سرور» بزنید.',5000);
+        toast('ساختار اینجا خالی است. دکمه «🔄 از سرور» را بزنید؛ اگر باز خالی بود از دستگاه دارای داده «ارسال» کنید.',5000);
       }
       try{if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}}catch(e){}
       afterSync(ok);
@@ -3447,6 +3574,7 @@ function showAppPage(name){
   if(name==='send'&&!hasModule('sms'))return toast('ماژول پیامک برای این مدرسه فعال نیست');
   if(name==='reports'){if(!(hasModule('advanced_reports')||hasModule('discipline')))return toast('ماژول گزارش فعال نیست');}
   if(name==='att-log'&&!canManage())return toast('فقط مدیر یا معاون');
+  if(name==='bulk-disc'&&!canManage())return toast('فقط مدیر یا معاون');
   if(name==='period-track'&&!canManage())return toast('فقط مدیر یا معاون');
   document.querySelectorAll('#screen-app .page').forEach(p=>p.classList.remove('active'));
   // صفحات زیرمجموعه «بیشتر» هم تب بیشتر را فعال نگه می‌دارند
@@ -3460,6 +3588,7 @@ function showAppPage(name){
       (name==='take-att'&&p==='teacher')||
       (name==='submission'&&p==='home')||
       (name==='att-log'&&p==='home')||
+      (name==='bulk-disc'&&p==='home')||
       (morePages.indexOf(name)>=0&&p==='settings'&&!(isTeacher()&&name==='exams'));
     b.classList.toggle('active',!!on);
   });
@@ -3471,6 +3600,7 @@ function showAppPage(name){
   if(name==='home')renderHome();
   if(name==='period-track'){try{renderPeriodTrack()}catch(e){console.warn(e)}}
   if(name==='att-log'){try{var d=document.getElementById('att-log-date');if(d&&!d.value)d.value=formatDateFa(todayStr());var md=document.getElementById('mgr-att-date');if(md&&!md.value)md.value=formatDateFa(todayStr());var sel=document.getElementById('mgr-att-class');if(sel){sel.innerHTML='<option value="">— انتخاب کلاس —</option>'+classesForRole().map(function(c){return '<option value="'+c.id+'">'+classTitle(c)+'</option>'}).join('');}renderAttLog();filterLateStudentPick();loadMgrAttStudents()}catch(e){}}
+  if(name==='bulk-disc'){try{openBulkDiscPage()}catch(e){}}
   if(name==='classes')renderClasses();
   if(name==='team')renderTeam();
   if(name==='send')prepareSend();
@@ -3511,6 +3641,7 @@ function renderHome(){
       '<button type="button" class="qa-item" onclick="showAppPage(\'exams\')"><span class="ic">📝</span><span class="lb">نمرات</span><span class="ds">ثبت امتحان</span></button>'+
       '<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">اتوماسیون</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'پیام داخلی')+'</span></button>'+
       '<button type="button" class="qa-item" onclick="showAppPage(\'settings\')"><span class="ic">⋯</span><span class="lb">بیشتر</span><span class="ds">ظاهر و پشتیبانی</span></button>'+
+      '<button type="button" class="qa-item" onclick="pullFromServer()"><span class="ic">🔄</span><span class="lb">به‌روزرسانی از سرور</span><span class="ds">آخرین برنامه و کلاس</span></button>'+
       '</div>';
   }else{
     // میان‌برهای هم‌راستا با منوی پایین — بدون تکرار شلوغ
@@ -3520,6 +3651,7 @@ function renderHome(){
       (((hasModule('advanced_reports')||hasModule('discipline'))&&!isTeacher())?'<button type="button" class="qa-item" onclick="showAppPage(\'reports\')"><span class="ic">📊</span><span class="lb">گزارش</span><span class="ds">حضور و انضباط</span></button>':'')+
       '<button type="button" class="qa-item" onclick="showAppPage(\'settings\')"><span class="ic">⋯</span><span class="lb">بیشتر</span><span class="ds">امتحان · تنظیمات</span></button>'+
       '<button type="button" class="qa-item" onclick="showAppPage(\'messages\')"><span class="ic">📨</span><span class="lb">اتوماسیون</span><span class="ds">'+(unreadMsgCount()? (unreadMsgCount()+' خوانده‌نشده'):'پیام داخلی')+'</span></button>'+
+      '<button type="button" class="qa-item" onclick="pullFromServer()"><span class="ic">🔄</span><span class="lb">به‌روزرسانی از سرور</span><span class="ds">آخرین داده مدرسه</span></button>'+
       '</div>';
   }
   // خانه: در انتظار + شیت پایین بررسی‌شده‌ها
@@ -3541,6 +3673,7 @@ function renderHome(){
     }).length;
     let html='';
     html+='<button type="button" class="btn btn-primary btn-block" style="margin-bottom:10px" onclick="showAppPage(\'att-log\')">✏️ حضور و غیاب مدیر/معاون · تأخیر ورود</button>';
+    html+='<button type="button" class="btn btn-outline btn-block" style="margin-bottom:10px" onclick="showAppPage(\'bulk-disc\')">ثبت گروهی مورد انضباطی</button>';
     if(pending.length){
       html+='<div class="card-title">در انتظار بررسی ('+pending.length+')</div><p class="hint">بعد از بررسی از این لیست حذف و به «بررسی‌شده‌های امروز» می‌رود.</p>';
       html+=pending.map(s=>{
@@ -3888,7 +4021,7 @@ function applySubmissionAttendance(s){
   schoolData.attendance=schoolData.attendance||[];
   s.rows.forEach(r=>{
     if(r.status==='present')return;
-    const type=r.status==='late'?'late':'absent';
+    const type=r.status==='late'?'late':(r.status==='escape'?'escape':'absent');
     // already have from this submission?
     const exists=schoolData.attendance.some(a=>a.submissionId===s.id&&a.studentId===r.studentId);
     if(exists)return;
@@ -3900,6 +4033,8 @@ function applySubmissionAttendance(s){
     var deduct=0;
     if(type==='late'){
       deduct=(schoolData.rules&&schoolData.rules.late)||0.25;
+    }else if(type==='escape'){
+      deduct=(schoolData.rules&&schoolData.rules.escape!=null)?(parseFloat(schoolData.rules.escape)||1):1;
     }else{
       // absent: آیا قبلاً برای این روز کسر شده؟
       var alreadyAbsent=schoolData.attendance.some(function(a){
@@ -3907,7 +4042,8 @@ function applySubmissionAttendance(s){
       });
       deduct=alreadyAbsent?0:((schoolData.rules&&schoolData.rules.absent)||0.5);
     }
-    schoolData.attendance.push({id:uid(),studentId:r.studentId,classId:s.classId,date:s.date,type:type,note:'حضور و غیاب معلم — '+(s.periodName||''),scoreDeduct:deduct,fromTeacher:true,submissionId:s.id,teacherId:s.teacherId||null});
+    var isMgr=!!s.fromManager;
+    schoolData.attendance.push({id:uid(),studentId:r.studentId,classId:s.classId,date:s.date,type:type,note:(type==='escape'?'فرار — ':'')+(isMgr?'حضور مدیریت':'حضور و غیاب معلم')+' — '+(s.periodName||''),scoreDeduct:deduct,scoreLocked:type==='escape',fromDiscipline:type==='escape',fromTeacher:!isMgr,fromManager:isMgr,submissionId:s.id,teacherId:s.teacherId||null});
   });
 }
 function ensureAllSubmissionsInAttendance(){
@@ -3930,18 +4066,20 @@ function openSubmission(id){
   const c=(schoolData.classes||[]).find(x=>x.id===s.classId);
   document.getElementById('sub-title').textContent=(t?t.name:'معلم')+' — '+(s.periodName||'زنگ');
   document.getElementById('sub-meta').textContent=(s.fromManager?'از سمت مدیریت':'از سمت معلم')+' · '+(c?c.name:'کلاس')+(s.subject?' · درس '+s.subject:'')+' · زنگ '+(s.periodName||'—')+' · تاریخ '+formatDateFa(s.date)+(s.status==='pending'?' · در انتظار بررسی':' · بررسی‌شده');
-  const statusFa={present:'حاضر',absent:'غایب',late:'تأخیر'};
+  const statusFa={present:'حاضر',absent:'غایب',late:'تأخیر',escape:'فرار'};
   const abs=(s.rows||[]).filter(r=>r.status==='absent');
   const late=(s.rows||[]).filter(r=>r.status==='late');
+  const esc=(s.rows||[]).filter(r=>r.status==='escape');
   const pres=(s.rows||[]).filter(r=>r.status==='present');
   function rowHtml(r,defCheck){
     const st=schoolData.students.find(x=>x.id===r.studentId);
     const checked=defCheck?' checked':'';
-    const color=r.status==='absent'?'var(--danger)':(r.status==='late'?'#f57f17':'var(--success)');
+    const color=r.status==='escape'?'#c62828':(r.status==='absent'?'var(--danger)':(r.status==='late'?'#f57f17':'var(--success)'));
     return '<label class="checkbox-row" style="justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0"><span><input type="checkbox" class="sub-sc" value="'+r.studentId+'" data-status="'+r.status+'"'+checked+' /> <strong>'+(st?st.name:'?')+'</strong></span><span style="color:'+color+';font-weight:700">'+(statusFa[r.status]||r.status)+'</span></label>';
   }
   let listHtml='';
-  if(abs.length){listHtml+='<div class="card-title" style="color:var(--danger)">غایب‌ها ('+abs.length+')</div>'+abs.map(r=>rowHtml(r,true)).join('')}
+  if(esc.length){listHtml+='<div class="card-title" style="color:#c62828">فرار ('+esc.length+')</div>'+esc.map(r=>rowHtml(r,true)).join('')}
+  if(abs.length){listHtml+='<div class="card-title" style="color:var(--danger);margin-top:10px">غایب‌ها ('+abs.length+')</div>'+abs.map(r=>rowHtml(r,true)).join('')}
   if(late.length){listHtml+='<div class="card-title" style="color:#f57f17;margin-top:10px">تأخیرها ('+late.length+')</div>'+late.map(r=>rowHtml(r,true)).join('')}
   if(pres.length){listHtml+='<div class="card-title" style="color:var(--success);margin-top:10px">حاضرها ('+pres.length+')</div>'+pres.map(r=>rowHtml(r,false)).join('')}
   document.getElementById('sub-list').innerHTML=listHtml||'<p class="hint">ردیفی نیست</p>';
@@ -3949,10 +4087,14 @@ function openSubmission(id){
   try{
     const tA=(schoolData.smsTemplates||[]).find(x=>x.id==='absent');
     const tL=(schoolData.smsTemplates||[]).find(x=>x.id==='late');
+    const tE=(schoolData.smsTemplates||[]).find(x=>x.id==='escape');
     const ea=document.getElementById('sub-msg-absent');
     const el=document.getElementById('sub-msg-late');
+    const ee=document.getElementById('sub-msg-escape');
     if(ea&&tA)ea.value=tA.text;
     if(el&&tL)el.value=tL.text;
+    if(ee&&tE)ee.value=tE.text;
+    else if(ee&&typeof TPL!=='undefined'&&TPL.escape)ee.value=TPL.escape;
   }catch(e){}
   document.getElementById('sub-sms-out').innerHTML='';
   window._openSub=s;
@@ -3976,7 +4118,8 @@ function markAbsentSmsSent(studentIds,dateStr){
 function prepareSmsFromSubmission(kind){
   const s=window._openSub||(schoolData.submissions||[]).find(x=>x.id===currentSubmissionId);if(!s||!s.rows)return toast('ابتدا حضور و غیاب را باز کنید');
   var dateStr=s.date||todayStr();
-  var allIds=s.rows.filter(r=>r.status===(kind==='late'?'late':'absent')).map(r=>r.studentId);
+  var wantStatus=kind==='late'?'late':(kind==='escape'?'escape':'absent');
+  var allIds=s.rows.filter(r=>r.status===wantStatus).map(r=>r.studentId);
   var useIds=allIds.slice();
   var skipped=[];
   if(kind==='absent'){
@@ -3991,10 +4134,10 @@ function prepareSmsFromSubmission(kind){
       if(names.length)console.info('sms skip',names);
     }
   }
-  if(!useIds.length)return toast(kind==='late'?'تأخیری نیست':(skipped.length?'برای همه این غایب‌ها قبلاً پیامک رفته است':'غایبی نیست'));
+  if(!useIds.length)return toast(kind==='late'?'تأخیری نیست':(kind==='escape'?'مورد فراری نیست':(skipped.length?'برای همه این غایب‌ها قبلاً پیامک رفته است':'غایبی نیست')));
   let tplText='';
-  try{const el=document.getElementById(kind==='late'?'sub-msg-late':'sub-msg-absent');if(el&&el.value.trim())tplText=el.value.trim()}catch(e){}
-  if(!tplText){const tpl=getSmsTemplates().find(t=>t.id===(kind==='late'?'late':'absent'));tplText=(tpl&&tpl.text)||(kind==='late'?TPL.late:TPL.absent)}
+  try{const elId=kind==='late'?'sub-msg-late':(kind==='escape'?'sub-msg-escape':'sub-msg-absent');const el=document.getElementById(elId);if(el&&el.value.trim())tplText=el.value.trim()}catch(e){}
+  if(!tplText){const tid=kind==='late'?'late':(kind==='escape'?'escape':'absent');const tpl=getSmsTemplates().find(t=>t.id===tid);tplText=(tpl&&tpl.text)||(kind==='late'?TPL.late:(kind==='escape'?(TPL.escape||''):TPL.absent))}
   const tpl={text:tplText};
   const both=document.getElementById('sub-both')?document.getElementById('sub-both').checked:true;
   let html='',allPhones=[],jobs=[];
@@ -4013,7 +4156,7 @@ function prepareSmsFromSubmission(kind){
   });
   const uniq=[...new Set(allPhones)];
   const g=applyVars(tpl.text||'','فرزند شما');
-  const title=kind==='late'?'تأخیرها':'غایب‌ها';
+  const title=kind==='late'?'تأخیرها':(kind==='escape'?'فرار':'غایب‌ها');
   let top='';
   const cfg=getSmsCfg();
   top+='<div class="card"><div class="meta">حالت: <strong>'+(cfg.mode==='panel'?'فقط پنل':cfg.mode==='both'?'هر دو':'فقط سیم‌کارت')+'</strong></div></div>';
@@ -4292,7 +4435,7 @@ function loadMgrAttStudents(){
   var stus=(schoolData.students||[]).filter(function(s){return s.classId===cid});
   if(!stus.length){list.innerHTML='<p class="hint">دانش‌آموزی نیست</p>';return}
   list.innerHTML=stus.map(function(s){
-    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div><select class="form-control mgr-att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present">حاضر</option><option value="absent">غایب</option><option value="late">تأخیر</option></select></div>';
+    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div><select class="form-control mgr-att-st" data-sid="'+s.id+'" style="width:auto;min-width:120px"><option value="present">حاضر</option><option value="absent">غایب</option><option value="late">تأخیر</option><option value="escape">فرار</option></select></div>';
   }).join('');
 }
 async function submitManagerClassAtt(){
@@ -4325,12 +4468,19 @@ async function submitManagerClassAtt(){
     createdAt:Date.now()
   };
   schoolData.submissions.push(sub);
+  var escScoreRaw=((document.getElementById('mgr-escape-score')||{}).value||'').trim();
+  var escScore=null;
+  if(escScoreRaw!==''){escScore=parseFloat(typeof toEnDigits==='function'?toEnDigits(escScoreRaw):escScoreRaw);if(isNaN(escScore))escScore=null}
   rows.forEach(function(r){
     if(r.status==='present')return;
-    var type=r.status==='late'?'late':'absent';
+    var type=r.status==='late'?'late':(r.status==='escape'?'escape':'absent');
     var deduct=0;
     if(type==='late'){
       deduct=(schoolData.rules&&schoolData.rules.late)||0.25;
+    }else if(type==='escape'){
+      if(escScore!=null)deduct=escScore;
+      else if(schoolData.rules&&schoolData.rules.escape!=null)deduct=parseFloat(schoolData.rules.escape)||1;
+      else deduct=1;
     }else{
       var already=schoolData.attendance.some(function(a){
         return a.studentId===r.studentId&&(a.type||'')==='absent'&&(normalizeDateToIso(a.date)||a.date)===(normalizeDateToIso(day)||day)&&parseFloat(a.scoreDeduct)>0;
@@ -4339,7 +4489,10 @@ async function submitManagerClassAtt(){
     }
     schoolData.attendance.push({
       id:uid(),studentId:r.studentId,classId:cid,date:day,type:type,
-      note:'حضور مدیریت — '+period,scoreDeduct:deduct,
+      note:(type==='escape'?'فرار — ':'')+'حضور مدیریت — '+period,
+      scoreDeduct:deduct,
+      scoreLocked:type==='escape',
+      fromDiscipline:type==='escape',
       fromTeacher:false,fromManager:true,submissionId:sub.id,teacherId:null
     });
   });
@@ -7099,6 +7252,117 @@ function openPerformance(id){
   }catch(e){}
   showAppPage('performance');
 }
+
+function openBulkDiscPage(){
+  if(!canManage())return toast('فقط مدیر یا معاون');
+  var sel=document.getElementById('bulk-disc-class');
+  if(sel){
+    sel.innerHTML='<option value="">— انتخاب کلاس —</option>'+classesForRole().map(function(c){return '<option value="'+c.id+'">'+classTitle(c)+'</option>'}).join('');
+  }
+  var typeSel=document.getElementById('bulk-disc-type');
+  if(typeSel){
+    var types=(schoolData.disciplineTypes||[]).slice();
+    if(!types.length)types=[{id:'other',name:'مورد انضباطی',scoreDeduct:1}];
+    typeSel.innerHTML=types.map(function(t){return '<option value="'+t.id+'">'+(t.name||t.id)+'</option>'}).join('');
+  }
+  var d=document.getElementById('bulk-disc-date');
+  if(d&&!d.value)try{d.value=formatDateFa(todayStr())}catch(e){}
+  var n=document.getElementById('bulk-disc-note');if(n)n.value='';
+  var sc=document.getElementById('bulk-disc-score');if(sc)sc.value='';
+  bulkDiscTypeChanged();
+  loadBulkDiscStudents();
+}
+function bulkDiscTypeChanged(){
+  try{
+    var type=(document.getElementById('bulk-disc-type')||{}).value;
+    var dt=(schoolData.disciplineTypes||[]).find(function(t){return t&&t.id===type});
+    var sc=document.getElementById('bulk-disc-score');
+    if(sc&&dt){sc.placeholder=String(dt.scoreDeduct!=null?dt.scoreDeduct:1)}
+  }catch(e){}
+}
+function loadBulkDiscStudents(){
+  if(!canManage())return;
+  var list=document.getElementById('bulk-disc-list');
+  var sel=document.getElementById('bulk-disc-class');
+  if(!list||!sel)return;
+  var cid=sel.value;
+  if(!cid){list.innerHTML='<p class="hint">کلاس را انتخاب کنید</p>';return}
+  var stus=(schoolData.students||[]).filter(function(s){return s&&s.classId===cid});
+  if(!stus.length){list.innerHTML='<p class="hint">دانش‌آموزی در این کلاس نیست</p>';return}
+  list.innerHTML=stus.map(function(s){
+    return '<label class="checkbox-row" style="border-bottom:1px solid var(--border);padding:8px 0"><span><input type="checkbox" class="bulk-disc-cb" value="'+s.id+'" checked /> <strong>'+s.name+'</strong>'+(s.group?(' <span class="meta">· گروه '+s.group+'</span>'):'')+'</span></label>';
+  }).join('');
+}
+function bulkDiscSelectAll(on){
+  document.querySelectorAll('.bulk-disc-cb').forEach(function(cb){cb.checked=!!on});
+}
+async function submitBulkDiscipline(){
+  if(!canManage())return toast('فقط مدیر یا معاون');
+  var cid=(document.getElementById('bulk-disc-class')||{}).value;
+  if(!cid)return toast('کلاس را انتخاب کنید');
+  var ids=[].slice.call(document.querySelectorAll('.bulk-disc-cb:checked')).map(function(cb){return cb.value}).filter(Boolean);
+  if(!ids.length)return toast('حداقل یک دانش‌آموز را انتخاب کنید');
+  var type=(document.getElementById('bulk-disc-type')||{}).value||'other';
+  var dt=(schoolData.disciplineTypes||[]).find(function(t){return t&&t.id===type});
+  var typeLabel=dt?dt.name:(type==='absent'?'غیبت':type==='late'?'تأخیر':type==='escape'?'فرار':'مورد انضباطی');
+  var note=((document.getElementById('bulk-disc-note')||{}).value||'').trim();
+  if(!note)note=typeLabel+' (ثبت گروهی)';
+  var scoreRaw=((document.getElementById('bulk-disc-score')||{}).value||'').trim();
+  if(typeof toEnDigits==='function')scoreRaw=toEnDigits(scoreRaw);
+  var deduct;
+  if(scoreRaw!==''){
+    deduct=parseFloat(scoreRaw);
+    if(isNaN(deduct))return toast('کسر نمره نامعتبر است');
+  }else if(dt&&dt.scoreDeduct!=null&&!isNaN(parseFloat(dt.scoreDeduct))){
+    deduct=parseFloat(dt.scoreDeduct);
+  }else if(type==='absent'){
+    deduct=(schoolData.rules&&schoolData.rules.absent)!=null?parseFloat(schoolData.rules.absent):0.5;
+  }else if(type==='late'){
+    deduct=(schoolData.rules&&schoolData.rules.late)!=null?parseFloat(schoolData.rules.late):0.25;
+  }else if(type==='escape'){
+    deduct=(schoolData.rules&&schoolData.rules.escape)!=null?parseFloat(schoolData.rules.escape):1;
+  }else{
+    deduct=1;
+  }
+  if(isNaN(deduct))deduct=0;
+  var dateRaw=((document.getElementById('bulk-disc-date')||{}).value||'').trim();
+  var day=dateRaw?(typeof normalizeDateToIso==='function'?normalizeDateToIso(dateRaw):dateRaw):todayStr();
+  if(!Array.isArray(schoolData.attendance))schoolData.attendance=[];
+  var n=0;
+  ids.forEach(function(sid){
+    var s=(schoolData.students||[]).find(function(x){return x&&x.id===sid});
+    if(!s)return;
+    schoolData.attendance.push({
+      id:uid(),
+      studentId:sid,
+      classId:s.classId||cid,
+      date:day,
+      type:type||'other',
+      typeName:typeLabel,
+      note:note,
+      scoreDeduct:deduct,
+      scoreLocked:true,
+      fromDiscipline:true,
+      fromManager:true,
+      bulkGroup:true,
+      createdAtMs:Date.now()
+    });
+    n++;
+  });
+  if(!n)return toast('دانش‌آموزی ثبت نشد');
+  schoolData._cloudUpdatedAtMs=Date.now();
+  schoolData._localDirtyAt=Date.now();
+  saveSchoolData();
+  toast('ثبت محلی '+n+' نفر · '+typeLabel+' · کسر '+deduct+' — ارسال به سرور…');
+  try{
+    var ok=await pushAttendanceToServer(3);
+    if(ok)toast('ثبت گروهی روی سرور: '+n+' نفر · '+typeLabel+' · کسر '+deduct,4000);
+    else toast('محلی ذخیره شد — ارسال به سرور را بزنید',4000);
+  }catch(e){
+    toast('محلی ذخیره شد — ارسال ناموفق',4000);
+  }
+}
+
 function addDisciplineCustom(){
   if(!canManage())return toast('فقط مدیر و معاون می‌توانند نمره انضباط را تغییر دهند');
   if(!currentStudentId)return;
@@ -7301,6 +7565,7 @@ function saveRules(){
   if(!schoolData.rules)schoolData.rules={};
   schoolData.rules.absent=parseFloat(document.getElementById('rule-absent').value)||0.5;
   schoolData.rules.late=parseFloat(document.getElementById('rule-late').value)||0.25;
+  try{var re=document.getElementById('rule-escape');if(re)schoolData.rules.escape=parseFloat(re.value)||1;}catch(e){}
   schoolData.rules.other=parseFloat(document.getElementById('rule-other').value)||1;
   const ab=schoolData.disciplineTypes.find(t=>t.id==='absent');
   const la=schoolData.disciplineTypes.find(t=>t.id==='late');
@@ -7462,10 +7727,14 @@ async function sendViaSmsPanel(phones,text){
   if(c.mode==='sim')return {ok:false,error:'حالت فقط سیم‌کارت است'};
   if(!c.username&&!c.password)return {ok:false,error:'اطلاعات پنل پیامک کامل نیست'};
   if(!SYNC_API)return {ok:false,error:'آدرس سرور تنظیم نیست'};
-  const list=(phones||[]).map(p=>String(p).replace(/\D/g,'')).filter(p=>p.length>=10);
+  const list=(phones||[]).map(function(p){return String(p).replace(/\D/g,'')}).filter(function(p){return p.length>=10});
   if(!list.length)return {ok:false,error:'شماره معتبر نیست'};
+  var sid='';
+  try{sid=String((session&&session.schoolId)||(userSession&&userSession.schoolId)||'')}catch(e){}
+  if(!sid)return {ok:false,error:'شناسه مدرسه مشخص نیست — دوباره وارد شوید'};
   try{
     const data=await apiFetch('/api/sms/send',{method:'POST',body:{
+      schoolId:sid,
       provider:c.provider,
       username:c.username,
       password:c.password,
@@ -7474,7 +7743,7 @@ async function sendViaSmsPanel(phones,text){
       apiUrl:c.apiUrl,
       phones:list,
       text:text
-    },retries:1});
+    },retries:2,timeoutMs:45000});
     return data||{ok:false};
   }catch(e){
     return {ok:false,error:(e&&e.message)||String(e)};
@@ -7487,7 +7756,7 @@ async function testSmsPanel(){
   toast('در حال ارسال تست...');
   const r=await sendViaSmsPanel([phone],'تست سامانه مدارس نیکان');
   if(r&&r.ok)toast('ارسال تست موفق ('+(r.sent||1)+')');
-  else toast('ناموفق: '+(r&&r.error?r.error:(r&&r.results&&r.results[0]&&r.results[0].detail)||'خطا'));
+  else toast('ناموفق: '+(r&&r.error?r.error:(r&&r.results&&r.results[0]&&(r.results[0].detail||r.results[0].error))||'auth/خطا — تنظیمات و ورود مدیر را چک کنید'));
 }
 function smsModeAllowsPanel(){const m=getSmsCfg().mode;return m==='panel'||m==='both'}
 function smsModeAllowsSim(){const m=getSmsCfg().mode;return m==='sim'||m==='both'||!m}
@@ -7821,7 +8090,7 @@ function renderSettings(){
   const tl=document.getElementById('sms-tpl-list');
   if(tl){tl.innerHTML=getSmsTemplates().map(tp=>'<div class="list-item"><div style="flex:1"><div class="name">'+tp.name+'</div><div class="meta" style="white-space:pre-wrap">'+tp.text+'</div></div><button class="btn btn-outline btn-sm" onclick="openSmsTplModal(\''+tp.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delSmsTpl(\''+tp.id+'\')">حذف</button></div>').join('')||'<p class="hint">قالبی نیست</p>'}
 
-  const r=schoolData.rules||{};document.getElementById('rule-absent').value=r.absent??0.5;document.getElementById('rule-late').value=r.late??0.25;document.getElementById('rule-other').value=r.other??1;
+  const r=schoolData.rules||{};document.getElementById('rule-absent').value=r.absent??0.5;document.getElementById('rule-late').value=r.late??0.25;try{var re=document.getElementById('rule-escape');if(re)re.value=r.escape??1;}catch(e){}document.getElementById('rule-other').value=r.other??1;
   const t=schoolData.theme||{};if(t.fontSize&&document.getElementById('set-fsize'))document.getElementById('set-fsize').value=t.fontSize;const mode=t.mode||localStorage.getItem('nikan_theme')||'dark';document.querySelectorAll('.theme-switch button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-mode')===mode));
   try{applyTheme()}catch(e){}
   const accCard=document.getElementById('set-manager-account-card');
