@@ -1,8 +1,46 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-<path android:fillColor="#0d47a1" android:pathData="M0,0h108v108h-108z"/>
-<path android:fillColor="#ffffff" android:pathData="M22,72C32,66 44,66 52,70L52,86C44,82 32,82 22,88Z"/>
-<path android:fillColor="#ffffff" android:pathData="M86,72C76,66 64,66 56,70L56,86C64,82 76,82 86,88Z"/>
-<path android:fillColor="#ffd54f" android:pathData="M54,18L88,34L54,50L20,34Z"/>
-<path android:fillColor="#ffffff" android:pathData="M38,42v12c0,6 32,6 32,0v-12l-16,7z"/>
-<path android:fillColor="#ffd54f" android:pathData="M85,48a3,3 0 1,0 6,0a3,3 0 1,0 -6,0"/>
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- پس‌زمینه سرمه‌ای -->
+    <path
+        android:fillColor="#0D47A1"
+        android:pathData="M0,0h108v108h-108z"/>
+
+    <!-- کلاه طلایی -->
+    <path
+        android:fillColor="#F0C94A"
+        android:pathData="M54,16 L88,32 L54,48 L20,32 Z"/>
+    <path
+        android:fillColor="#E8B923"
+        android:pathData="M40,33 L68,33 L66,44 C66,48 60,51 54,51 C48,51 42,48 42,44 Z"/>
+    <!-- منگوله -->
+    <path
+        android:fillColor="#F0C94A"
+        android:pathData="M26,28 L29,28 L29,40 L26,40 Z"/>
+    <path
+        android:fillColor="#E8B923"
+        android:pathData="M24,40 C24,44 27,47 27.5,47 C28,47 31,44 31,40 C31,38 29,37 27.5,37 C26,37 24,38 24,40 Z"/>
+
+    <!-- حرف N طلایی -->
+    <path
+        android:fillColor="#C9A84C"
+        android:pathData="M40,54 L47,54 L47,68 L58,54 L65,54 L65,76 L58,76 L58,62 L47,76 L40,76 Z"/>
+
+    <!-- کتاب باز -->
+    <path
+        android:fillColor="#C9A84C"
+        android:pathData="M26,80 L52,76 L52,94 L28,98 Z"/>
+    <path
+        android:fillColor="#B8943D"
+        android:pathData="M56,76 L82,80 L80,98 L56,94 Z"/>
+    <path
+        android:fillColor="#FFF8E7"
+        android:pathData="M30,80 L52,77 L52,92 L31,95 Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M56,77 L78,80 L77,95 L56,92 Z"/>
 </vector>
