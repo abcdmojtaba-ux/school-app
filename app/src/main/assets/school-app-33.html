@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>سامانه نیکان | پنل مدرسه</title>
+<title>سامانه نیکان | پنل مدرسه (اندروید پاک)</title>
 <style>
 /* سامانه نیکان — قالب داشبورد حرفه‌ای (نزدیک نمونه ۳) */
 /* بدون فونت خارجی — برای کروم و اینترنت ایران سریع‌تر باز می‌شود */
@@ -1257,7 +1257,7 @@ function loadMother(){try{return JSON.parse(localStorage.getItem(MOTHER_KEY)||'n
 function saveMother(d){localStorage.setItem(MOTHER_KEY,JSON.stringify(d))}
 function importMotherBackup(ev){const file=ev.target.files&&ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(){try{const data=JSON.parse(reader.result);if(!data.schools)throw 0;saveMother(data);toast('پشتیبان مادر بارگذاری شد')}catch(e){toast('فایل نامعتبر')}};reader.readAsText(file);ev.target.value=''}
 
-/* سرور Cloudflare — بدون Firebase/گوگل */
+/* سرور Cloudflare — بدون Firebase/گوگل · android-clean v27 · PDF بدون خروج · api فقط panel */
 const DEFAULT_SYNC_API='https://panel.nikan-school.top';
 const FALLBACK_SYNC_API='https://panel.nikan-school.top';
 const SYNC_API=(function(u){u=String(u||'');while(u.length&&u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u})(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API);
@@ -1289,23 +1289,18 @@ async function apiFetch(path,options){
   };
   var isApi=String(path||'').indexOf('/api')===0;
   if(isApi){
+    // فقط سرور اصلی — Worker قدیمی CORS می‌شکند
     try{if(typeof location!=='undefined'&&location.origin&&(location.hostname||'').indexOf('nikan-school')>=0)addBase(location.origin)}catch(e){}
     addBase('https://panel.nikan-school.top');
-    addBase('https://api.nikan-school.top');
-    addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
-    addBase(typeof FALLBACK_SYNC_API!=='undefined'?FALLBACK_SYNC_API:'');
     try{
       var sticky=localStorage.getItem('school_sync_api')||'';
-      if(sticky)addBase(sticky);
+      if(sticky && sticky.indexOf('school-sync')<0 && sticky.indexOf('api.nikan-school')<0) addBase(sticky);
     }catch(e){}
-    addBase('https://school-sync.abcd-mojtaba.workers.dev');
-  }else{
-    try{addBase(localStorage.getItem('school_sync_api'))}catch(e){}
-    try{if(typeof location!=='undefined'&&location.origin)addBase(location.origin)}catch(e){}
     addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
-    addBase(typeof FALLBACK_SYNC_API!=='undefined'?FALLBACK_SYNC_API:'');
-    addBase('https://api.nikan-school.top');
-    addBase('https://school-sync.abcd-mojtaba.workers.dev');
+  }else{
+    try{if(typeof location!=='undefined'&&location.origin)addBase(location.origin)}catch(e){}
+    addBase('https://panel.nikan-school.top');
+    addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
   }
   if(!bases.length)throw new Error('آدرس سرور تنظیم نشده');
   const tOut=opts.timeoutMs!=null?opts.timeoutMs:8000;
@@ -3547,15 +3542,13 @@ async function assertSchoolExistsOnServer(schoolId){
   }
 }
 function forceKickDeletedSchool(msg){
-  // هرگز داده محلی مدرسه را پاک نکن — فقط نشست ورود را ببند
-  // (پاک کردن کش + فرض اشتباه «حذف از مادر» قبلاً کل داده را می‌برد)
+  // فقط نشست ورود را ببند — داده مدرسه (کلاس/دانش‌آموز) پاک نشود
   try{clearUserSession()}catch(e){}
-  try{
-    localStorage.removeItem(SESSION_USER);
-    localStorage.removeItem(APP_KEY);
-  }catch(e){}
-  try{session=null;userSession=null}catch(e){}
-  showScreen('gate');
+  try{localStorage.removeItem(SESSION_USER)}catch(e){}
+  // APP_KEY را پاک نکن تا با ورود مجدد داده برگردد
+  try{userSession=null}catch(e){}
+  try{session=null}catch(e){}
+  try{showScreen('gate')}catch(e){}
   toast(msg||'ورود بسته شد — داده محلی مدرسه حفظ شد');
 }
 function stopAutoSync(){try{if(window._autoSyncTimer)clearInterval(window._autoSyncTimer);window._autoSyncTimer=null}catch(e){}}
@@ -5735,16 +5728,22 @@ function renderAssignments(){
 function renderTeacherScheduleStats(){
   var box=document.getElementById('teacher-schedule-stats');
   if(!box)return;
+  try{
   var filt=document.getElementById('assign-teacher-filter');
   var tid=filt&&filt.value;
   if(!tid){box.innerHTML='';return}
-  var t=(schoolData.staff||[]).find(function(x){return x.id===tid});
-  var arr=(schoolData.assignments||[]).filter(function(a){return a.teacherId===tid});
+  var t=((schoolData&&schoolData.staff)||[]).find(function(x){return x&&String(x.id)===String(tid)});
+  var arr=((schoolData&&schoolData.assignments)||[]).filter(function(a){
+    if(!a)return false;
+    if(String(a.teacherId||'')===String(tid))return true;
+    if(String(a.teacherId2||'')===String(tid))return true;
+    return false;
+  });
   var sf=document.getElementById('assign-shift-filter');
   var shiftVal=sf?sf.value:'all';
   if(shiftVal&&shiftVal!=='all'){
     arr=arr.filter(function(a){
-      var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
+      var c=((schoolData&&schoolData.classes)||[]).find(function(x){return x&&String(x.id)===String(a.classId)});
       var sh=c&&c.shift!=null?String(c.shift):'1';
       return sh===String(shiftVal);
     });
@@ -5752,25 +5751,30 @@ function renderTeacherScheduleStats(){
   if(!arr.length){box.innerHTML='<p class="hint">برای این معلم برنامه‌ای ثبت نشده.</p>';return}
   arr=arr.slice().sort(function(a,b){return (a.dayOfWeek||0)-(b.dayOfWeek||0)||String(a.startTime||'').localeCompare(String(b.startTime||''))});
   var subjects={},classes={},byShift={1:0,2:0};
+  var dayNames=(typeof DAYS!=='undefined'&&DAYS)?DAYS:['','شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
   arr.forEach(function(a){
     if(a.subject)subjects[a.subject]=(subjects[a.subject]||0)+1;
     if(a.classId)classes[a.classId]=(classes[a.classId]||0)+1;
-    var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
+    var c=((schoolData&&schoolData.classes)||[]).find(function(x){return x&&String(x.id)===String(a.classId)});
     var sh=c&&c.shift!=null?String(c.shift):'1';
     byShift[sh]=(byShift[sh]||0)+1;
   });
   var html='<div class="card" style="margin:0">';
-  html+='<div class="card-title">برنامه هفته — '+(t?t.name:'معلم')+'</div>';
+  html+='<div class="card-title">برنامه هفته — '+(t&&t.name?t.name:'معلم')+'</div>';
   html+='<p class="hint">جلسات: <strong>'+arr.length+'</strong> · دروس: <strong>'+Object.keys(subjects).length+'</strong> · کلاس‌ها: <strong>'+Object.keys(classes).length+'</strong>';
   if((byShift[1]||0)+(byShift[2]||0)>0)html+=' · صبح: '+(byShift[1]||0)+' · عصر: '+(byShift[2]||0);
   html+='</p>';
   html+='<div style="overflow-x:auto"><table style="width:100%;font-size:.85rem"><thead><tr><th>روز</th><th>زنگ</th><th>ساعت</th><th>کلاس</th><th>شیفت</th><th>درس</th></tr></thead><tbody>';
-  arr.forEach(function(a){
-    var c=(schoolData.classes||[]).find(function(x){return x.id===a.classId});
-    var sh=c&&c.shift!=null?(String(c.shift)==='2'?'عصر':'صبح'):'';
-    var idStr=String(a.id||'');
-    return '<div class="list-item"><div><div class="name">'+(c?c.name:'کلاس')+(sh?' · '+sh:'')+(a.subject?' · '+a.subject:'')+' → '+(t?t.name:'معلم')+'</div><div class="meta">'+(DAYS[a.dayOfWeek]||'')+' · '+(a.periodName||'')+' · '+(a.startTime||'')+(a.endTime?' تا '+a.endTime:'')+'</div></div><button type="button" class="btn btn-outline btn-sm" data-id="'+idStr+'" onclick="openAssignModal(this.dataset.id)">ویرایش</button><button type="button" class="btn btn-danger btn-sm" data-id="'+idStr+'" onclick="delAssign(this.dataset.id)">حذف</button></div>';
+  html+=arr.map(function(a){
+    var c=((schoolData&&schoolData.classes)||[]).find(function(x){return x&&String(x.id)===String(a.classId)});
+    var sh=c&&c.shift!=null?(String(c.shift)==='2'?'عصر':'صبح'):'—';
+    var dayLabel=dayNames[a.dayOfWeek]||('روز '+(a.dayOfWeek!=null?a.dayOfWeek:''));
+    var timeStr=(a.startTime||'')+(a.endTime?' تا '+a.endTime:'');
+    return '<tr><td>'+dayLabel+'</td><td>'+(a.periodName||a.period||'—')+'</td><td>'+(timeStr||'—')+'</td><td>'+(c&&c.name?c.name:'—')+'</td><td>'+sh+'</td><td>'+(a.subject||'—')+'</td></tr>';
   }).join('');
+  html+='</tbody></table></div></div>';
+  box.innerHTML=html;
+  }catch(e){console.warn('renderTeacherScheduleStats',e);box.innerHTML='<p class="hint">نمایش برنامه ممکن نشد.</p>'}
 }
 function isMyAssignment(a){
   if(!a||!userSession)return false;
@@ -6654,41 +6658,70 @@ function filterAttByRange(att,from,to){
   if(t)a=a.filter(function(x){var d=normalizeDateToIso(x.date)||String(x.date||'');return d<=t});
   return a;
 }
-/** خروجی چاپ/PDF — برای اندروید و دسکتاپ بدون کتابخانه خارجی */
+/** خروجی چاپ/PDF — امن برای WebView اندروید (بدون window.open که کاربر را از سامانه بیرون می‌اندازد) */
+function closePrintOverlay(){
+  var ov=document.getElementById('nikan-print-overlay');
+  if(ov)ov.style.display='none';
+  try{document.body.style.overflow=''}catch(e){}
+}
 function openPrintWindow(title, bodyHtml){
   try{
-    var w=window.open('','_blank');
-    if(!w){
-      toast('پنجره چاپ مسدود شد — اجازه پاپ‌آپ بدهید یا از دکمه چاپ مرورگر استفاده کنید');
-      return null;
-    }
     var schoolName=(session&&session.name)||'مدرسه';
-    var html='<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'+
-      '<title>'+title+'</title>'+
-      '<style>'+
-      'body{font-family:Tahoma,Segoe UI,sans-serif;margin:16px;color:#111;line-height:1.7;font-size:13px}'+
-      'h1{font-size:18px;margin:0 0 4px;text-align:center}'+
-      'h2{font-size:15px;margin:16px 0 8px;border-bottom:1px solid #ccc;padding-bottom:4px}'+
-      '.meta{text-align:center;color:#555;font-size:12px;margin-bottom:14px}'+
-      'table{width:100%;border-collapse:collapse;margin:8px 0 14px}'+
-      'th,td{border:1px solid #bbb;padding:6px 8px;text-align:right;font-size:12px}'+
-      'th{background:#f0f0f0}'+
-      '.sum{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}'+
-      '.sum span{border:1px solid #ccc;border-radius:8px;padding:6px 10px;font-size:12px}'+
-      '.foot{margin-top:20px;font-size:11px;color:#666;text-align:center}'+
-      '@media print{button{display:none!important} body{margin:8mm}}'+
-      '</style></head><body>'+
-      '<button onclick="window.print()" style="padding:8px 14px;margin-bottom:12px;font-family:Tahoma">چاپ / ذخیره PDF</button>'+
-      '<h1>'+title+'</h1>'+
-      '<div class="meta">'+schoolName+' · تاریخ: '+persianToday()+'</div>'+
-      bodyHtml+
-      '<div class="foot">سامانه نیکان · گزارش قابل ارائه به اولیا</div>'+
-      '<scr'+'ipt>setTimeout(function(){try{window.print()}catch(e){}},400)</scr'+'ipt>'+
-      '</body></html>';
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    return w;
+    var ov=document.getElementById('nikan-print-overlay');
+    if(!ov){
+      ov=document.createElement('div');
+      ov.id='nikan-print-overlay';
+      ov.setAttribute('dir','rtl');
+      ov.style.cssText='display:none;position:fixed;inset:0;z-index:9999;background:#fff;color:#111;overflow:auto;font-family:Tahoma,sans-serif';
+      document.body.appendChild(ov);
+    }
+    var bodyContent=bodyHtml||'';
+    ov.innerHTML=
+      '<div id="nikan-print-toolbar" style="position:sticky;top:0;z-index:2;background:#0f1c4d;color:#fff;padding:10px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between">'+
+        '<div style="font-weight:700;font-size:14px;flex:1">'+String(title||'گزارش').replace(/</g,'&lt;')+'</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+          '<button type="button" id="nikan-print-btn" style="padding:8px 12px;border:none;border-radius:10px;background:#38bdf8;color:#041018;font-weight:700;font-family:Tahoma;cursor:pointer">چاپ / ذخیره PDF</button>'+
+          '<button type="button" id="nikan-print-share" style="padding:8px 12px;border:none;border-radius:10px;background:#34d399;color:#042f1a;font-weight:700;font-family:Tahoma;cursor:pointer">اشتراک / ذخیره</button>'+
+          '<button type="button" id="nikan-print-close" style="padding:8px 12px;border:1px solid rgba(255,255,255,.4);border-radius:10px;background:transparent;color:#fff;font-weight:700;font-family:Tahoma;cursor:pointer">بستن</button>'+
+        '</div>'+
+      '</div>'+
+      '<div id="nikan-print-body" style="padding:16px;line-height:1.7;font-size:13px">'+
+        '<h1 style="font-size:18px;margin:0 0 4px;text-align:center">'+String(title||'').replace(/</g,'&lt;')+'</h1>'+
+        '<div style="text-align:center;color:#555;font-size:12px;margin-bottom:14px">'+schoolName+' · تاریخ: '+persianToday()+'</div>'+
+        bodyContent+
+        '<div style="margin-top:20px;font-size:11px;color:#666;text-align:center">سامانه نیکان · گزارش قابل ارائه به اولیا</div>'+
+      '</div>';
+    // style tables inside
+    var style=document.createElement('style');
+    style.textContent='#nikan-print-body table{width:100%;border-collapse:collapse;margin:8px 0 14px}#nikan-print-body th,#nikan-print-body td{border:1px solid #bbb;padding:6px 8px;text-align:right;font-size:12px}#nikan-print-body th{background:#f0f0f0}#nikan-print-body .sum{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}#nikan-print-body .sum span{border:1px solid #ccc;border-radius:8px;padding:6px 10px;font-size:12px}@media print{#nikan-print-toolbar{display:none!important}#nikan-print-overlay{position:static!important;overflow:visible!important}body>*:not(#nikan-print-overlay){display:none!important}}';
+    ov.appendChild(style);
+    ov.style.display='block';
+    try{document.body.style.overflow='hidden'}catch(e){}
+    document.getElementById('nikan-print-close').onclick=function(){closePrintOverlay()};
+    document.getElementById('nikan-print-btn').onclick=function(){
+      try{window.print()}catch(e){toast('چاپ در این دستگاه پشتیبانی نشد — از اشتراک استفاده کنید')}
+    };
+    document.getElementById('nikan-print-share').onclick=function(){
+      try{
+        var plain=document.getElementById('nikan-print-body');
+        var htmlDoc='<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"/><title>'+String(title||'report')+'</title></head><body>'+(plain?plain.innerHTML:'')+'</body></html>';
+        var blob=new Blob([htmlDoc],{type:'text/html;charset=utf-8'});
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');
+        var safe=String(title||'report').replace(/[^\w؀-ۿ\-]+/g,'_').slice(0,40);
+        a.href=url;
+        a.download=safe+'-'+(typeof todayStr==='function'?todayStr():Date.now())+'.html';
+        a.style.display='none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function(){try{document.body.removeChild(a);URL.revokeObjectURL(url)}catch(e){}},1500);
+        toast('فایل گزارش ذخیره شد — می‌توانید با مرورگر باز و PDF کنید');
+      }catch(e){
+        toast('ذخیره فایل ممکن نشد');
+      }
+    };
+    toast('گزارش آماده است — چاپ یا اشتراک را بزنید');
+    return ov;
   }catch(e){
     console.error(e);
     toast('ساخت خروجی چاپ ممکن نشد');
