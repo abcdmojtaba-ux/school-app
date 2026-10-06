@@ -289,6 +289,25 @@ body.theme-light .btn-outline{border-color:#93c5fd;color:#1d4ed8}
 .toast.show{opacity:1}
 .toast.toast-long{bottom:90px}
 
+/* نمایشگر رسانه داخل اپ — بدون تب جدید */
+#media-viewer-overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.92);align-items:center;justify-content:center;
+  flex-direction:column;padding:16px;gap:12px;
+}
+#media-viewer-overlay.show{display:flex}
+#media-viewer-overlay .mv-toolbar{
+  width:100%;max-width:640px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
+}
+#media-viewer-overlay .mv-title{color:#e8eef7;font-weight:700;font-size:.9rem;flex:1}
+#media-viewer-overlay img,#media-viewer-overlay embed,#media-viewer-overlay iframe{
+  max-width:100%;max-height:72vh;border-radius:12px;background:#111;
+  object-fit:contain;
+}
+#media-viewer-overlay .mv-body{width:100%;max-width:640px;display:flex;justify-content:center;align-items:center;min-height:40vh}
+#media-viewer-overlay .mv-fallback{color:#94a3b8;text-align:center;padding:20px;line-height:1.7}
+
+
 /* بارگذاری ماندگار برای ورود و همگام‌سازی */
 .login-loading-overlay{
   display:none;position:fixed;inset:0;z-index:300;
@@ -750,8 +769,8 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <div id="teacher-slots"></div>
     </div>
     <div class="card">
-      <div class="card-title">۲) گزارش کلاس و دانش‌آموز</div>
-      <p class="hint">کلاس را انتخاب کنید → لیست دانش‌آموزان با میانگین نمرات و حضور. روی نام بزنید برای جزئیات و PDF. نمره انضباط فقط برای مدیر/معاون است.</p>
+      <div class="card-title">۲) گزارش عملکرد کلاسی</div>
+      <p class="hint">کلاس را انتخاب کنید → با بازه تاریخ، عملکرد دانش‌آموزان همان کلاس/درس شما (نمره، غیبت روزی، تأخیر جلسه، یادداشت دفتر). روی نام بزنید برای جزئیات. نمره انضباط مخصوص مدیر/معاون است و اینجا نیست.</p>
       <div id="teacher-class-list"></div>
       <div id="teacher-perf-panel" style="display:none;margin-top:12px">
         <div class="card-title" id="teacher-perf-title">عملکرد کلاس</div>
@@ -773,6 +792,12 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
         <button type="button" class="qa-item" onclick="showAppPage('messages')"><span class="ic">📨</span><span class="lb">اتوماسیون</span><span class="ds">پیام داخلی</span></button>
         <button type="button" class="qa-item" onclick="pullFromServer()"><span class="ic">🔄</span><span class="lb">به‌روزرسانی از سرور</span><span class="ds">آخرین کلاس و برنامه</span></button>
       </div>
+    </div>
+    <div class="card">
+      <div class="card-title">۴) نمونه سوالات دروس</div>
+      <p class="hint">برای هر درس نمونه برگ سوال (PDF / Word / عکس) بارگذاری کنید تا مدیر ببیند.</p>
+      <button type="button" class="btn btn-primary btn-block" onclick="openSampleQuestionModal()">+ بارگذاری نمونه سوال</button>
+      <div id="teacher-samples-list" style="margin-top:10px"></div>
     </div>
   </div>
 
@@ -987,6 +1012,26 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <div id="msg-list"></div>
     </div>
   </div>
+
+  <!-- نمونه سوالات — در بیشتر، فیلتر بر اساس درس -->
+  <div id="page-samples" class="page">
+    <div class="card">
+      <button class="btn btn-outline btn-sm" style="margin-bottom:10px" onclick="showAppPage('settings')">← بیشتر</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="card-title" style="margin:0">نمونه سوالات دروس</div>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-upload-sample" onclick="openSampleQuestionModal()">+ بارگذاری</button>
+      </div>
+      <p class="hint">فقط درس‌هایی که معلمان نمونه سوال فرستاده‌اند. بعد از انتخاب، فایل‌ها با نام معلم و دانلود می‌آید.</p>
+      <div class="form-group">
+        <label>انتخاب درس</label>
+        <select class="form-control" id="samples-subject-filter" onchange="renderSamplesBySubject()">
+          <option value="">— انتخاب درس —</option>
+        </select>
+      </div>
+      <div id="samples-list-out"></div>
+    </div>
+  </div>
+
   <div id="page-settings" class="page">
     <div class="card" id="more-hub">
       <div class="card-title">بیشتر</div>
@@ -1138,6 +1183,14 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div id="media-viewer-overlay" onclick="if(event.target===this)closeMediaViewer()">
+  <div class="mv-toolbar">
+    <div class="mv-title" id="media-viewer-title">مشاهده</div>
+    <button type="button" class="btn btn-outline btn-sm" style="color:#fff;border-color:rgba(255,255,255,.35)" onclick="closeMediaViewer()">بستن</button>
+  </div>
+  <div class="mv-body" id="media-viewer-body"></div>
+</div>
+
 <div class="login-loading-overlay" id="login-loading">
   <div class="login-loading-spinner"></div>
   <div class="login-loading-text" id="login-loading-text">در حال ورود...</div>
@@ -1847,6 +1900,8 @@ async function cloudPushAppData(force){
           submissions:_subSlim,
           exams:schoolData.exams||[],
           messages:schoolData.messages||[],
+          teacherNotes:schoolData.teacherNotes||[],
+          sampleQuestions:schoolData.sampleQuestions||[],
           updatedAtMs:Date.now(),
           _teacherPartial:true
         },
@@ -2217,6 +2272,16 @@ function applyRemoteAppData(d,remoteTs,forceAll){
   if(Array.isArray(d.disciplineTypes)&&d.disciplineTypes.length)schoolData.disciplineTypes=(typeof mergeDisciplineTypes==='function'?mergeDisciplineTypes(schoolData.disciplineTypes,d.disciplineTypes):d.disciplineTypes);
   if(Array.isArray(d.smsTemplates)&&d.smsTemplates.length)schoolData.smsTemplates=d.smsTemplates;
   schoolData.exams=_mergeById(schoolData.exams,d.exams,!!forceAll);
+  schoolData.teacherNotes=_mergeById(schoolData.teacherNotes||[],d.teacherNotes,!!forceAll);
+  schoolData.sampleQuestions=_mergeById(schoolData.sampleQuestions||[],d.sampleQuestions,!!forceAll);
+  if(Array.isArray(d.deletedSampleQuestionIds)&&d.deletedSampleQuestionIds.length){
+    if(!Array.isArray(schoolData.deletedSampleQuestionIds))schoolData.deletedSampleQuestionIds=[];
+    d.deletedSampleQuestionIds.forEach(function(id){if(id&&schoolData.deletedSampleQuestionIds.indexOf(id)<0)schoolData.deletedSampleQuestionIds.push(id)});
+  }
+  if(Array.isArray(schoolData.deletedSampleQuestionIds)&&schoolData.deletedSampleQuestionIds.length){
+    var delQ={};schoolData.deletedSampleQuestionIds.forEach(function(id){delQ[id]=true});
+    schoolData.sampleQuestions=(schoolData.sampleQuestions||[]).filter(function(q){return q&&q.id&&!delQ[q.id]});
+  }
   schoolData.messages=(function(){
     const loc=Array.isArray(schoolData.messages)?schoolData.messages:[];
     const rem=Array.isArray(d.messages)?d.messages:[];
@@ -2260,6 +2325,7 @@ function applyRemoteAppData(d,remoteTs,forceAll){
 async function cloudPullAppData(force){
   if(!session||!session.schoolId)return false;
   try{
+    if(!schoolData){try{if(typeof loadSchoolData==='function')loadSchoolData()}catch(e){} if(!schoolData)schoolData=(typeof defaultData==='function'?defaultData():{});}
     // ویرایش محلی تازه: force کامل را نرم کن تا برنامه جدید پاک نشود
     var forcePull=!!force;
     if(!forcePull&&schoolData&&schoolData._localDirtyAt&&(Date.now()-schoolData._localDirtyAt)<45000){
@@ -2269,7 +2335,7 @@ async function cloudPullAppData(force){
     }
     // همیشه برای همگام‌سازی چنددستگاهی full بکش اگر force یا معلم
     var needFull=!!forcePull||(userSession&&userSession.role==='teacher');
-    var since=(!needFull&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
+    var since=(!needFull&&schoolData&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
     var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:needFull?3:2,timeoutMs:needFull?45000:20000});
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
@@ -2281,7 +2347,7 @@ async function cloudPullAppData(force){
       return true;
     }
     const remoteTs=d.updatedAtMs||(data&&data.updatedAt)||0;
-    const localTs=schoolData._cloudUpdatedAtMs||0;
+    const localTs=(schoolData&&schoolData._cloudUpdatedAtMs)||0;
     const rRich=_dataRichness(d);
     const lRich=_dataRichness(schoolData);
     const rStruct=((d.classes||[]).length+(d.students||[]).length+(d.staff||[]).length+(d.assignments||[]).length);
@@ -2480,8 +2546,8 @@ async function autoPullAll(checkSchool){
   finally{_pullBusy=false}
 }
 function dataKey(){return DATA_PREFIX+(session?.schoolId||session?.code||'local')}
-function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'escape',name:'فرار',text:'ولی محترم {نام} در تاریخ {تاریخ} بدون اجازه از مدرسه خارج شده (فرار) است.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'escape',name:'فرار',scoreDeduct:1},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,escape:1,other:1},theme:{},shifts:1,messages:[]}}
-function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.deletedClassIds))schoolData.deletedClassIds=[];if(!Array.isArray(schoolData.deletedStudentIds))schoolData.deletedStudentIds=[];if(!Array.isArray(schoolData.deletedStaffIds))schoolData.deletedStaffIds=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.deletedAssignmentIds)schoolData.deletedAssignmentIds=[];if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;
+function defaultData(){return{classes:[],students:[],attendance:[],staff:[],colleagues:[],assignments:[],submissions:[],exams:[],teacherNotes:[],sampleQuestions:[],smsTemplates:[{id:'absent',name:'غیبت',text:'ولی محترم {نام} در تاریخ {تاریخ} غایب بوده است.'},{id:'late',name:'تأخیر',text:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.'},{id:'escape',name:'فرار',text:'ولی محترم {نام} در تاریخ {تاریخ} بدون اجازه از مدرسه خارج شده (فرار) است.'},{id:'encourage',name:'تشویق',text:'ولی محترم {نام} امروز ({تاریخ}) عملکرد خوبی داشت.'}],disciplineTypes:[{id:'absent',name:'غیبت',scoreDeduct:0.5},{id:'late',name:'تأخیر',scoreDeduct:0.25},{id:'escape',name:'فرار',scoreDeduct:1},{id:'other',name:'مورد انضباطی',scoreDeduct:1}],managerUser:'',managerPass:'',rules:{absent:0.5,late:0.25,escape:1,other:1},theme:{},shifts:1,messages:[]}}
+function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.deletedClassIds))schoolData.deletedClassIds=[];if(!Array.isArray(schoolData.deletedStudentIds))schoolData.deletedStudentIds=[];if(!Array.isArray(schoolData.deletedStaffIds))schoolData.deletedStaffIds=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.deletedAssignmentIds)schoolData.deletedAssignmentIds=[];if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!Array.isArray(schoolData.teacherNotes))schoolData.teacherNotes=[];if(!Array.isArray(schoolData.sampleQuestions))schoolData.sampleQuestions=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;
 try{if(!(schoolData.smsTemplates||[]).some(function(t){return t&&t.id==='escape'})){schoolData.smsTemplates.push({id:'escape',name:'فرار',text:(typeof TPL!=='undefined'&&TPL.escape)?TPL.escape:'ولی محترم {نام} در تاریخ {تاریخ} بدون اجازه از مدرسه خارج شده (فرار) است.'});}}catch(e){}
 try{if(schoolData.rules&&schoolData.rules.escape==null)schoolData.rules.escape=1;}catch(e){}applyTheme()}
 function saveSchoolData(){
@@ -3371,6 +3437,8 @@ async function enterApp(){
   window._loginPulling=true;
   // هم‌تراز کردن شیفت با لایسنس/مادر (تک‌شیفت اجباری می‌ماند)
   if(session){
+    try{if(!schoolData&&typeof loadSchoolData==='function')loadSchoolData()}catch(e){}
+    if(!schoolData)schoolData=(typeof defaultData==='function'?defaultData():{});
     if(Number(session.shifts)===2||(session.modules&&session.modules.indexOf('dual_shift')>=0)){
       session.shifts=2;schoolData.shifts=2;
     }else{
@@ -3571,11 +3639,10 @@ function doLogout(){
 function buildNav(){
   const nav=document.getElementById('bottom-nav');
   if(isTeacher()){
-    // معلم: کارهای روزانه در منو · بقیه داخل بیشتر
+    // معلم: بدون گزارش غیبت مدیر — عملکرد کلاسی داخل صفحه کلاس‌هاست
     nav.innerHTML=
       '<button class="active" data-p="teacher" onclick="showAppPage(\'teacher\')">کلاس‌ها</button>'+
       '<button data-p="exams" onclick="showAppPage(\'exams\')">نمرات</button>'+
-      ((hasModule('advanced_reports')||hasModule('discipline'))?'<button data-p="reports" onclick="showAppPage(\'reports\')">گزارش غیبت</button>':'')+
       '<button data-p="home" onclick="showAppPage(\'home\')">خانه</button>'+
       '<button data-p="settings" onclick="showAppPage(\'settings\')">بیشتر</button>';
     return;
@@ -3594,7 +3661,7 @@ function buildNav(){
   nav.innerHTML=html;
 }
 function showAppPage(name){
-  if(isTeacher()&&['send','team','schedule'].includes(name))return toast('دسترسی ندارید');
+  if(isTeacher()&&['send','team','schedule','reports'].includes(name))return toast('این بخش مخصوص مدیر/معاون است — از «گزارش عملکرد کلاسی» در صفحه کلاس‌ها استفاده کنید');
   if(!isManager()&&(name==='schedule'||name==='team'))return toast('فقط مدیر به این بخش دسترسی دارد');
   if(name==='send'&&!hasModule('sms'))return toast('ماژول پیامک برای این مدرسه فعال نیست');
   if(name==='reports'){if(!(hasModule('advanced_reports')||hasModule('discipline')))return toast('ماژول گزارش فعال نیست');}
@@ -3630,13 +3697,15 @@ function showAppPage(name){
   if(name==='team')renderTeam();
   if(name==='send')prepareSend();
   if(name==='reports')prepareReports();
-  if(name==='settings')renderSettings();
+  if(name==='settings')renderSettings()
+  if(name==='teacher'){try{renderTeacherSamples()}catch(e){}}
+  if(name==='samples'){try{fillSamplesSubjectFilter();renderSamplesBySubject()}catch(e){}};
   if(name==='teacher')renderTeacherDay();
   if(name==='schedule')renderAssignments();
   if(name==='exams')renderExams();
   if(name==='messages')renderMessages();
 
-  if(name==='teacher'){try{renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}catch(e){}}
+  if(name==='teacher'){try{renderTeacherDay();renderTeacherClassList();renderTeacherJournal();renderTeacherSamples()}catch(e){}}
 }
 function daysLeft(){if(!session?.expireDate)return 0;return Math.ceil((new Date(session.expireDate+'T12:00:00')-new Date(todayStr()+'T12:00:00'))/86400000)}
 
@@ -5884,13 +5953,197 @@ function openTakeAtt(assignId){
     const last=(schoolData.submissions||[]).filter(s=>s.assignId===assignId&&s.date===todayStr()&&s.teacherId===userSession.staffId).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))[0];
     if(last&&last.rows)last.rows.forEach(r=>{lastMap[r.studentId]=r.status});
   }
+  // prefill notes for this slot today
+  var noteMap={};
+  (schoolData.teacherNotes||[]).forEach(function(n){
+    if(!n||!userSession)return;
+    if(String(n.teacherId)!==String(userSession.staffId||userSession.id||''))return;
+    if(n.assignId===assignId&&n.date===todayStr())noteMap[n.studentId]=n;
+  });
+  window._attNotePhotos=window._attNotePhotos||{};
   document.getElementById('take-list').innerHTML=st.length?st.map(s=>{
     const cur=lastMap[s.id]||'present';
-    return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div><select class="form-control att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present"'+(cur==='present'?' selected':'')+'>حاضر</option><option value="absent"'+(cur==='absent'?' selected':'')+'>غایب</option><option value="late"'+(cur==='late'?' selected':'')+'>تأخیر</option></select></div>';
+    const prev=noteMap[s.id];
+    const prevText=prev&&prev.text?String(prev.text).replace(/"/g,'&quot;'):'';
+    if(prev&&prev.photos&&prev.photos.length)window._attNotePhotos[s.id]=prev.photos.slice();
+    return '<div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">'+
+      '<div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div>'+
+      '<select class="form-control att-st" data-sid="'+s.id+'" style="width:auto;min-width:110px"><option value="present"'+(cur==='present'?' selected':'')+'>حاضر</option><option value="absent"'+(cur==='absent'?' selected':'')+'>غایب</option><option value="late"'+(cur==='late'?' selected':'')+'>تأخیر</option></select>'+
+      '</div>'+
+      '<div class="form-group" style="margin:0"><label style="font-size:.72rem">یادداشت دفتر کلاسی (فقط شما می‌بینید)</label>'+
+      '<input class="form-control att-note" data-sid="'+s.id+'" placeholder="مثلاً فعال بود / نیاز به تمرین..." value="'+prevText+'" /></div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
+      '<label class="btn btn-outline btn-sm" style="margin:0;cursor:pointer">📷 افزودن عکس نمونه کار'+
+      '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="onAttNotePhoto(this,\''+s.id+'\')" /></label>'+
+      '<span class="hint att-photo-count" data-sid="'+s.id+'" style="color:var(--muted)">'+(window._attNotePhotos[s.id]&&window._attNotePhotos[s.id].length?(window._attNotePhotos[s.id].length+' عکس'):'بدون عکس')+'</span>'+
+      '</div>'+
+      '<div class="att-photo-thumbs" data-sid="'+s.id+'" style="display:flex;gap:8px;flex-wrap:wrap"></div>'+
+      '</div>';
   }).join(''):'<p class="hint">دانش‌آموزی در این کلاس نیست</p>';
+  refreshAllAttPhotoThumbs();
+
   const btn=document.querySelector('#page-take-att .btn-success');
   if(btn){btn.disabled=false;btn.textContent=done?'به‌روزرسانی و ارسال مجدد':'ثبت و ارسال برای مدیر/معاون';btn.onclick=submitAttendance}
   showAppPage('take-att');
+}
+function onAttNotePhoto(input,sid){
+  var file=input.files&&input.files[0];
+  if(!file)return;
+  if(file.size>4*1024*1024)return toast('حجم عکس حداکثر ۴ مگابایت');
+  var reader=new FileReader();
+  reader.onload=function(){
+    var data=reader.result;
+    // فشرده‌سازی ساده اگر خیلی بزرگ
+    if(typeof data==='string'&&data.length>900000){
+      try{
+        var img=new Image();
+        img.onload=function(){
+          var c=document.createElement('canvas');
+          var maxW=1280,w=img.width,h=img.height;
+          if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
+          c.width=w;c.height=h;
+          c.getContext('2d').drawImage(img,0,0,w,h);
+          data=c.toDataURL('image/jpeg',0.72);
+          _storeAttPhoto(sid,data);
+        };
+        img.src=data;
+        return;
+      }catch(e){}
+    }
+    _storeAttPhoto(sid,data);
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+function bindAttPhotoCounts(){
+  // سازگاری — از refreshAllAttPhotoThumbs استفاده می‌شود
+  refreshAllAttPhotoThumbs();
+}
+function refreshAllAttPhotoThumbs(){
+  document.querySelectorAll('.att-photo-thumbs').forEach(function(box){
+    var sid=box.getAttribute('data-sid');
+    renderAttPhotoThumbs(sid);
+  });
+  document.querySelectorAll('.att-photo-count').forEach(function(el){
+    var sid=el.getAttribute('data-sid');
+    var arr=(window._attNotePhotos&&window._attNotePhotos[sid])||[];
+    el.textContent=arr.length?(arr.length+' عکس'):'بدون عکس';
+    el.style.color=arr.length?'var(--blue)':'var(--muted)';
+  });
+}
+function renderAttPhotoThumbs(sid){
+  var box=document.querySelector('.att-photo-thumbs[data-sid="'+sid+'"]');
+  if(!box)return;
+  window._attNotePhotos=window._attNotePhotos||{};
+  var arr=window._attNotePhotos[sid]||[];
+  if(!arr.length){box.innerHTML='';return}
+  box.innerHTML=arr.map(function(ph,pi){
+    return '<div style="position:relative;width:72px">'+
+      '<button type="button" class="media-thumb-btn" style="padding:0;border:none;background:none;cursor:pointer;display:block" onclick="openAttNotePhoto(\''+sid+'\','+pi+')">'+
+      '<img src="'+ph+'" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block" /></button>'+
+      '<div style="display:flex;gap:2px;margin-top:4px">'+
+      '<button type="button" class="btn btn-outline btn-sm" style="flex:1;padding:2px 4px;font-size:.65rem" onclick="replaceAttNotePhoto(\''+sid+'\','+pi+')">ویرایش</button>'+
+      '<button type="button" class="btn btn-danger btn-sm" style="flex:1;padding:2px 4px;font-size:.65rem" onclick="removeAttNotePhoto(\''+sid+'\','+pi+')">حذف</button>'+
+      '</div></div>';
+  }).join('');
+}
+function openAttNotePhoto(sid, idx){
+  var arr=(window._attNotePhotos&&window._attNotePhotos[sid])||[];
+  if(!arr[idx])return toast('عکس یافت نشد');
+  openMediaViewer(arr[idx],'نمونه کار دانش‌آموز','photo.jpg');
+}
+function removeAttNotePhoto(sid, idx){
+  window._attNotePhotos=window._attNotePhotos||{};
+  var arr=window._attNotePhotos[sid]||[];
+  if(idx<0||idx>=arr.length)return;
+  if(!confirm('این عکس حذف شود؟'))return;
+  arr.splice(idx,1);
+  window._attNotePhotos[sid]=arr;
+  renderAttPhotoThumbs(sid);
+  document.querySelectorAll('.att-photo-count[data-sid="'+sid+'"]').forEach(function(el){
+    el.textContent=arr.length?(arr.length+' عکس'):'بدون عکس';
+    el.style.color=arr.length?'var(--blue)':'var(--muted)';
+  });
+  toast('عکس حذف شد — با ثبت حضور ذخیره می‌شود');
+}
+function replaceAttNotePhoto(sid, idx){
+  window._attReplaceTarget={sid:sid,idx:idx};
+  try{
+    var input=document.createElement('input');
+    input.type='file';
+    input.accept='image/*';
+    input.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;z-index:99999;';
+    input.onchange=function(){
+      var f=input.files&&input.files[0];
+      try{if(input.parentNode)input.parentNode.removeChild(input)}catch(e){}
+      if(!f)return;
+      onAttNotePhotoReplace(f, sid, idx);
+    };
+    document.body.appendChild(input);
+    input.click();
+    setTimeout(function(){try{if(input.parentNode)input.parentNode.removeChild(input)}catch(e){}},120000);
+  }catch(e){toast('انتخاب عکس ممکن نشد')}
+}
+function onAttNotePhotoReplace(file, sid, idx){
+  if(!file)return;
+  if(file.size>4*1024*1024)return toast('حجم عکس حداکثر ۴ مگابایت');
+  var reader=new FileReader();
+  reader.onload=function(){
+    var data=reader.result;
+    function apply(d){
+      window._attNotePhotos=window._attNotePhotos||{};
+      if(!window._attNotePhotos[sid])window._attNotePhotos[sid]=[];
+      if(idx>=0&&idx<window._attNotePhotos[sid].length){
+        window._attNotePhotos[sid][idx]=d;
+      }else{
+        window._attNotePhotos[sid].push(d);
+      }
+      renderAttPhotoThumbs(sid);
+      document.querySelectorAll('.att-photo-count[data-sid="'+sid+'"]').forEach(function(el){
+        var n=window._attNotePhotos[sid].length;
+        el.textContent=n?(n+' عکس'):'بدون عکس';
+        el.style.color=n?'var(--blue)':'var(--muted)';
+      });
+      toast('عکس جایگزین شد — با ثبت حضور ذخیره می‌شود');
+    }
+    if(typeof data==='string'&&data.length>900000){
+      try{
+        var img=new Image();
+        img.onload=function(){
+          var c=document.createElement('canvas');
+          var maxW=1280,w=img.width,h=img.height;
+          if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
+          c.width=w;c.height=h;
+          c.getContext('2d').drawImage(img,0,0,w,h);
+          apply(c.toDataURL('image/jpeg',0.72));
+        };
+        img.src=data;
+        return;
+      }catch(e){}
+    }
+    apply(data);
+  };
+  reader.readAsDataURL(file);
+}
+function openStoredMedia(mid){
+  window._mediaStore=window._mediaStore||{};
+  var src=window._mediaStore[mid];
+  if(!src)return toast('فایل یافت نشد');
+  openMediaViewer(src,'نمونه کار دانش‌آموز','photo.jpg');
+}
+function _storeAttPhoto(sid,data){
+  window._attNotePhotos=window._attNotePhotos||{};
+  if(!window._attNotePhotos[sid])window._attNotePhotos[sid]=[];
+  if(window._attNotePhotos[sid].length>=4)return toast('حداکثر ۴ عکس برای هر دانش‌آموز در این زنگ');
+  window._attNotePhotos[sid].push(data);
+  renderAttPhotoThumbs(sid);
+  document.querySelectorAll('.att-photo-count[data-sid="'+sid+'"]').forEach(function(el){
+    el.textContent=window._attNotePhotos[sid].length+' عکس';
+    el.style.color='var(--blue)';
+  });
+  toast('عکس اضافه شد');
 }
 let submittingAtt=false;
 
@@ -5950,6 +6203,151 @@ function teacherOwnAttendance(sid,from,to){
   });
   return filterAttByRange(list,from,to);
 }
+/** تأخیر ورود صبح (مدیر/معاون) — در عملکرد دانش‌آموز دیده شود */
+function deputyMorningLates(sid,from,to){
+  var list=(schoolData.attendance||[]).filter(function(a){
+    if(a.studentId!==sid)return false;
+    if((a.type||'')!=='late')return false;
+    if(a.fromTeacher)return false;
+    return !!(a.fromManager||a.fromDeputy||(a.note||'').indexOf('تأخیر ورود')>=0||(a.note||'').indexOf('ورود به مدرسه')>=0);
+  });
+  return filterAttByRange(list,from,to);
+}
+/** غیبت روزی یکی — فقط از حضور این معلم */
+function teacherCountAbsentDays(sid,from,to){
+  var days={};
+  teacherOwnAttendance(sid,from,to).forEach(function(a){
+    if((a.type||'')!=='absent')return;
+    var day=normalizeDateToIso(a.date)||String(a.date||'');
+    if(day)days[day]=true;
+  });
+  return Object.keys(days).length;
+}
+/** تأخیر: هر جلسه/زنگ جدا (چهار زنگ تأخیر = ۴) */
+function teacherCountLates(sid,from,to){
+  return teacherOwnAttendance(sid,from,to).filter(function(a){return (a.type||'')==='late'}).length;
+}
+/** یادداشت‌های دفتر کلاسی فقط این معلم */
+
+
+function refreshStudentPerfView(){
+  var id=window._lastPerfStudentId||currentStudentId||null;
+  if(!id)return;
+  try{openPerformance(id)}catch(e){console.warn('refreshStudentPerfView',e)}
+}
+
+function removeTeacherNotePhoto(noteId, idx){
+  if(!isTeacher()&&!canManage())return toast('دسترسی ندارید');
+  var n=(schoolData.teacherNotes||[]).find(function(x){return x&&String(x.id)===String(noteId)});
+  if(!n||!Array.isArray(n.photos)||idx<0||idx>=n.photos.length)return toast('عکس یافت نشد');
+  if(isTeacher()){
+    var myId=String(userSession.staffId||userSession.id||'');
+    if(String(n.teacherId)!==myId)return toast('فقط یادداشت خودتان');
+  }
+  if(!confirm('این عکس از دفتر کلاسی حذف شود؟'))return;
+  n.photos.splice(idx,1);
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  toast('عکس حذف شد');
+  refreshStudentPerfView();
+}
+function replaceTeacherNotePhoto(noteId, idx){
+  if(!isTeacher()&&!canManage())return toast('دسترسی ندارید');
+  var n=(schoolData.teacherNotes||[]).find(function(x){return x&&String(x.id)===String(noteId)});
+  if(!n)return toast('یادداشت یافت نشد');
+  if(isTeacher()){
+    var myId=String(userSession.staffId||userSession.id||'');
+    if(String(n.teacherId)!==myId)return toast('فقط یادداشت خودتان');
+  }
+  try{
+    var input=document.createElement('input');
+    input.type='file';input.accept='image/*';
+    input.onchange=function(){
+      var f=input.files&&input.files[0];
+      if(!f)return;
+      if(f.size>4*1024*1024)return toast('حجم حداکثر ۴ مگابایت');
+      var reader=new FileReader();
+      reader.onload=function(){
+        var data=reader.result;
+        function apply(d){
+          if(!Array.isArray(n.photos))n.photos=[];
+          if(idx>=0&&idx<n.photos.length)n.photos[idx]=d;else n.photos.push(d);
+          schoolData._cloudUpdatedAtMs=Date.now();
+          saveSchoolData();
+          cloudPushAppData(true).catch(function(){});
+          toast('عکس جایگزین شد');
+          refreshStudentPerfView();
+        }
+        if(typeof data==='string'&&data.length>900000){
+          try{
+            var img=new Image();
+            img.onload=function(){
+              var c=document.createElement('canvas');
+              var maxW=1280,w=img.width,h=img.height;
+              if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
+              c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+              apply(c.toDataURL('image/jpeg',0.72));
+            };
+            img.src=data;return;
+          }catch(e){}
+        }
+        apply(data);
+      };
+      reader.readAsDataURL(f);
+    };
+    input.click();
+  }catch(e){toast('انتخاب عکس ممکن نشد')}
+}
+function editTeacherNoteText(noteId){
+  if(!isTeacher()&&!canManage())return toast('دسترسی ندارید');
+  var n=(schoolData.teacherNotes||[]).find(function(x){return x&&String(x.id)===String(noteId)});
+  if(!n)return toast('یادداشت یافت نشد');
+  if(isTeacher()){
+    var myId=String(userSession.staffId||userSession.id||'');
+    if(String(n.teacherId)!==myId)return toast('فقط یادداشت خودتان');
+  }
+  var t=prompt('متن یادداشت دفتر کلاسی:', n.text||'');
+  if(t===null)return;
+  n.text=String(t).trim();
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  toast('متن ذخیره شد');
+  refreshStudentPerfView();
+}
+function delTeacherNote(noteId){
+  if(!isTeacher()&&!canManage())return toast('دسترسی ندارید');
+  var n=(schoolData.teacherNotes||[]).find(function(x){return x&&String(x.id)===String(noteId)});
+  if(!n)return toast('یادداشت یافت نشد');
+  if(isTeacher()){
+    var myId=String(userSession.staffId||userSession.id||'');
+    if(String(n.teacherId)!==myId)return toast('فقط یادداشت خودتان');
+  }
+  if(!confirm('کل این یادداشت و عکس‌هایش حذف شود؟'))return;
+  var id=String(noteId);
+  if(!Array.isArray(schoolData.deletedTeacherNoteIds))schoolData.deletedTeacherNoteIds=[];
+  if(id&&schoolData.deletedTeacherNoteIds.indexOf(id)<0)schoolData.deletedTeacherNoteIds.push(id);
+  schoolData.teacherNotes=(schoolData.teacherNotes||[]).filter(function(x){return x&&String(x.id)!==id});
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  toast('یادداشت حذف شد');
+  refreshStudentPerfView();
+}
+
+function teacherNotesForStudent(sid,from,to){
+  if(!userSession)return [];
+  var myId=String(userSession.staffId||userSession.id||'');
+  var list=(schoolData.teacherNotes||[]).filter(function(n){
+    if(!n||String(n.studentId)!==String(sid))return false;
+    if(myId&&String(n.teacherId)!==myId)return false;
+    return true;
+  });
+  return filterAttByRange(list.map(function(n){return Object.assign({},n,{date:n.date});}),from,to).sort(function(a,b){
+    return String(b.date||'').localeCompare(String(a.date||''));
+  });
+}
 /** نمرات مربوط به این معلم برای یک دانش‌آموز */
 function teacherStudentExams(sid){
   var s=(schoolData.students||[]).find(function(x){return x.id===sid});
@@ -6000,13 +6398,12 @@ function runTeacherClassPerf(){
   if(!stus.length){document.getElementById('teacher-perf-out').innerHTML='<p class="hint">دانش‌آموزی نیست</p>';return}
   html+='<p class="hint" style="margin-bottom:8px">فقط نمرات و حضور/غیاب <b>شما</b> · روی نام بزنید برای جزئیات و PDF · نمره انضباط نیست</p>';
   stus.forEach(s=>{
-    let att=teacherOwnAttendance(s.id,from,to);
-    const abs=countAbsentDays(s.id,from,to);
-    var lateDays={};att.filter(a=>a.type==='late').forEach(function(a){var day=normalizeDateToIso(a.date)||String(a.date||'');if(day)lateDays[day]=true;});
-    const late=Object.keys(lateDays).length;
+    const abs=teacherCountAbsentDays(s.id,from,to);
+    const late=teacherCountLates(s.id,from,to);
     const avg=teacherExamAvg(s.id);
     const exN=teacherStudentExams(s.id).length;
-    html+='<div class="list-item clickable" onclick="openTeacherStudentView(\''+s.id+'\')"><div class="who">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">غیبت من: '+abs+' · تأخیر من: '+late+(exN?' · آزمون من: '+exN:'')+'</div></div></div><div style="text-align:left;min-width:72px"><div style="font-weight:800;color:var(--primary);font-size:1.05rem">'+(avg!=null?avg:'—')+'</div><div class="meta" style="font-size:.68rem">میانگین نمرات من</div></div></div>';
+    const notesN=teacherNotesForStudent(s.id,from,to).length;
+    html+='<div class="list-item clickable" onclick="openTeacherStudentView(\''+s.id+'\')"><div class="who">'+avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">غیبت (روز): '+abs+' · تأخیر (جلسه): '+late+(exN?' · آزمون: '+exN:'')+(notesN?' · یادداشت: '+notesN:'')+'</div></div></div><div style="text-align:left;min-width:72px"><div style="font-weight:800;color:var(--primary);font-size:1.05rem">'+(avg!=null?avg:'—')+'</div><div class="meta" style="font-size:.68rem">میانگین نمرات من</div></div></div>';
   });
   document.getElementById('teacher-perf-out').innerHTML=html;
 }
@@ -6034,18 +6431,210 @@ function exportTeacherClassPdf(){
   html+='</div>';
   html+='<table><thead><tr><th>نام</th><th>میانگین نمرات من</th><th>تعداد آزمون</th><th>غیبت من</th><th>تأخیر من</th></tr></thead><tbody>';
   stus.forEach(function(s){
-    var att=teacherOwnAttendance(s.id,from,to);
-    var abs=att.filter(function(a){return a.type==='absent'}).length;
-    var late=att.filter(function(a){return a.type==='late'}).length;
+    var abs=teacherCountAbsentDays(s.id,from,to);
+    var late=teacherCountLates(s.id,from,to);
     var avg=teacherExamAvg(s.id);
     var exN=teacherStudentExams(s.id).length;
     html+='<tr><td>'+s.name+'</td><td><b>'+(avg!=null?avg:'—')+'</b></td><td>'+exN+'</td><td>'+abs+'</td><td>'+late+'</td></tr>';
   });
   html+='</tbody></table>';
-  html+='<p style="font-size:11px;color:#555">فقط حضور و نمرات این معلم — بدون نمره انضباط و بدون حضور معلمان دیگر.</p>';
+  html+='<p style="font-size:11px;color:#555">غیبت = تعداد روز (نه تعداد زنگ) · تأخیر = هر جلسه جدا · فقط حضور و نمرات این معلم.</p>';
   openPrintWindow('گزارش کلاس معلم — '+(c?c.name:'کلاس'), html);
 }
 
+
+function fillSamplesSubjectFilter(){
+  var sel=document.getElementById('samples-subject-filter');
+  if(!sel)return;
+  if(!schoolData){try{loadSchoolData()}catch(e){} if(!schoolData)return;}
+  var prev=sel.value||'';
+  var set={}, counts={};
+  (schoolData.sampleQuestions||[]).forEach(function(q){
+    if(!q)return;
+    if(isTeacher()){
+      var myId=userSession&&(userSession.staffId||userSession.id);
+      if(String(q.teacherId)!==String(myId))return;
+    }
+    var subj=String(q.subject||'').trim();
+    if(!subj)return;
+    set[subj]=true;
+    counts[subj]=(counts[subj]||0)+1;
+  });
+  if(isTeacher()){
+    (schoolData.assignments||[]).filter(isMyAssignment).forEach(function(a){
+      var subj=String(a.subject||'').trim();
+      if(subj)set[subj]=true;
+    });
+  }
+  var subjects=Object.keys(set).sort(function(a,b){return a.localeCompare(b,'fa')});
+  sel.innerHTML='<option value="">— انتخاب درس —</option>'+
+    subjects.map(function(subj){
+      var n=counts[subj]||0;
+      var label=subj+(n?(' ('+n+' فایل)'):'');
+      return '<option value="'+String(subj).replace(/"/g,'&quot;')+'">'+label+'</option>';
+    }).join('');
+  if(prev&&set[prev])sel.value=prev;
+  var up=document.getElementById('btn-upload-sample');
+  if(up)up.style.display=isTeacher()?'inline-flex':'none';
+}
+function renderSamplesBySubject(){
+  var box=document.getElementById('samples-list-out');
+  if(!box)return;
+  if(!schoolData){box.innerHTML='<p class="hint">در حال بارگذاری…</p>';return}
+  if(!Array.isArray(schoolData.sampleQuestions))schoolData.sampleQuestions=[];
+  var sub=(document.getElementById('samples-subject-filter')||{}).value||'';
+  if(!sub){
+    var total=(schoolData.sampleQuestions||[]).length;
+    if(!isTeacher()&&!total) box.innerHTML='<p class="hint">هنوز هیچ نمونه سوالی از معلمان دریافت نشده.</p>';
+    else box.innerHTML='<p class="hint">یک درس را انتخاب کنید تا نمونه سوال‌های همان درس با نام معلم و دانلود نمایش داده شود.</p>';
+    return;
+  }
+  var myId=userSession&&(userSession.staffId||userSession.id);
+  var list=(schoolData.sampleQuestions||[]).filter(function(q){
+    if(!q||String(q.subject||'').trim()!==sub)return false;
+    if(isTeacher())return String(q.teacherId)===String(myId);
+    return true;
+  }).slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+  if(!list.length){
+    box.innerHTML='<p class="hint">برای درس «'+sub+'» نمونه سوالی نیست.'+(isTeacher()?' از صفحه کلاس‌ها بارگذاری کنید.':'')+'</p>';
+    return;
+  }
+  box.innerHTML='<p class="hint" style="margin-bottom:8px">درس «'+sub+'» · '+list.length+' فایل</p>'+list.map(function(q){
+    var size=q.fileData?Math.round((String(q.fileData).length*0.75)/1024):0;
+    var canDel=isTeacher()?String(q.teacherId)===String(myId):canManage();
+    var teacherLabel=q.teacherName||'معلم نامشخص';
+    return '<div class="list-item" style="flex-direction:column;align-items:stretch;gap:6px">'+
+      '<div><div class="name">'+(q.title||q.fileName||'نمونه سوال')+'</div>'+
+      '<div class="meta"><strong>معلم: '+teacherLabel+'</strong> · '+formatDateFa(q.date||q.createdAt)+' · '+(q.fileName||q.fileType||'فایل')+(size?(' · ~'+size+'KB'):'')+'</div></div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+      (q.fileData?('<button type="button" class="btn btn-primary btn-sm" onclick="downloadSampleById(\''+q.id+'\')">⬇ دانلود</button>'):'')+
+      (q.fileData?('<button type="button" class="btn btn-outline btn-sm" onclick="openSampleInApp(\''+q.id+'\')">مشاهده</button>'):'')+
+      (canDel?('<button type="button" class="btn btn-danger btn-sm" onclick="delSampleQuestion(\''+q.id+'\')">حذف</button>'):'')+
+      '</div></div>';
+  }).join('');
+}
+function renderTeacherSamples(){
+  var box=document.getElementById('teacher-samples-list');
+  if(box){
+    if(!schoolData||!Array.isArray(schoolData.sampleQuestions)){
+      box.innerHTML='<p class="hint">هنوز نمونه‌ای بارگذاری نشده.</p>';
+    }else{
+      var myId=userSession&&(userSession.staffId||userSession.id);
+      var list=(schoolData.sampleQuestions||[]).filter(function(q){
+        return q&&String(q.teacherId)===String(myId);
+      }).slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+      if(!list.length) box.innerHTML='<p class="hint">هنوز نمونه‌ای بارگذاری نشده.</p>';
+      else box.innerHTML=list.map(function(q){
+        var size=q.fileData?Math.round((String(q.fileData).length*0.75)/1024):0;
+        return '<div class="list-item" style="flex-direction:column;align-items:stretch;gap:6px">'+
+          '<div><div class="name">'+(q.subject||'درس')+(q.title?(' · '+q.title):'')+'</div>'+
+          '<div class="meta">'+formatDateFa(q.date||q.createdAt)+' · '+(q.fileName||'')+(size?(' · ~'+size+'KB'):'')+'</div></div>'+
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+          (q.fileData?('<button type="button" class="btn btn-outline btn-sm" onclick="openSampleInApp(\''+q.id+'\')">مشاهده</button>'):'')+
+          (q.fileData?('<button type="button" class="btn btn-outline btn-sm" onclick="downloadSampleById(\''+q.id+'\')">دانلود</button>'):'')+
+          '<button type="button" class="btn btn-danger btn-sm" onclick="delSampleQuestion(\''+q.id+'\')">حذف</button>'+
+          '</div></div>';
+      }).join('');
+    }
+  }
+  try{fillSamplesSubjectFilter();renderSamplesBySubject()}catch(e){}
+}
+function openSamplesPage(){
+  showAppPage('samples');
+  fillSamplesSubjectFilter();
+  renderSamplesBySubject();
+}
+function openSampleQuestionModal(){
+  if(!isTeacher()&&!canManage())return toast('دسترسی ندارید');
+  var subs=[];
+  if(isTeacher()){
+    (schoolData.assignments||[]).filter(isMyAssignment).forEach(function(a){
+      var s=String(a.subject||'').trim();
+      if(s&&subs.indexOf(s)<0)subs.push(s);
+    });
+  }else{
+    (schoolData.assignments||[]).forEach(function(a){
+      var s=String(a.subject||'').trim();
+      if(s&&subs.indexOf(s)<0)subs.push(s);
+    });
+  }
+  document.getElementById('modal-title').textContent='بارگذاری نمونه سوال';
+  document.getElementById('modal-body').innerHTML=
+    '<div class="form-group"><label>درس</label>'+
+    (subs.length
+      ?('<select class="form-control" id="sq-subject">'+subs.map(function(s){return '<option value="'+s+'">'+s+'</option>'}).join('')+'<option value="__other__">سایر / دستی</option></select>')
+      :'<input class="form-control" id="sq-subject-text" placeholder="نام درس" />')+
+    '</div>'+
+    (subs.length?'<div class="form-group" id="sq-subject-other-wrap" style="display:none"><label>نام درس</label><input class="form-control" id="sq-subject-text" /></div>':'')+
+    '<div class="form-group"><label>عنوان (اختیاری)</label><input class="form-control" id="sq-title" placeholder="مثلاً نمونه سوال فصل ۳" /></div>'+
+    '<div class="form-group"><label>فایل (PDF / Word / عکس)</label><input type="file" class="form-control" id="sq-file" accept=".pdf,.doc,.docx,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></div>'+
+    '<button class="btn btn-primary btn-block" onclick="saveSampleQuestion()">ذخیره نمونه سوال</button>';
+  document.getElementById('modal').classList.add('show');
+  try{
+    var sel=document.getElementById('sq-subject');
+    if(sel)sel.onchange=function(){
+      var w=document.getElementById('sq-subject-other-wrap');
+      if(w)w.style.display=this.value==='__other__'?'block':'none';
+    };
+  }catch(e){}
+}
+function saveSampleQuestion(){
+  var subject='';
+  var sel=document.getElementById('sq-subject');
+  if(sel&&sel.value&&sel.value!=='__other__')subject=sel.value;
+  else subject=((document.getElementById('sq-subject-text')||{}).value||'').trim();
+  var title=((document.getElementById('sq-title')||{}).value||'').trim();
+  var fileInput=document.getElementById('sq-file');
+  var file=fileInput&&fileInput.files&&fileInput.files[0];
+  if(!subject)return toast('نام درس لازم است');
+  if(!file)return toast('فایل را انتخاب کنید');
+  if(file.size>5*1024*1024)return toast('حجم فایل حداکثر ۵ مگابایت');
+  var reader=new FileReader();
+  reader.onload=function(){
+    if(!Array.isArray(schoolData.sampleQuestions))schoolData.sampleQuestions=[];
+    schoolData.sampleQuestions.push({
+      id:uid(),
+      teacherId:userSession.staffId||userSession.id||'',
+      teacherName:userSession.name||userSession.username||'معلم',
+      subject:subject,
+      title:title||file.name,
+      fileName:file.name,
+      fileType:file.type||'',
+      fileData:reader.result,
+      date:todayStr(),
+      createdAt:Date.now()
+    });
+    schoolData._cloudUpdatedAtMs=Date.now();
+    saveSchoolData();
+    closeModal();
+    try{
+      fillSamplesSubjectFilter();
+      var sf=document.getElementById('samples-subject-filter');
+      if(sf)sf.value=subject;
+      renderSamplesBySubject();
+    }catch(e){}
+    toast('در حال ارسال به سرور...');
+    cloudPushAppData(true).then(function(){toast('نمونه سوال ذخیره و همگام شد ✓')}).catch(function(){toast('محلی ذخیره شد؛ بعداً همگام کنید')});
+  };
+  reader.onerror=function(){toast('خواندن فایل ناموفق')};
+  reader.readAsDataURL(file);
+}
+function delSampleQuestion(id){
+  if(!confirm('حذف این نمونه سوال؟'))return;
+  id=String(id);
+  if(!Array.isArray(schoolData.deletedSampleQuestionIds))schoolData.deletedSampleQuestionIds=[];
+  if(id&&schoolData.deletedSampleQuestionIds.indexOf(id)<0)schoolData.deletedSampleQuestionIds.push(id);
+  schoolData.sampleQuestions=(schoolData.sampleQuestions||[]).filter(function(q){return q&&String(q.id)!==id});
+  schoolData._cloudUpdatedAtMs=Date.now();
+  saveSchoolData();
+  try{renderTeacherSamples();fillSamplesSubjectFilter();renderSamplesBySubject()}catch(e){}
+  cloudPushAppData(true).catch(function(){});
+  toast('حذف شد');
+}
+function renderManagerSamples(){
+  fillSamplesSubjectFilter();
+  renderSamplesBySubject();
+}
 function renderTeacherJournal(){
   // ژورنال شلوغ حذف شد — عملکرد از بخش ۲ قابل دسترس است
   return;
@@ -6081,6 +6670,12 @@ async function submitAttendance(){
   if(btn){btn.disabled=true;btn.textContent='در حال ثبت...'}
   try{
     const rows=[...document.querySelectorAll('.att-st')].map(el=>({studentId:el.getAttribute('data-sid'),status:el.value}));
+    // یادداشت‌های دفتر کلاسی (فقط معلم)
+    var noteInputs={};
+    document.querySelectorAll('.att-note').forEach(function(inp){
+      noteInputs[inp.getAttribute('data-sid')]=(inp.value||'').trim();
+    });
+    var photoBag=window._attNotePhotos||{};
     // هشدار: غایب‌هایی که قبلاً امروز پیامک گرفته‌اند
     var alreadySms=[];
     rows.forEach(function(r){
@@ -6124,8 +6719,37 @@ async function submitAttendance(){
       markAbsentSmsSent(schoolData._pendingAbsentSms,todayStr());
       schoolData._pendingAbsentSms=[];
     }
+    // ذخیره یادداشت/عکس دفتر کلاسی — فقط برای این معلم، برای مدیر ارسال نمی‌شود در نمایش
+    if(!Array.isArray(schoolData.teacherNotes))schoolData.teacherNotes=[];
+    var myTid=userSession.staffId||userSession.id||'';
+    rows.forEach(function(r){
+      var text=noteInputs[r.studentId]||'';
+      var photos=(photoBag[r.studentId]||[]).slice(0,4);
+      // حذف یادداشت قبلی همین زنگ/امروز
+      schoolData.teacherNotes=schoolData.teacherNotes.filter(function(n){
+        return !(n&&String(n.teacherId)===String(myTid)&&n.assignId===currentAssign.id&&n.date===todayStr()&&String(n.studentId)===String(r.studentId));
+      });
+      if(text||photos.length){
+        schoolData.teacherNotes.push({
+          id:uid(),
+          teacherId:myTid,
+          teacherName:userSession.name||userSession.username||'معلم',
+          studentId:r.studentId,
+          classId:currentAssign.classId,
+          assignId:currentAssign.id,
+          periodName:currentAssign.periodName||'',
+          subject:currentAssign.subject||'',
+          date:todayStr(),
+          text:text,
+          photos:photos,
+          createdAt:Date.now()
+        });
+      }
+    });
+    try{window._attNotePhotos={}}catch(e){}
     saveSchoolData();
     await cloudPushSubmission(session.schoolId,sub);
+    try{await cloudPushAppData(true)}catch(e){}
     const tName=userSession.name||userSession.username||'معلم';
     const c=schoolData.classes.find(x=>x.id===currentAssign.classId);
     const period=currentAssign.periodName||'زنگ';
@@ -7054,6 +7678,7 @@ function openPerformance(id){
   if(!s)return;
   if(isTeacher()&&!canAccessClass(s.classId))return toast('به این کلاس دسترسی ندارید');
   currentStudentId=id;
+  window._lastPerfStudentId=id;
   const hideDisc=isTeacher();
   const cls=(schoolData.classes||[]).find(c=>c.id===s.classId);
   const disc=calcScore(id);
@@ -7064,12 +7689,14 @@ function openPerformance(id){
     var db=normalizeDateToIso(b.date)||String(b.date||'');
     return db.localeCompare(da);
   });
-  const lateN=att.filter(a=>a.type==='late').length;
+  const lateN=hideDisc?teacherCountLates(id,null,null):att.filter(a=>a.type==='late').length;
   const otherN=hideDisc?0:att.filter(a=>a.type!=='absent'&&a.type!=='late').length;
-  // مدیر: تعداد روز غایب (نه تعداد زنگ)؛ معلم: جزئیات زنگ‌های خودش
+  // مدیر و معلم: غیبت روزی یکی (نه هر زنگ)
   const absDays=hideDisc?null:absentDaysSummary(id,null,null);
-  const absN=hideDisc?att.filter(a=>a.type==='absent').length:(absDays?absDays.length:0);
+  const absN=hideDisc?teacherCountAbsentDays(id,null,null):(absDays?absDays.length:0);
   const absUnexcused=hideDisc?0:(absDays?absDays.filter(function(d){return !d.excused}).length:0);
+  const myNotes=hideDisc?teacherNotesForStudent(id,null,null):[];
+  const mornLates=hideDisc?deputyMorningLates(id,null,null):[];
 
   let examAvg=null,examCnt=0,examSum=0;
   exams.forEach(function(ex){
@@ -7154,17 +7781,58 @@ function openPerformance(id){
   }
   html+='</div>';
   if(hideDisc){
-    if(att.length){
-      html+='<button type="button" class="btn btn-outline btn-sm" onclick="togglePerfSubject(this.dataset.key)" data-key="att">جزئیات ('+att.length+') ▼</button>';
-      html+='<div class="rep-detail" id="perf-sub-att" style="margin-top:8px">';
-      att.forEach(function(a){
-        var lab=typeName(a.type);
-        if((a.type||'')==='absent'&&isAbsentExcused(a))lab='غیبت موجه';
-        html+='<div class="row"><div><strong>'+lab+'</strong><div class="meta">'+formatDateFa(a.date)+(a.note?(' · '+a.note):'')+'</div></div></div>';
+    // گروه‌بندی غیبت بر اساس روز (یک روز = یک غیبت در خلاصه)
+    var dayMap={};
+    att.filter(function(a){return (a.type||'')==='absent'}).forEach(function(a){
+      var day=normalizeDateToIso(a.date)||String(a.date||'');
+      if(!day)return;
+      if(!dayMap[day])dayMap[day]={date:day,periods:[]};
+      dayMap[day].periods.push(a);
+    });
+    var dayList=Object.keys(dayMap).sort().reverse().map(function(k){return dayMap[k]});
+    var lateList=att.filter(function(a){return (a.type||'')==='late'});
+    if(dayList.length||lateList.length||mornLates.length||myNotes.length){
+      html+='<p class="hint">غیبت: '+absN+' روز · تأخیر جلسه: '+lateN+(mornLates.length?(' · تأخیر صبح معاون: '+mornLates.length):'')+'</p>';
+      html+='<div class="rep-detail" id="perf-sub-att" style="display:block;margin-top:8px">';
+      dayList.forEach(function(d){
+        var periods=d.periods.map(function(p){return p.note||'زنگ';}).join('، ');
+        html+='<div class="row"><div><strong>غایب در این روز</strong><div class="meta">'+formatDateFa(d.date)+' · '+(d.periods.length)+' زنگ ثبت‌شده'+(periods?(' ('+periods+')'):'')+'</div></div></div>';
       });
+      lateList.forEach(function(a){
+        html+='<div class="row"><div><strong>تأخیر (جلسه)</strong><div class="meta">'+formatDateFa(a.date)+(a.note?(' · '+a.note):'')+'</div></div></div>';
+      });
+      mornLates.forEach(function(a){
+        html+='<div class="row"><div><strong>تأخیر صبح (معاون/مدیر)</strong><div class="meta">'+formatDateFa(a.date)+(a.note?(' · '+a.note):'')+'</div></div></div>';
+      });
+      if(myNotes.length){
+        html+='<div class="rep-sec" style="margin-top:10px">دفتر کلاسی من (یادداشت و نمونه کار)</div>';
+        myNotes.forEach(function(n){
+          html+='<div class="row" style="flex-direction:column;align-items:stretch"><div><strong>'+formatDateFa(n.date)+(n.periodName?(' · '+n.periodName):'')+(n.subject?(' · '+n.subject):'')+'</strong>';
+          if(n.text)html+='<div class="meta" style="white-space:pre-wrap;margin-top:4px">'+escapeHtml(n.text)+'</div>';
+          if(n.photos&&n.photos.length){
+            html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">';
+            n.photos.forEach(function(ph,pi){
+              var pid='note-ph-'+String(n.id||'x')+'-'+pi;
+              window._mediaStore=window._mediaStore||{};
+              window._mediaStore[pid]=ph;
+              html+='<div style="position:relative;width:72px">'+
+                '<button type="button" class="media-thumb-btn" data-mid="'+pid+'" style="padding:0;border:none;background:none;cursor:pointer;display:block">'+
+                '<img src="'+ph+'" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block" /></button>'+
+                '<div style="display:flex;gap:2px;margin-top:4px">'+
+                '<button type="button" class="btn btn-outline btn-sm" style="flex:1;padding:2px 4px;font-size:.65rem" onclick="replaceTeacherNotePhoto(\''+n.id+'\','+pi+')">ویرایش</button>'+
+                '<button type="button" class="btn btn-danger btn-sm" style="flex:1;padding:2px 4px;font-size:.65rem" onclick="removeTeacherNotePhoto(\''+n.id+'\','+pi+')">حذف</button>'+
+                '</div></div>';
+            });
+            html+='</div>';
+          }
+          html+='<div style="margin-top:6px"><button type="button" class="btn btn-outline btn-sm" onclick="editTeacherNoteText(\''+n.id+'\')">ویرایش متن یادداشت</button> '+
+            '<button type="button" class="btn btn-danger btn-sm" onclick="delTeacherNote(\''+n.id+'\')">حذف یادداشت</button></div>';
+          html+='</div></div>';
+        });
+      }
       html+='</div>';
     }else{
-      html+='<p class="hint">غیبت/تأخیری ثبت نشده.</p>';
+      html+='<p class="hint">غیبت/تأخیر/یادداشتی برای شما ثبت نشده.</p>';
     }
   }else{
     var days=absDays||absentDaysSummary(id,null,null);
@@ -7201,6 +7869,7 @@ function openPerformance(id){
   }
 
   document.getElementById('perf-report').innerHTML=html;
+  try{document.querySelectorAll('.media-thumb-btn').forEach(function(btn){btn.onclick=function(){openStoredMedia(btn.getAttribute('data-mid'));};});}catch(e){}
 
   // ثبت انضباط فقط مدیر/معاون
   const adminBox=document.getElementById('perf-admin-box');
@@ -8168,6 +8837,7 @@ function renderSettings(){
     if(isManager()){
       h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-full-backup-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">💾</span><span class="lb">پشتیبان</span><span class="ds">دانلود / بازیابی</span></button>';
     }
+    h+='<button type="button" class="qa-item" onclick="openSamplesPage()"><span class="ic">📄</span><span class="lb">نمونه سوالات</span><span class="ds">بر اساس درس · فایل معلمان</span></button>';
     h+='<button type="button" class="qa-item" onclick="openContactSalesModal()"><span class="ic">🤝</span><span class="lb">پشتیبانی</span><span class="ds">تماس و شبکه‌های اجتماعی</span></button>';
     hub.innerHTML=h;
   }
@@ -8564,6 +9234,81 @@ function importFullSchoolBackupLocal(ev){
   };
   reader.readAsText(file);
   ev.target.value='';
+}
+
+
+function closeMediaViewer(){
+  var ov=document.getElementById('media-viewer-overlay');
+  if(ov)ov.classList.remove('show');
+  var body=document.getElementById('media-viewer-body');
+  if(body)body.innerHTML='';
+  try{document.body.style.overflow=''}catch(e){}
+}
+/** نمایش عکس/فایل داخل خود اپ — تب جدید باز نمی‌شود */
+function openMediaViewer(src, title, fileName){
+  if(!src)return toast('فایلی نیست');
+  var ov=document.getElementById('media-viewer-overlay');
+  var body=document.getElementById('media-viewer-body');
+  var tit=document.getElementById('media-viewer-title');
+  if(!ov||!body){toast('نمایشگر آماده نیست');return}
+  if(tit)tit.textContent=title||fileName||'مشاهده';
+  body.innerHTML='';
+  var s=String(src);
+  var name=String(fileName||title||'');
+  var isImg=/^data:image\//i.test(s)||/\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(name)||/^blob:/.test(s);
+  var isPdf=/^data:application\/pdf/i.test(s)||/\.pdf(\?|$)/i.test(name)||/application\/pdf/i.test(s);
+  if(isImg){
+    var img=document.createElement('img');
+    img.src=s;
+    img.alt=name||'عکس';
+    img.onclick=function(e){e.stopPropagation()};
+    body.appendChild(img);
+  }else if(isPdf){
+    var emb=document.createElement('iframe');
+    emb.src=s;
+    emb.style.width='100%';
+    emb.style.height='70vh';
+    emb.style.border='none';
+    emb.style.borderRadius='12px';
+    emb.onclick=function(e){e.stopPropagation()};
+    body.appendChild(emb);
+    var hint=document.createElement('p');
+    hint.className='mv-fallback';
+    hint.style.marginTop='8px';
+    hint.textContent='اگر PDF نمایش داده نشد، از دکمه دانلود استفاده کنید.';
+    body.appendChild(hint);
+  }else{
+    body.innerHTML='<div class="mv-fallback">پیش‌نمایش این فرمت داخل اپ پشتیبانی نمی‌شود.<br><strong>'+escapeHtml(name||'فایل')+'</strong><br><br>'+
+      '<button type="button" class="btn btn-primary" id="mv-dl-btn">دانلود فایل</button></div>';
+    setTimeout(function(){
+      var b=document.getElementById('mv-dl-btn');
+      if(b)b.onclick=function(e){e.stopPropagation();downloadDataUrl(s,name||'file')};
+    },0);
+  }
+  ov.classList.add('show');
+  try{document.body.style.overflow='hidden'}catch(e){}
+}
+function downloadDataUrl(dataUrl, fileName){
+  try{
+    var a=document.createElement('a');
+    a.href=dataUrl;
+    a.download=fileName||'download';
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){try{document.body.removeChild(a)}catch(e){}},500);
+    toast('دانلود شروع شد');
+  }catch(e){toast('دانلود ناموفق')}
+}
+function downloadSampleById(id){
+  var q=(schoolData.sampleQuestions||[]).find(function(x){return x&&String(x.id)===String(id)});
+  if(!q||!q.fileData)return toast('فایل یافت نشد');
+  downloadDataUrl(q.fileData, q.fileName||'sample');
+}
+function openSampleInApp(id){
+  var q=(schoolData.sampleQuestions||[]).find(function(x){return x&&String(x.id)===String(id)});
+  if(!q||!q.fileData)return toast('فایل یافت نشد');
+  openMediaViewer(q.fileData, (q.subject||'')+(q.title?(' · '+q.title):''), q.fileName||'sample');
 }
 
 function openModal(){var m=document.getElementById('modal');if(m)m.classList.add('show')}
