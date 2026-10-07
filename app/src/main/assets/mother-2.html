@@ -415,7 +415,24 @@ td{color:#e2e8f0!important}
     </div>
     <p class="hint" id="login-hint">اولین ورود: نام کاربری admin و یک رمز حداقل ۶ کاراکتری وارد کنید تا ذخیره شود.</p>
     <button class="btn btn-primary btn-block" onclick="doLogin()">ورود</button>
+    <p style="text-align:center;margin-top:12px">
+      <button type="button" class="btn btn-outline btn-sm" onclick="showForgotPanel()" style="width:100%">فراموشی نام کاربری / رمز عبور</button>
+    </p>
     <p id="login-error" style="color:var(--danger);margin-top:10px;font-size:.85rem;display:none;text-align:center"></p>
+    <div id="forgot-panel" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <p class="hint" style="margin-bottom:10px;text-align:center">کد بازیابی را که قبلاً در تنظیمات ذخیره کرده‌اید وارد کنید، سپس نام کاربری و رمز جدید بگذارید.</p>
+      <div class="form-group"><label>کد بازیابی</label>
+        <input type="text" class="form-control" id="forgot-code" placeholder="کد بازیابی" autocomplete="off" /></div>
+      <div class="form-group"><label>نام کاربری جدید</label>
+        <input type="text" class="form-control" id="forgot-user" placeholder="مثلاً admin" autocomplete="off" /></div>
+      <div class="form-group"><label>رمز جدید (حداقل ۶ کاراکتر)</label>
+        <input type="password" class="form-control" id="forgot-pass" autocomplete="new-password" /></div>
+      <div class="form-group"><label>تکرار رمز جدید</label>
+        <input type="password" class="form-control" id="forgot-pass2" autocomplete="new-password" /></div>
+      <button class="btn btn-success btn-block" type="button" onclick="doForgotReset()">بازیابی و ورود</button>
+      <p style="text-align:center;margin-top:8px"><button type="button" class="btn btn-outline btn-sm" onclick="hideForgotPanel()">بازگشت به ورود</button></p>
+      <p class="hint" style="margin-top:8px;text-align:center">اگر کد بازیابی تنظیم نکرده‌اید، فقط از همان دستگاهی که قبلاً وارد شده می‌توانید با پاک کردن دادهٔ مرورگر از صفر شروع کنید (مدارس روی سرور می‌مانند).</p>
+    </div>
   </div>
 </div>
 
@@ -489,6 +506,18 @@ td{color:#e2e8f0!important}
           <p class="hint" style="margin-top:10px">اگر مدرسه پرید: همان فایل پشتیبان کامل یا تک‌مدرسه را اینجا بارگذاری کنید تا لایسنس و داده عملیاتی به سرور برگردد. برای پشتیبان یک مدرسه از لیست مدارس «پشتیبان» را بزنید.</p>
         </div>
         <div class="card">
+          <div class="card-title">کد بازیابی حساب (فراموشی رمز)</div>
+          <p class="hint" style="margin-bottom:10px">این کد را در جای امن نگه دارید. با آن می‌توانید نام کاربری و رمز پنل مادر را بازیابی کنید.</p>
+          <div class="form-group"><label>کد بازیابی فعلی</label>
+            <input class="form-control" id="recovery-code-display" value="" readonly /></div>
+          <div class="form-group"><label>کد بازیابی جدید</label>
+            <input class="form-control" id="recovery-code-new" placeholder="حداقل ۸ کاراکتر · حروف و عدد" autocomplete="off" /></div>
+          <div class="form-group"><label>رمز فعلی پنل مادر (برای تأیید)</label>
+            <input type="password" class="form-control" id="recovery-cur-pass" /></div>
+          <button class="btn btn-primary" onclick="saveRecoveryCode()">ذخیره کد بازیابی</button>
+          <button class="btn btn-outline" style="margin-right:8px" onclick="genRecoveryCodeHint()">پیشنهاد کد تصادفی</button>
+        </div>
+        <div class="card">
           <div class="card-title">درباره</div>
           <p style="font-size:.9rem;color:var(--muted)">سامانه نیکان — پنل مادر<br>مدیریت مدارس، لایسنس، ماژول‌ها و پیامک<br>طراحی: سید مجتبی موسوی</p>
         </div>
@@ -525,12 +554,15 @@ const DEFAULT_MODULES = [
   { id: 'manager_approve', label: 'تأیید مدیر قبل از پیامک' },
   { id: 'discipline', label: 'موارد انضباطی و نمره' },
   { id: 'advanced_reports', label: 'گزارش پیشرفته' },
-  { id: 'dual_shift', label: 'دو شیفت' }
+  { id: 'dual_shift', label: 'دو شیفت' },
+  { id: 'sample_questions', label: 'نمونه سوالات امتحانی (PDF/Word/عکس)' },
+  { id: 'teacher_notes', label: 'یادداشت و عکس دفتر کلاسی معلم' }
 ];
 
 let state = {
   motherUser: 'admin',
   motherPass: null,
+  motherRecoveryCode: null,
   schools: []
 };
 
@@ -559,13 +591,14 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     motherUser: state.motherUser,
     motherPass: state.motherPass,
+    motherRecoveryCode: state.motherRecoveryCode || null,
     schools: state.schools
   }));
 }
 
 /* —— سرور همگام‌سازی (Cloudflare Worker) — بدون گوگل/Firebase —— */
 // بعد از ساخت Worker، آدرس را اینجا بگذار — مثال: https://school-sync.xxx.workers.dev
-const DEFAULT_SYNC_API = 'https://api.nikan-school.top';
+const DEFAULT_SYNC_API = 'https://panel.nikan-school.top';
 const FALLBACK_SYNC_API = 'https://school-sync.abcd-mojtaba.workers.dev';
 const SYNC_API = (localStorage.getItem('school_sync_api') || DEFAULT_SYNC_API).replace(/\/$/, '');
 
@@ -583,6 +616,7 @@ async function apiFetch(path, options) {
   const primary = (typeof SYNC_API !== 'undefined' && SYNC_API) ? SYNC_API : '';
   if (primary) bases.push(primary);
   if (typeof FALLBACK_SYNC_API !== 'undefined' && FALLBACK_SYNC_API && FALLBACK_SYNC_API !== primary) bases.push(FALLBACK_SYNC_API);
+  try { var _extraApi = 'https://api.nikan-school.top'; if (_extraApi !== primary && bases.indexOf(_extraApi) < 0) bases.push(_extraApi); } catch (e) {}
   if (!bases.length) throw new Error('آدرس سرور تنظیم نشده');
   for (const base of bases) {
     for (let i = 1; i <= maxTry; i++) {
@@ -820,9 +854,13 @@ function doLogin() {
     }
     state.motherUser = user;
     state.motherPass = pass;
+    // کد بازیابی اولیه خودکار (کاربر می‌تواند در تنظیمات عوض کند)
+    if (!state.motherRecoveryCode) {
+      state.motherRecoveryCode = (Math.random().toString(36).slice(2, 6) + Math.random().toString(36).slice(2, 6) + Math.random().toString(36).slice(2, 4)).toUpperCase();
+    }
     save();
     enterApp();
-    toast('رمز پنل مادر ذخیره شد');
+    toast('رمز ذخیره شد · کد بازیابی: ' + state.motherRecoveryCode + ' — در تنظیمات هم قابل تغییر است');
     return;
   }
 
@@ -1349,6 +1387,73 @@ function changeMotherPassword(){ changeMotherAccount(); }
 function fillMotherAccountForm(){
   const disp = document.getElementById('mother-user-display');
   if (disp) disp.value = state.motherUser || 'admin';
+  const rc = document.getElementById('recovery-code-display');
+  if (rc) {
+    if (state.motherRecoveryCode) {
+      var c = String(state.motherRecoveryCode);
+      rc.value = c.length > 4 ? (c.slice(0, 2) + '••••' + c.slice(-2) + ' (تنظیم شده)') : '•••• (تنظیم شده)';
+    } else {
+      rc.value = 'هنوز تنظیم نشده — حتماً یک کد بگذارید';
+    }
+  }
+}
+function showForgotPanel(){
+  var p = document.getElementById('forgot-panel');
+  if (p) p.style.display = 'block';
+  var err = document.getElementById('login-error');
+  if (err) err.style.display = 'none';
+  if (!state.motherPass) {
+    toast('هنوز حسابی ساخته نشده — با admin و رمز جدید وارد شوید');
+  } else if (!state.motherRecoveryCode) {
+    toast('کد بازیابی تنظیم نشده — فقط از دستگاه قبلی یا پشتیبان ممکن است');
+  }
+}
+function hideForgotPanel(){
+  var p = document.getElementById('forgot-panel');
+  if (p) p.style.display = 'none';
+}
+function doForgotReset(){
+  if (!state.motherPass) return toast('حسابی وجود ندارد — از صفحه ورود رمز اولیه بگذارید');
+  if (!state.motherRecoveryCode) return toast('کد بازیابی ذخیره نشده. نمی‌توان بازیابی کرد.');
+  var code = (document.getElementById('forgot-code').value || '').trim();
+  var user = (document.getElementById('forgot-user').value || '').trim();
+  var p1 = document.getElementById('forgot-pass').value || '';
+  var p2 = document.getElementById('forgot-pass2').value || '';
+  if (!code) return toast('کد بازیابی را وارد کنید');
+  if (code !== String(state.motherRecoveryCode)) return toast('کد بازیابی اشتباه است');
+  if (!user || user.length < 3) return toast('نام کاربری حداقل ۳ کاراکتر');
+  if (p1.length < 6) return toast('رمز جدید حداقل ۶ کاراکتر');
+  if (p1 !== p2) return toast('تکرار رمز یکسان نیست');
+  state.motherUser = user;
+  state.motherPass = p1;
+  save();
+  toast('حساب بازیابی شد — وارد می‌شوید');
+  try {
+    document.getElementById('login-user').value = user;
+    document.getElementById('login-pass').value = p1;
+  } catch (e) {}
+  hideForgotPanel();
+  enterApp();
+}
+function genRecoveryCodeHint(){
+  var a = Math.random().toString(36).slice(2, 6).toUpperCase();
+  var b = Math.random().toString(36).slice(2, 6).toUpperCase();
+  var c = Math.random().toString(36).slice(2, 4).toUpperCase();
+  var el = document.getElementById('recovery-code-new');
+  if (el) el.value = a + '-' + b + '-' + c;
+  toast('کد پیشنهادی در فیلد قرار گرفت — ذخیره را بزنید');
+}
+function saveRecoveryCode(){
+  var cur = document.getElementById('recovery-cur-pass').value || '';
+  if (cur !== state.motherPass) return toast('رمز فعلی اشتباه است');
+  var code = (document.getElementById('recovery-code-new').value || '').trim();
+  if (code.length < 8) return toast('کد بازیابی حداقل ۸ کاراکتر باشد');
+  state.motherRecoveryCode = code;
+  save();
+  document.getElementById('recovery-code-new').value = '';
+  document.getElementById('recovery-cur-pass').value = '';
+  fillMotherAccountForm();
+  toast('کد بازیابی ذخیره شد — آن را جایی امن یادداشت کنید');
 }
 
 function downloadJsonFile(obj, filename) {
