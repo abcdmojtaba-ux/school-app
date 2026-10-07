@@ -6707,7 +6707,7 @@ function openSampleQuestionModal(){
       '<input type="text" class="form-control" id="sq-file-name" readonly placeholder="هنوز فایلی انتخاب نشده" style="margin-bottom:8px" />'+
       '<input type="file" id="sq-file" style="display:none" />'+
       '<div style="display:flex;flex-direction:column;gap:8px">'+
-        '<button type="button" class="btn btn-outline btn-block" id="sq-btn-any">📄 انتخاب فایل (PDF / Word / PowerPoint / ...)</button>'+
+        '<button type="button" class="btn btn-outline btn-block" id="sq-btn-any">📄 انتخاب از فایل‌ها (PDF / Word / همه فرمت‌ها)</button>'+
         '<button type="button" class="btn btn-outline btn-block" id="sq-btn-img">🖼️ انتخاب عکس از گالری</button>'+
         '<button type="button" class="btn btn-outline btn-block" id="sq-btn-cam">📷 عکس با دوربین</button>'+
       '</div>'+
@@ -6724,23 +6724,34 @@ function openSampleQuestionModal(){
     var inp=document.getElementById('sq-file');
     var nameBox=document.getElementById('sq-file-name');
     function pick(mode){
-      if(!inp)return;
-      inp.removeAttribute('capture');
+      // هر بار input تازه بساز تا اندروید کش accept قبلی را نگه ندارد
+      var old=document.getElementById('sq-file');
+      var parent=old?old.parentNode:null;
+      var fresh=document.createElement('input');
+      fresh.type='file';
+      fresh.id='sq-file';
+      fresh.style.display='none';
+      fresh.removeAttribute('capture');
       if(mode==='any'){
-        // بدون image/* تا اندروید Document picker باز کند
-        inp.accept='.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.rtf,.odt,.ods,.odp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain';
+        // * /* = انتخاب‌گر فایل سیستم (نه گالری). روی WebView اندروید بهترین نتیجه را می‌دهد
+        fresh.accept='*/*';
+        try{fresh.setAttribute('data-mode','any')}catch(e){}
       }else if(mode==='img'){
-        inp.accept='image/*';
+        fresh.accept='image/*';
       }else if(mode==='cam'){
-        inp.accept='image/*';
-        inp.setAttribute('capture','environment');
+        fresh.accept='image/*';
+        fresh.setAttribute('capture','environment');
       }
-      inp.value='';
-      inp.onchange=function(){
-        var f=inp.files&&inp.files[0];
+      fresh.onchange=function(){
+        var f=fresh.files&&fresh.files[0];
         if(nameBox)nameBox.value=f?(f.name+' · '+Math.round(f.size/1024)+' KB'):'';
+        // اگر کاربر از مسیر any عکس انتخاب کرد هم اوکی است
       };
-      inp.click();
+      if(old&&parent){parent.replaceChild(fresh,old)}
+      else if(parent){parent.appendChild(fresh)}
+      else{document.body.appendChild(fresh)}
+      // تأخیر کوتاه تا DOM به‌روز شود
+      setTimeout(function(){try{fresh.click()}catch(e){toast('انتخاب فایل ممکن نشد')}},30);
     }
     var b1=document.getElementById('sq-btn-any');
     var b2=document.getElementById('sq-btn-img');
