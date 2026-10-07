@@ -24,7 +24,10 @@ import java.io.FileOutputStream
 
 /**
  * سامانه نیکان — WebView
- * انتخاب فایل: همه فرمت‌ها (PDF/Word/...) + گالری + دوربین
+ * انتخاب فایل:
+ *  - capture  => فقط دوربین
+ *  - image/*  => فقط گالری/عکس
+ *  - بقیه     => انتخاب‌گر فایل سیستم (PDF / Word / PowerPoint / همه فرمت‌ها)
  */
 class MainActivity : Activity() {
 
@@ -79,64 +82,53 @@ class MainActivity : Activity() {
                 }
                 fileCallback = cb
 
-                // نوع فایل را از HTML بگیر؛ اگر نبود همه فایل‌ها
-                val acceptTypes = params?.acceptTypes?.filter { !it.isNullOrBlank() } ?: emptyList()
-                val acceptJoined = acceptTypes.joinToString(",").lowercase()
-                val isImageOnly = acceptJoined.isNotEmpty() &&
-                    acceptJoined.contains("image") &&
-                    !acceptJoined.contains("pdf") &&
-                    !acceptJoined.contains("msword") &&
-                    !acceptJoined.contains("officedocument") &&
-                    !acceptJoined.contains("*/*") &&
-                    !acceptJoined.contains("application")
+                val accepts = params?.acceptTypes
+                    ?.map { it.trim().lowercase() }
+                    ?.filter { it.isNotEmpty() } ?: emptyList()
 
-                val wantsCamera = params?.isCaptureEnabled == true ||
-                    acceptJoined.contains("capture") ||
-                    isImageOnly
+                val wantsCamera = params?.isCaptureEnabled == true
+                val imageOnly = accepts.isNotEmpty() && accepts.all { it.startsWith("image/") }
+                val multiple = params?.mode == FileChooserParams.MODE_OPEN_MULTIPLE
 
-                // انتخاب فایل اصلی
-                val pick = Intent(Intent.ACTION_GET_CONTENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = if (isImageOnly) "image/*" else "*/*"
-                    // اگر HTML چند نوع داده، به اندروید هم بگو
-                    if (!isImageOnly && acceptTypes.isNotEmpty() && !acceptJoined.contains("*/*")) {
-                        putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes.toTypedArray())
+                val intent: Intent = when {
+                    // فقط دوربین
+                    wantsCamera -> Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+
+                    // فقط عکس از گالری
+                    imageOnly -> Intent(Intent.ACTION_GET_CONTENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "image/*"
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
                     }
-                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, params?.mode == FileChooserParams.MODE_OPEN_MULTIPLE)
-                }
 
-                val initialIntents = ArrayList<Intent>()
-
-                // گالری عکس (همیشه مفید)
-                try {
-                    val gallery = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                    initialIntents.add(gallery)
-                } catch (_: Exception) {
-                }
-
-                // دوربین فقط وقتی HTML عکس می‌خواهد
-                if (wantsCamera || isImageOnly) {
-                    try {
-                        initialIntents.add(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
-                    } catch (_: Exception) {
-                    }
-                }
-
-                val title = if (isImageOnly) "انتخاب عکس" else "انتخاب فایل (PDF / Word / عکس / ...)"
-                val chooser = Intent(Intent.ACTION_CHOOSER).apply {
-                    putExtra(Intent.EXTRA_INTENT, pick)
-                    putExtra(Intent.EXTRA_TITLE, title)
-                    if (initialIntents.isNotEmpty()) {
-                        putExtra(Intent.EXTRA_INITIAL_INTENTS, initialIntents.toTypedArray())
+                    // همه فرمت‌ها: PDF / Word / ...
+                    else -> Intent(Intent.ACTION_GET_CONTENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        // فقط اگر همه موارد MIME معتبر بودند فیلتر کن؛
+                        // پسوندهایی مثل .csv باعث خراب شدن فیلتر می‌شوند
+                        val mimes = accepts.filter { it.contains("/") && it != "*/*" }
+                        if (mimes.isNotEmpty() && mimes.size == accepts.size) {
+                            putExtra(Intent.EXTRA_MIME_TYPES, mimes.toTypedArray())
+                        }
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
                     }
                 }
 
                 return try {
-                    startActivityForResult(chooser, FILE_REQ)
+                    val finalIntent = if (wantsCamera) {
+                        intent
+                    } else {
+                        Intent.createChooser(
+                            intent,
+                            if (imageOnly) "انتخاب عکس" else "انتخاب فایل (PDF / Word / عکس / ...)"
+                        )
+                    }
+                    startActivityForResult(finalIntent, FILE_REQ)
                     true
                 } catch (e: Exception) {
                     // fallback ساده
-                    return try {
+                    try {
                         startActivityForResult(
                             Intent.createChooser(
                                 Intent(Intent.ACTION_GET_CONTENT).apply {
@@ -226,13 +218,16 @@ class MainActivity : Activity() {
         }
 
         try {
-            if (data?.data != null) {
-                cb.onReceiveValue(arrayOf(data.data!!))
+            // انتخاب چندتایی
+            val clip = data?.clipData
+            if (clip != null && clip.itemCount > 0) {
+                cb.onReceiveValue(Array(clip.itemCount) { i -> clip.getItemAt(i).uri })
                 return
             }
-            if (data?.clipData != null) {
-                val clip = data.clipData!!
-                cb.onReceiveValue(Array(clip.itemCount) { i -> clip.getItemAt(i).uri })
+            // انتخاب تکی
+            val single = data?.data
+            if (single != null) {
+                cb.onReceiveValue(arrayOf(single))
                 return
             }
             // دوربین: thumbnail
