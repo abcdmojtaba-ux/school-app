@@ -1,5 +1,160 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-<path android:fillColor="#1a237e" android:pathData="M0,0h108v108h-108z"/>
-<path android:fillColor="#ffd54f" android:pathData="M24,70L24,46L38,58L54,38L70,58L84,46L84,70Z"/>
-<path android:fillColor="#ffd54f" android:pathData="M24,74h60v6h-60z"/>
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ===== پس‌زمینه سرمه‌ای ===== -->
+    <path
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108">
+                <item android:offset="0" android:color="#0A1550"/>
+                <item android:offset="0.5" android:color="#16268A"/>
+                <item android:offset="1" android:color="#2A3FC8"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- درخشش پشت تاج -->
+    <path
+        android:pathData="M54,4 C79.41,4 100,24.59 100,50 C100,75.41 79.41,96 54,96 C28.59,96 8,75.41 8,50 C8,24.59 28.59,4 54,4 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="50"
+                android:gradientRadius="46">
+                <item android:offset="0" android:color="#553F6BFF"/>
+                <item android:offset="0.6" android:color="#223F6BFF"/>
+                <item android:offset="1" android:color="#003F6BFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- ===== سایه زیر تاج ===== -->
+    <path
+        android:fillColor="#33000000"
+        android:pathData="M30,80 Q54,86 78,80 Q54,92 30,80 Z"/>
+
+    <!-- ===== بدنه تاج + سوراخ کلید (لایسنس) ===== -->
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M32,66 L28,40 L42,54 L54,33 L66,54 L80,40 L76,66 Z M54,50.1 C55.88,50.1 57.4,51.62 57.4,53.5 C57.4,55.38 55.88,56.9 54,56.9 C52.12,56.9 50.6,55.38 50.6,53.5 C50.6,51.62 52.12,50.1 54,50.1 Z M52.2,56 L55.8,56 L57,63 L51,63 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="28"
+                android:startY="33"
+                android:endX="80"
+                android:endY="66">
+                <item android:offset="0" android:color="#FFE27A"/>
+                <item android:offset="0.5" android:color="#FFC83A"/>
+                <item android:offset="1" android:color="#E09A1A"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- بازتاب نور روی وجه‌ها -->
+    <path
+        android:fillColor="#33FFFFFF"
+        android:pathData="M32,66 L28,40 L42,54 L46,66 Z"/>
+    <path
+        android:fillColor="#22FFFFFF"
+        android:pathData="M54,33 L66,54 L61,66 L54,52 Z"/>
+
+    <!-- ===== گوی‌های نوک تاج ===== -->
+    <path
+        android:pathData="M28,34.8 C29.77,34.8 31.2,36.23 31.2,38 C31.2,39.77 29.77,41.2 28,41.2 C26.23,41.2 24.8,39.77 24.8,38 C24.8,36.23 26.23,34.8 28,34.8 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="24.8"
+                android:startY="34.8"
+                android:endX="31.2"
+                android:endY="41.2">
+                <item android:offset="0" android:color="#FFF3B0"/>
+                <item android:offset="1" android:color="#F2B01E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M54,27.2 C56.10,27.2 57.8,28.90 57.8,31 C57.8,33.10 56.10,34.8 54,34.8 C51.90,34.8 50.2,33.10 50.2,31 C50.2,28.90 51.90,27.2 54,27.2 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="50.2"
+                android:startY="27.2"
+                android:endX="57.8"
+                android:endY="34.8">
+                <item android:offset="0" android:color="#FFF3B0"/>
+                <item android:offset="1" android:color="#F2B01E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M80,34.8 C81.77,34.8 83.2,36.23 83.2,38 C83.2,39.77 81.77,41.2 80,41.2 C78.23,41.2 76.8,39.77 76.8,38 C76.8,36.23 78.23,34.8 80,34.8 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="76.8"
+                android:startY="34.8"
+                android:endX="83.2"
+                android:endY="41.2">
+                <item android:offset="0" android:color="#FFF3B0"/>
+                <item android:offset="1" android:color="#F2B01E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- ===== نوار پایین تاج + جواهرها ===== -->
+    <path
+        android:pathData="M31,68.5 L77,68.5 L75.5,76 Q54,78.5 32.5,76 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="31"
+                android:startY="68"
+                android:endX="77"
+                android:endY="76">
+                <item android:offset="0" android:color="#F7C33F"/>
+                <item android:offset="0.5" android:color="#FFDD70"/>
+                <item android:offset="1" android:color="#D9921A"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#FF5C7A"
+        android:pathData="M42,70.2 C43.16,70.2 44.1,71.14 44.1,72.3 C44.1,73.46 43.16,74.39999999999999 42,74.39999999999999 C40.84,74.39999999999999 39.9,73.46 39.9,72.3 C39.9,71.14 40.84,70.2 42,70.2 Z"/>
+    <path
+        android:fillColor="#CCFFFFFF"
+        android:pathData="M41.4,70.89999999999999 C41.79,70.89999999999999 42.1,71.21 42.1,71.6 C42.1,71.99 41.79,72.3 41.4,72.3 C41.01,72.3 40.699999999999996,71.99 40.699999999999996,71.6 C40.699999999999996,71.21 41.01,70.89999999999999 41.4,70.89999999999999 Z"/>
+    <path
+        android:fillColor="#5CE1FF"
+        android:pathData="M54,70.2 C55.16,70.2 56.1,71.14 56.1,72.3 C56.1,73.46 55.16,74.39999999999999 54,74.39999999999999 C52.84,74.39999999999999 51.9,73.46 51.9,72.3 C51.9,71.14 52.84,70.2 54,70.2 Z"/>
+    <path
+        android:fillColor="#CCFFFFFF"
+        android:pathData="M53.4,70.89999999999999 C53.79,70.89999999999999 54.1,71.21 54.1,71.6 C54.1,71.99 53.79,72.3 53.4,72.3 C53.01,72.3 52.699999999999996,71.99 52.699999999999996,71.6 C52.699999999999996,71.21 53.01,70.89999999999999 53.4,70.89999999999999 Z"/>
+    <path
+        android:fillColor="#FF5C7A"
+        android:pathData="M66,70.2 C67.16,70.2 68.1,71.14 68.1,72.3 C68.1,73.46 67.16,74.39999999999999 66,74.39999999999999 C64.84,74.39999999999999 63.9,73.46 63.9,72.3 C63.9,71.14 64.84,70.2 66,70.2 Z"/>
+    <path
+        android:fillColor="#CCFFFFFF"
+        android:pathData="M65.4,70.89999999999999 C65.79,70.89999999999999 66.10000000000001,71.21 66.10000000000001,71.6 C66.10000000000001,71.99 65.79,72.3 65.4,72.3 C65.01,72.3 64.7,71.99 64.7,71.6 C64.7,71.21 65.01,70.89999999999999 65.4,70.89999999999999 Z"/>
+
+    <!-- ===== جرقه‌ها ===== -->
+    <path
+        android:fillColor="#E6FFFFFF"
+        android:pathData="M86,21.8 Q86,26 90.2,26 Q86,26 86,30.2 Q86,26 81.8,26 Q86,26 86,21.8 Z"/>
+    <path
+        android:fillColor="#99FFFFFF"
+        android:pathData="M23,27 Q23,30 26,30 Q23,30 23,33 Q23,30 20,30 Q23,30 23,27 Z"/>
+    <path
+        android:fillColor="#77FFFFFF"
+        android:pathData="M84,81.6 Q84,84 86.4,84 Q84,84 84,86.4 Q84,84 81.6,84 Q84,84 84,81.6 Z"/>
 </vector>
