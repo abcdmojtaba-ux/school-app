@@ -525,10 +525,12 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <div class="form-group"><label>نام مدیر *</label><input class="form-control" id="r-manager" /></div>
       <div class="form-group"><label>شماره تماس *</label><input class="form-control" id="r-phone" type="tel" /></div>
       <div class="form-group"><label>شهر</label><input class="form-control" id="r-city" /></div>
-      <div class="form-group"><label>نام کاربری مدیر *</label><input class="form-control" id="r-user" /></div>
-      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="r-pass" type="password" /></div>
-      <div class="form-group"><label>تکرار رمز *</label><input class="form-control" id="r-pass2" type="password" /></div>
-      <button class="btn btn-success btn-block" onclick="doRegister()">ثبت‌نام و ورود</button>
+      <form onsubmit="event.preventDefault();doRegister();return false;" autocomplete="on">
+      <div class="form-group"><label>نام کاربری مدیر *</label><input class="form-control" id="r-user" name="username" autocomplete="username" /></div>
+      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="r-pass" name="password" type="password" autocomplete="new-password" /></div>
+      <div class="form-group"><label>تکرار رمز *</label><input class="form-control" id="r-pass2" name="password-confirm" type="password" autocomplete="new-password" /></div>
+      <button class="btn btn-success btn-block" type="submit">ثبت‌نام و ورود</button>
+      </form>
       <p style="text-align:center;margin-top:12px"><button class="linkish" onclick="showScreen('gate')">بازگشت</button></p>
     </div>
   </div>
@@ -543,15 +545,17 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
         <button type="button" class="role-btn" data-role="deputy" onclick="pickRole(this)"><span>📋</span>معاون</button>
         <button type="button" class="role-btn" data-role="teacher" onclick="pickRole(this)"><span>📚</span>معلم</button>
       </div>
-      <div class="form-group"><label>کد مدرسه</label><input class="form-control" id="l-code" placeholder="SCH-...." autocomplete="organization" inputmode="text" /></div>
-      <div class="form-group"><label>نام کاربری *</label><input class="form-control" id="l-user" autocomplete="username" inputmode="text" /></div>
-      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="l-pass" type="password" autocomplete="current-password" /></div>
+      <form onsubmit="event.preventDefault();doLogin();return false;" autocomplete="on">
+      <div class="form-group"><label>کد مدرسه</label><input class="form-control" id="l-code" name="organization" placeholder="SCH-...." autocomplete="organization" inputmode="text" /></div>
+      <div class="form-group"><label>نام کاربری *</label><input class="form-control" id="l-user" name="username" autocomplete="username" inputmode="text" /></div>
+      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="l-pass" name="password" type="password" autocomplete="current-password" /></div>
       <label style="display:flex;align-items:center;gap:8px;margin:10px 0 14px;cursor:pointer;user-select:none">
         <input type="checkbox" id="l-remember" checked style="width:18px;height:18px" />
         <span>ذخیره کد مدرسه و نام کاربری روی این دستگاه</span>
       </label>
       <p class="hint" style="margin-top:-8px;margin-bottom:10px">دفعه بعد لازم نیست دوباره کد و نام کاربری را بنویسید. رمز ذخیره نمی‌شود.</p>
-      <button class="btn btn-primary btn-block" id="btn-login" onclick="doLogin()">ورود</button>
+      <button class="btn btn-primary btn-block" id="btn-login" type="submit">ورود</button>
+      </form>
       <p class="hint" id="hint-vpn-login" style="margin-top:8px">کد مدرسه را از مدیر بگیرید. این برنامه فقط سامانه مدرسه است.</p>
       <p style="text-align:center;margin-top:12px"><button class="linkish" onclick="showScreen('gate')">بازگشت</button></p>
     </div>
@@ -564,9 +568,11 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
     <div class="auth-card">
       <div class="form-group"><label>کد مدرسه</label><input class="form-control" id="a-code" /></div>
       <div class="form-group"><label>کد فعال‌سازی</label><input class="form-control" id="a-act" /></div>
-      <div class="form-group"><label>نام کاربری مدیر</label><input class="form-control" id="a-user" /></div>
-      <div class="form-group"><label>رمز عبور</label><input class="form-control" id="a-pass" type="password" /></div>
-      <button class="btn btn-primary btn-block" onclick="activateWithCode()">فعال‌سازی</button>
+      <form onsubmit="event.preventDefault();activateWithCode();return false;" autocomplete="on">
+      <div class="form-group"><label>نام کاربری مدیر</label><input class="form-control" id="a-user" name="username" autocomplete="username" /></div>
+      <div class="form-group"><label>رمز عبور</label><input class="form-control" id="a-pass" name="password" type="password" autocomplete="current-password" /></div>
+      <button class="btn btn-primary btn-block" type="submit">فعال‌سازی</button>
+      </form>
       <p style="text-align:center;margin-top:12px"><button class="linkish" onclick="showScreen('gate')">بازگشت</button></p>
     </div>
   </div>
@@ -1080,7 +1086,7 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <p class="hint">می‌توانید قالب اضافه، ویرایش یا حذف کنید. متغیرها: {نام} و {تاریخ}</p>
       <div id="sms-tpl-list"></div>
     </div>
-    <div class="card">
+    <div class="card" id="set-rules-card" style="display:none">
       <div class="card-title">قوانین پایه (از ۲۰)</div>
       <div class="form-group"><label>غیبت</label><input type="number" step="0.25" class="form-control" id="rule-absent" onchange="saveRules()" /></div>
       <div class="form-group"><label>تأخیر</label><input type="number" step="0.25" class="form-control" id="rule-late" onchange="saveRules()" /></div>
@@ -1115,12 +1121,14 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
     <div class="card" id="set-manager-account-card" style="display:none">
       <div class="card-title">حساب ورود مدیر</div>
       <p class="hint" style="margin-bottom:10px">نام کاربری و رمز ورود خودتان را از اینجا عوض کنید.</p>
-      <div class="form-group"><label>نام کاربری فعلی</label><input class="form-control" id="mgr-user-cur" readonly /></div>
-      <div class="form-group"><label>نام کاربری جدید (اختیاری)</label><input class="form-control" id="mgr-user-new" autocomplete="username" placeholder="خالی = بدون تغییر" /></div>
+      <form onsubmit="event.preventDefault();changeManagerPassword();return false;" autocomplete="on">
+      <div class="form-group"><label>نام کاربری فعلی</label><input class="form-control" id="mgr-user-cur" name="username" autocomplete="username" readonly /></div>
+      <div class="form-group"><label>نام کاربری جدید (اختیاری)</label><input class="form-control" id="mgr-user-new" name="new-username" autocomplete="off" placeholder="خالی = بدون تغییر" /></div>
       <div class="form-group"><label>رمز فعلی *</label><input class="form-control" id="mgr-pass-cur" type="password" autocomplete="current-password" /></div>
       <div class="form-group"><label>رمز جدید *</label><input class="form-control" id="mgr-pass-new" type="password" autocomplete="new-password" placeholder="حداقل ۶ کاراکتر" /></div>
-      <div class="form-group"><label>تکرار رمز جدید *</label><input class="form-control" id="mgr-pass-new2" type="password" autocomplete="new-password" /></div>
-      <button class="btn btn-primary btn-block" type="button" onclick="changeManagerPassword()">ذخیره حساب ورود</button>
+      <div class="form-group"><label>تکرار رمز جدید *</label><input class="form-control" id="mgr-pass-new2" name="password-confirm" type="password" autocomplete="new-password" /></div>
+      <button class="btn btn-primary btn-block" type="submit">ذخیره حساب ورود</button>
+      </form>
     </div>
     <div class="card" id="set-manager-photo-card">
       <div class="card-title">عکس مدیر</div>
@@ -1130,6 +1138,30 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       </div>
       <p class="hint">این عکس در داشبورد و برای شناسایی مدیر استفاده می‌شود و با سرور همگام می‌شود.</p>
       <button class="btn btn-primary btn-block" onclick="saveManagerPhoto()">ذخیره عکس مدیر</button>
+    </div>
+
+    <!-- عکس شخصی معاون / معلم -->
+    <div class="card" id="set-staff-photo-card" style="display:none">
+      <div class="card-title">عکس من</div>
+      <div class="photo-pick">
+        <div id="my-photo-prev"></div>
+        <div id="my-photo-btns"></div>
+      </div>
+      <p class="hint">این عکس در داشبورد، تیم مدیر و پیام‌های داخلی برای همه قابل‌مشاهده است و با سرور همگام می‌شود.</p>
+      <button class="btn btn-primary btn-block" type="button" onclick="saveMyStaffPhoto()">ذخیره عکس من</button>
+    </div>
+
+    <!-- تغییر رمز معاون / معلم — فقط رمز؛ نام کاربری فقط خواندنی -->
+    <div class="card" id="set-staff-account-card" style="display:none">
+      <div class="card-title">تغییر رمز عبور</div>
+      <p class="hint" style="margin-bottom:10px">نام کاربری را مدیر تعیین می‌کند و قابل تغییر نیست. فقط رمز را عوض کنید — رمز جدید برای مدیر در بخش تیم نمایش داده می‌شود.</p>
+      <form onsubmit="event.preventDefault();changeMyStaffPassword();return false;" autocomplete="on">
+      <div class="form-group"><label>نام کاربری (ثابت)</label><input class="form-control" id="staff-user-cur" name="username" autocomplete="username" readonly /></div>
+      <div class="form-group"><label>رمز فعلی *</label><input class="form-control" id="staff-pass-cur" name="current-password" type="password" autocomplete="current-password" /></div>
+      <div class="form-group"><label>رمز جدید *</label><input class="form-control" id="staff-pass-new" name="new-password" type="password" autocomplete="new-password" placeholder="حداقل ۴ کاراکتر" /></div>
+      <div class="form-group"><label>تکرار رمز جدید *</label><input class="form-control" id="staff-pass-new2" name="new-password-confirm" type="password" autocomplete="new-password" /></div>
+      <button class="btn btn-primary btn-block" type="submit">ذخیره رمز جدید</button>
+      </form>
     </div>
     
     <div class="card" id="contact-sales-card">
@@ -1357,12 +1389,18 @@ async function apiFetch(path,options){
   }
   if(!bases.length)throw new Error('آدرس سرور تنظیم نشده');
   var _meth=String((opts.method||'GET')).toUpperCase();
-  const tOut=opts.timeoutMs!=null?opts.timeoutMs:((_meth==='PUT'||_meth==='POST'||_meth==='DELETE')?45000:15000);
+  // ارسال کامل مدیر ممکن است بیش از ۴۵ثانیه طول بکشد
+  const tOut=opts.timeoutMs!=null?opts.timeoutMs:((_meth==='PUT'||_meth==='POST'||_meth==='DELETE')?90000:20000);
   for(const base of bases){
     for(let i=1;i<=maxTry;i++){
       try{
         const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},tOut):null;
+        const timer=ctrl?setTimeout(function(){
+          try{
+            if(typeof DOMException!=='undefined')ctrl.abort(new DOMException('timeout','TimeoutError'));
+            else ctrl.abort('timeout');
+          }catch(e){try{ctrl.abort()}catch(e2){}}
+        },tOut):null;
         var _auth=(typeof getWriteAuth==='function')?getWriteAuth():{user:'',pass:'',role:'manager',schoolId:''};
         var _hdrs=Object.assign({
           'Content-Type':'application/json',
@@ -1400,10 +1438,21 @@ async function apiFetch(path,options){
       }catch(e){
         lastErr=e;
         try{
+          var em=String((e&&e.message)||e||'');
+          var en=String((e&&e.name)||'');
+          var msg=em;
+          if(en==='AbortError'||em.indexOf('timeout')>=0||em.indexOf('TimeoutError')>=0){
+            msg='زمان پاسخ سرور تمام شد — دوباره ارسال کنید';
+          }else if(em.indexOf('CERT')>=0||em.indexOf('SSL')>=0||em.indexOf('certificate')>=0||em.indexOf('Failed to fetch')>=0||em.indexOf('NetworkError')>=0||em.indexOf('Load failed')>=0){
+            msg='اتصال به سرور برقرار نشد (شبکه یا گواهی SSL) — صفحه را یک‌بار کامل ببندید و دوباره باز کنید';
+          }
+          lastErr=new Error(msg);
+        }catch(e3){}
+        try{
           var st=localStorage.getItem('school_sync_api')||'';
           if(st&&String(base).indexOf(st)>=0)localStorage.removeItem('school_sync_api');
         }catch(e2){}
-        if(i<maxTry)await new Promise(r=>setTimeout(r,300*i));
+        if(i<maxTry)await new Promise(r=>setTimeout(r,700*i));
       }
     }
   }
@@ -1531,10 +1580,28 @@ async function manualSyncAll(){
   }
 }
 
-async function cloudFindSchoolByLogin(user,pass,code){
+async function cloudFindSchoolByLogin(user,pass,code,role){
   if(!SYNC_API)return null;
-  const data=await apiFetch('/api/login',{method:'POST',body:{user:String(user||'').trim(),pass:String(pass||''),code:String(code||'').trim()}});
-  return data&&data.school?data.school:null;
+  try{
+    const data=await apiFetch('/api/login',{
+      method:'POST',
+      body:{
+        user:String(user||'').trim(),
+        pass:String(pass||''),
+        code:String(code||'').trim(),
+        role:String(role||(typeof loginRole!=='undefined'?loginRole:'manager')||'manager')
+      },
+      retries:2,
+      timeoutMs:25000
+    });
+    if(data&&data.ok===false)return null;
+    return data&&data.school?data.school:null;
+  }catch(e){
+    // 404 not_found = کاربر/رمز اشتباه — خطای شبکه نیست
+    var m=String((e&&e.message)||e||'');
+    if(/not_found|404|code_required/i.test(m))return null;
+    throw e;
+  }
 }
 async function cloudFindSchoolByCodeAct(code,act){
   if(!SYNC_API)return null;
@@ -1603,53 +1670,108 @@ async function cloudDeleteSubmission(schoolId,subId){
     await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/submissions',{method:'DELETE',body:{id:subId}});
   }catch(e){console.warn(e)}
 }
+function _slimStaffForPush(list){
+  return (Array.isArray(list)?list:[]).map(function(s){
+    if(!s)return s;
+    var o={
+      id:s.id,
+      name:s.name||'',
+      role:s.role||'teacher',
+      username:s.username||'',
+      pass:s.pass||s.password||'',
+      password:s.pass||s.password||'',
+      phone:s.phone||'',
+      shift:s.shift||'',
+      active:s.active!==false
+    };
+    // عکس فقط اگر کوچک باشد (کمتر از ۳۰KB) — عکس بزرگ timeout می‌سازد
+    var ph=s.photo||s.image||'';
+    if(ph&&String(ph).length>0&&String(ph).length<30000)o.photo=ph;
+    return o;
+  });
+}
 async function cloudPushStaff(schoolId,staffList){
-  if(!SYNC_API||!schoolId)return;
-  // فقط مدیر — معلم/معاون هرگز نقش‌ها را به سرور نفرستند
+  if(!SYNC_API||!schoolId)return false;
   var role=(userSession&&userSession.role)||'';
   if(role==='teacher'||role==='معلم'||role==='دبیر'||role==='deputy'||role==='معاون'){
     console.warn('cloudPushStaff blocked for non-manager');
-    return;
+    return false;
   }
-  if(window._loginPulling){console.warn('cloudPushStaff blocked during login');return;}
-  var list=Array.isArray(staffList)?staffList:[];
-  // لیست خالی هرگز نفرست — نقش‌های سرور را پاک می‌کند
-  if(!list.length){console.warn('cloudPushStaff skip empty staff');return;}
+  if(window._loginPulling){console.warn('cloudPushStaff blocked during login');return false;}
+  var list=_slimStaffForPush(staffList);
+  if(!list.length){console.warn('cloudPushStaff skip empty staff');return false;}
   try{
-    await apiFetch('/api/schools',{method:'POST',body:{
-      id:schoolId,
-      staff:list,
-      managerAuthority:true,
-      structureWriteToken:!!(schoolData&&schoolData._structureWriteToken)
-    }});
-  }catch(e){console.warn('cloudPushStaff',e)}
+    if(userSession&&!userSession.pass&&schoolData&&schoolData.managerPass){
+      userSession.pass=schoolData.managerPass;
+      try{saveUserSession(userSession)}catch(e){}
+    }
+    var authUser=(userSession&&userSession.username)||(schoolData&&schoolData.managerUser)||(schoolData&&schoolData.managerUsername)||'';
+    var authPass=(userSession&&userSession.pass)||(schoolData&&schoolData.managerPass)||(schoolData&&schoolData.managerPassword)||'';
+    // مسیر سبک: فقط staff — بدون replaceStructure و بدون کل داده مدرسه
+    await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/appData',{
+      method:'PUT',
+      body:{
+        staff:list,
+        deletedStaffIds:(schoolData&&schoolData.deletedStaffIds)||[],
+        managerAuthority:true,
+        _staffOnly:true,
+        _compatNoAuth:true,
+        updatedAtMs:Date.now(),
+        auth:{user:authUser,pass:authPass,role:'manager'}
+      },
+      retries:3,
+      timeoutMs:45000
+    });
+    return true;
+  }catch(e){
+    console.warn('cloudPushStaff',e);
+    try{window._lastPushError=(e&&e.message)?String(e.message):String(e)}catch(e2){}
+    return false;
+  }
 }
 async function cloudPullStaff(schoolId){
   if(!SYNC_API||!schoolId)return;
   try{
-    const data=await apiFetch('/api/schools/'+encodeURIComponent(schoolId));
-    const d=data&&data.school;
-    if(d&&Array.isArray(d.staff)){
-      // لیست خالی هرگز تیم را پاک/جایگزین نکند (دستگاه جدید هم با خالی پر نشود)
-      if(d.staff.length===0){
-        console.warn('cloudPullStaff: skip empty staff from server');
-        return;
-      }
-      // ادغام؛ جایگزین کامل فقط اگر محلی خالی است
-      if(!(schoolData.staff||[]).length){
-        schoolData.staff=d.staff.slice();
-      }else{
-        var map={};
-        (schoolData.staff||[]).forEach(function(x){if(x&&x.id)map[String(x.id)]=x});
-        d.staff.forEach(function(x){
-          if(!x||!x.id)return;
-          map[String(x.id)]=Object.assign({},map[String(x.id)]||{},x);
-        });
-        schoolData.staff=Object.keys(map).map(function(k){return map[k]});
-      }
-      try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+    // تیم از app_data می‌آید (نه جدول schools)
+    const data=await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/appData',{retries:2});
+    var d=(data&&data.data)||null;
+    var remoteStaff=(d&&Array.isArray(d.staff))?d.staff:[];
+    if(!remoteStaff.length){
+      // fallback قدیمی
+      try{
+        const sc=await apiFetch('/api/schools/'+encodeURIComponent(schoolId));
+        if(sc&&sc.school&&Array.isArray(sc.school.staff)&&sc.school.staff.length){
+          remoteStaff=sc.school.staff;
+        }
+      }catch(e2){}
     }
-  }catch(e){}
+    if(!remoteStaff.length){
+      console.warn('cloudPullStaff: skip empty staff from server');
+      return;
+    }
+    if(!(schoolData.staff||[]).length){
+      schoolData.staff=remoteStaff.slice();
+    }else{
+      var map={};
+      (schoolData.staff||[]).forEach(function(x){if(x&&x.id)map[String(x.id)]=Object.assign({},x)});
+      remoteStaff.forEach(function(x){
+        if(!x||!x.id)return;
+        var id=String(x.id);
+        var prev=map[id]||{};
+        var merged=Object.assign({},prev,x);
+        // رمز سرور اولویت دارد اگر غیرخالی باشد (کاربر خودش عوض کرده)
+        if(x.pass!=null&&String(x.pass).length>=4)merged.pass=String(x.pass);
+        else if(prev.pass)merged.pass=prev.pass;
+        if(!(x.photo||x.image)&&(prev.photo||prev.image)){
+          merged.photo=prev.photo||'';
+          if(prev.image)merged.image=prev.image;
+        }
+        map[id]=merged;
+      });
+      schoolData.staff=Object.keys(map).map(function(k){return map[k]});
+    }
+    try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  }catch(e){console.warn('cloudPullStaff',e)}
 }
 
 function _localStructCount(){
@@ -1747,62 +1869,68 @@ function mergeDisciplineTypes(local, remote){
 /** ارسال اجباری حضور/انضباط به سرور با چند تلاش */
 async function pushAttendanceToServer(retries){
   if(!session||!session.schoolId||!schoolData)return false;
-  var n=retries!=null?retries:3;
-  var ok=false, lastErr=null;
+  var n=retries!=null?retries:2;
   var del={};
   try{(schoolData.deletedSubmissionIds||[]).forEach(function(id){if(id)del[String(id)]=true})}catch(e){}
+  // فقط آخرین ارسال‌ها (حداکثر ۳) — نه ۲۰ تا پشت‌سرهم
   var subs=(schoolData.submissions||[]).filter(function(s){return s&&s.id&&!del[String(s.id)]})
-    .slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,20);
+    .slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,3);
+  var lastErr=null;
   for(var attempt=1;attempt<=n;attempt++){
     try{
-      for(var i=0;i<subs.length;i++){
+      // ۱) فقط جدول submissions — سریع
+      for(var si=0;si<subs.length;si++){
         try{
           await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/submissions',{
-            method:'POST', body:subs[i], retries:1, timeoutMs:20000
+            method:'POST', body:subs[si], retries:1, timeoutMs:15000
           });
         }catch(eSub){
           if(/submission_deleted|410/.test(String(eSub&&eSub.message||eSub)))continue;
           throw eSub;
         }
       }
+      // ۲) appData سبک — فقط حضور اخیر همین معلم (بدون بلاک طولانی)
       var _attAll=schoolData.attendance||[];
-      var _attSlim=(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll,200):(_attAll.length>200?_attAll.slice(-200):_attAll));
+      var _attSlim=(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll,120):(_attAll.length>120?_attAll.slice(-120):_attAll));
       await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
         method:'PUT',
         body:{
           attendance:_attSlim,
           submissions:subs,
-          exams:(schoolData.exams||[]).slice(-30),
-          messages:(schoolData.messages||[]).slice(-20),
-          teacherNotes:(schoolData.teacherNotes||[]).slice(-40),
-          deletedSubmissionIds:schoolData.deletedSubmissionIds||[],
-          updatedAtMs:Date.now(),
           _teacherPartial:true,
-          _softOnly:true,
           _compatNoAuth:true
         },
-        retries:1, timeoutMs:25000
+        retries:1,
+        timeoutMs:25000
       });
-      ok=true;
-      try{window._serverPullOk=true}catch(e){}
-      break;
+      return true;
     }catch(e){
       lastErr=e;
-      if(attempt<n)await new Promise(function(r){setTimeout(r,600*attempt)});
+      console.warn('pushAttendance attempt',attempt,e);
+      if(attempt<n)await new Promise(function(r){setTimeout(r,400*attempt)});
     }
   }
-  if(!ok){try{window._lastPushError=String(lastErr&&lastErr.message||lastErr||'push_failed')}catch(e2){}}
-  return ok;
+  if(lastErr)throw lastErr;
+  return false;
 }
 
 async function cloudPushAppData(force){
   if(!session||!session.schoolId||!schoolData){try{window._lastPushError='نشست/داده نیست'}catch(e){}return false;}
   try{
     window._lastPushError='';
-    // معلم: حضور حتی قبل از pull موفق هم باید برود
+    // دکمه «ارسال به سرور» (force): بدون محدودیت نقش — همه بتوانند بفرستند
+    if(force){
+      try{
+        window._serverPullOk=true;
+        window._loginPulling=false;
+        window._serverStructOk=true;
+        window._blockStructUntil=0;
+      }catch(e){}
+    }
+    // معلم/معاون: حضور حتی قبل از pull موفق هم باید برود
     var _roleSoft=(userSession&&(userSession.role==='teacher'||userSession.role==='معلم'||userSession.role==='دبیر'||userSession.role==='deputy'||userSession.role==='معاون'));
     var _hasSoftLocal=((schoolData.attendance||[]).length+(schoolData.submissions||[]).length+(schoolData.exams||[]).length)>0;
-    if(!window._serverPullOk&&!window._allowLoginRestore&&!(_roleSoft&&_hasSoftLocal)){
+    if(!force&&!window._serverPullOk&&!window._allowLoginRestore&&!(_roleSoft&&_hasSoftLocal)){
       try{window._lastPushError='ابتدا دریافت از سرور'}catch(e){}
       console.warn('push blocked: no successful pull yet');
       return false;
@@ -1838,13 +1966,10 @@ async function cloudPushAppData(force){
   // force بدون توکن: فقط اگر قبلاً از سرور خوانده یا داده نرم/ساختار محلی هست
   if(!window._serverPullOk && !intentionalWrite){
     var _hasLocal=((schoolData.classes||[]).length+(schoolData.students||[]).length+(schoolData.assignments||[]).length+(schoolData.attendance||[]).length+(schoolData.exams||[]).length)>0;
-    if(force && _hasLocal){
+    if(force){
       try{window._serverPullOk=true;window._loginPulling=false;}catch(e){}
-    }else if(!force){
+    }else if(!_hasLocal){
       console.warn('PUSH BLOCKED: must read from server first');
-      return false;
-    }else{
-      console.warn('PUSH BLOCKED: empty device without prior pull');
       return false;
     }
   }
@@ -1945,15 +2070,19 @@ async function cloudPushAppData(force){
           submissions:_subSlim,
           exams:(schoolData.exams||[]).slice(-30),
           messages:(schoolData.messages||[]).slice(-20),
+          sampleQuestions:(schoolData.sampleQuestions||[]).slice(-15),
+          deletedSampleQuestionIds:schoolData.deletedSampleQuestionIds||[],
           updatedAtMs:Date.now(),
           _teacherPartial:true,
-          _softOnly:true
+          _softOnly:true,
+          _compatNoAuth:true,
+          auth:{user:(userSession&&userSession.username)||'',pass:(userSession&&userSession.pass)||'',role:(userSession&&userSession.role)||'teacher'}
         },
-        retries:1,timeoutMs:15000
+        retries:2,timeoutMs:force?60000:25000
       });
       schoolData._localDirtyAt=0;
       return true;
-    }catch(e){console.warn('teacher push',e);if(force)throw e;return}
+    }catch(e){console.warn('teacher push',e);if(force)throw e;return false}
   }
   // —— معاون: بدون دست‌زدن به کلاس/دانش‌آموز/برنامه (مگر تأیید حضور) ——
   // معاون: اگر ذخیره ساختار/برنامه عمدی نباشد → فقط حضور
@@ -1961,21 +2090,46 @@ async function cloudPushAppData(force){
     try{
       var _attAll2=schoolData.attendance||[];
       var _subAll2=schoolData.submissions||[];
+      var _depBody={
+        attendance:(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll2,1500):(_attAll2.length>1000?_attAll2.slice(-1000):_attAll2)),
+        submissions:_subAll2.length>200?_subAll2.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,200):_subAll2,
+        messages:(schoolData.messages||[]).slice(-50),
+        exams:(schoolData.exams||[]).slice(-40),
+        teacherNotes:(schoolData.teacherNotes||[]).slice(-40),
+        sampleQuestions:(schoolData.sampleQuestions||[]).slice(-20),
+        staff:schoolData.staff||[],
+        updatedAtMs:Date.now(),
+        _deputyPartial:true,
+        _compatNoAuth:true
+      };
       await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
         method:'PUT',
-        body:{
-          attendance:(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll2,5000):(_attAll2.length>800?_attAll2.slice(-800):_attAll2)),
-          submissions:_subAll2.length>150?_subAll2.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,150):_subAll2,
-          messages:schoolData.messages||[],
-          exams:schoolData.exams||[],
-          updatedAtMs:Date.now(),
-          _deputyPartial:true
-        },
-        retries:3,timeoutMs:45000
+        body:_depBody,
+        retries:3,timeoutMs:120000
       });
       schoolData._localDirtyAt=0;
       return true;
-    }catch(e){console.warn('deputy push',e);if(force)throw e;return}
+    }catch(e){
+      console.warn('deputy push',e);
+      // اگر مسیر کامل شکست، مثل معلم با مسیر سبک‌تر تلاش کن
+      try{
+        await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
+          method:'PUT',
+          body:{
+            attendance:(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(schoolData.attendance||[],200):[]),
+            submissions:(schoolData.submissions||[]).slice(-20),
+            exams:(schoolData.exams||[]).slice(-30),
+            messages:(schoolData.messages||[]).slice(-20),
+            staff:schoolData.staff||[],
+            updatedAtMs:Date.now(),
+            _teacherPartial:true,_softOnly:true,_compatNoAuth:true
+          },
+          retries:2,timeoutMs:60000
+        });
+        schoolData._localDirtyAt=0;
+        return true;
+      }catch(e2){console.warn('deputy fallback',e2);if(force)throw e2;return false}
+    }
   }
   // —— مدیر (یا معاون با replaceStructure): قبل از ارسال، سرور را چک کن ——
   if(isMgr||schoolData.replaceStructure||schoolData.replaceAssignments||schoolData.resetYear){
@@ -2009,17 +2163,17 @@ async function cloudPushAppData(force){
   try{
     var _attAll=schoolData.attendance||[];
     var _subAll=schoolData.submissions||[];
-    var _attSlim=(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll,5000):(_attAll.length>800?_attAll.slice(-800):_attAll));
+    var _attSlim=(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll,1200):(_attAll.length>800?_attAll.slice(-800):_attAll));
     var _subSlim=_subAll.length>150?_subAll.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,150):_subAll;
     var _studentsSlim=(schoolData.students||[]).map(function(s){
       if(!s)return s;
       var o={};for(var k in s){if(!Object.prototype.hasOwnProperty.call(s,k))continue;if(k==='photo'||k==='image'||k==='avatar')continue;o[k]=s[k]}
       return o;
     });
+    // عکس کارکنان همگام می‌شود تا در همه دستگاه‌ها دیده شود (حجم کم با compressPhoto)
     var _staffSlim=(schoolData.staff||[]).map(function(s){
       if(!s)return s;
-      var o={};for(var k in s){if(!Object.prototype.hasOwnProperty.call(s,k))continue;if(k==='photo'||k==='image'||k==='avatar')continue;o[k]=s[k]}
-      return o;
+      return s;
     });
     // فقط مدیر می‌تواند ساختار کامل را با replace بفرستد
     // در فاز ورود یا تا ۲ دقیقه بعد از pull ورود، replaceStructure ممنوع
@@ -2080,6 +2234,10 @@ async function cloudPushAppData(force){
       smsTemplates:schoolData.smsTemplates||[],
       exams:schoolData.exams||[],
       messages:schoolData.messages||[],
+      teacherNotes:schoolData.teacherNotes||[],
+      deletedTeacherNoteIds:schoolData.deletedTeacherNoteIds||[],
+      sampleQuestions:schoolData.sampleQuestions||[],
+      deletedSampleQuestionIds:schoolData.deletedSampleQuestionIds||[],
       smsConfig:schoolData.smsConfig||null,
       rules:schoolData.rules||null,
       theme:schoolData.theme||null,
@@ -2103,7 +2261,7 @@ async function cloudPushAppData(force){
       }
     }
     await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-      method:'PUT',body:payload,retries:3,timeoutMs:60000
+      method:'PUT',body:payload,retries:3,timeoutMs:120000
     });
     schoolData._localDirtyAt=0;
     schoolData.replaceStructure=false;
@@ -2150,6 +2308,10 @@ function _mergeById(local,remote,preferRemote){
     var merged;
     if(preferRemote) merged=Object.assign({}, prev, x);
     else merged=Object.assign({}, x, prev, x); // remote fields + keep local overrides for soft flags
+    // رمز/پسورد: اگر سرور مقدار دارد همان را بگیر (تغییر رمز توسط کاربر)
+    if(x.pass!=null&&String(x.pass).length>=4)merged.pass=String(x.pass);
+    else if(prev.pass!=null&&String(prev.pass).length>=4)merged.pass=String(prev.pass);
+    if(x.password!=null&&String(x.password).length>=4)merged.password=String(x.password);
     // پرچم‌های انضباطی: اگر هر طرف قفل/دستی بود حفظ شود
     if(prev.scoreLocked||x.scoreLocked) merged.scoreLocked=true;
     if(prev.fromDiscipline||x.fromDiscipline) merged.fromDiscipline=true;
@@ -2189,8 +2351,14 @@ function _mergeStructural(local,remote,preferRemote){
       if(!x||!x.id)return;
       if(map[x.id]){
         var r=map[x.id];
-        if((x.photo||x.image)&&!(r.photo||r.image))map[x.id]=Object.assign({},r,{photo:x.photo||'',image:x.image||''});
-        else map[x.id]=Object.assign({},x,r);
+        var merged;
+        if((x.photo||x.image)&&!(r.photo||r.image))merged=Object.assign({},r,{photo:x.photo||'',image:x.image||''});
+        else merged=Object.assign({},x,r);
+        // رمز: سرور منبع حقیقت است اگر مقدار داشته باشد
+        if(r.pass!=null&&String(r.pass).length>=4)merged.pass=String(r.pass);
+        else if(x.pass!=null&&String(x.pass).length>=4)merged.pass=String(x.pass);
+        if(r.password!=null&&String(r.password).length>=4)merged.password=String(r.password);
+        map[x.id]=merged;
       }
     });
     return Object.keys(map).map(function(k){return map[k]});
@@ -2377,10 +2545,32 @@ async function cloudPullAppData(force){
     }else if(forcePull&&schoolData&&schoolData._localDirtyAt&&(Date.now()-schoolData._localDirtyAt)<20000&&(schoolData.replaceAssignments||schoolData._structureWriteToken)){
       forcePull=false;
     }
-    // همیشه برای همگام‌سازی چنددستگاهی full بکش اگر force یا معلم
-    var needFull=!!forcePull||(userSession&&userSession.role==='teacher');
-    var since=(!needFull&&schoolData&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
-    var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:needFull?3:2,timeoutMs:needFull?45000:20000});
+    var role=(userSession&&userSession.role)||'';
+    var isMgr=role==='manager'||role==='مدیر'||(typeof isManager==='function'&&isManager());
+    var isTeach=role==='teacher'||role==='معلم'||role==='دبیر'||(typeof isTeacher==='function'&&isTeacher());
+    var isDep=role==='deputy'||role==='معاون'||role==='assistant'||(typeof isDeputy==='function'&&isDeputy());
+    // معلم/معاون: فقط دادهٔ مربوط به خودشان (سبک) — مدیر: کل مدرسه
+    var needFull=!!forcePull||isTeach||isDep;
+    var qs=[];
+    if(!needFull&&schoolData&&schoolData._cloudUpdatedAtMs){
+      qs.push('since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs)));
+    }
+    if(!isMgr&&(isTeach||isDep)){
+      qs.push('scope=mine');
+      qs.push('role='+encodeURIComponent(isDep?'deputy':'teacher'));
+      if(userSession&&userSession.staffId)qs.push('staffId='+encodeURIComponent(String(userSession.staffId)));
+      if(userSession&&userSession.username)qs.push('user='+encodeURIComponent(String(userSession.username)));
+    }
+    var qstr=qs.length?('?'+qs.join('&')):'';
+    var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+qstr,{
+      retries:needFull?3:2,
+      timeoutMs:needFull?45000:20000,
+      headers:(!isMgr&&(isTeach||isDep))?{
+        'X-Auth-Role':isDep?'deputy':'teacher',
+        'X-Staff-Id':(userSession&&userSession.staffId)?String(userSession.staffId):'',
+        'X-Auth-User':(userSession&&userSession.username)?String(userSession.username):''
+      }:undefined
+    });
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
@@ -2393,6 +2583,36 @@ async function cloudPullAppData(force){
       }
       schoolData._localDirtyAt=0;
       return false;
+    }
+    // پاسخ محدود معلم/معاون: فقط دادهٔ خودش — جایگزین کامل همان محدوده
+    if(d._scoped){
+      try{
+        if(Array.isArray(d.classes))schoolData.classes=d.classes.slice();
+        if(Array.isArray(d.students))schoolData.students=d.students.slice();
+        if(Array.isArray(d.assignments))schoolData.assignments=d.assignments.slice();
+        if(Array.isArray(d.attendance))schoolData.attendance=_mergeById(schoolData.attendance||[],d.attendance,false);
+        if(Array.isArray(d.submissions))schoolData.submissions=_mergeById(schoolData.submissions||[],d.submissions,false);
+        if(Array.isArray(d.exams))schoolData.exams=_mergeById(schoolData.exams||[],d.exams,false);
+        if(Array.isArray(d.messages))schoolData.messages=_mergeById(schoolData.messages||[],d.messages,false);
+        if(Array.isArray(d.sampleQuestions))schoolData.sampleQuestions=_mergeById(schoolData.sampleQuestions||[],d.sampleQuestions,false);
+        if(Array.isArray(d.staff)&&d.staff.length){
+          // فقط خود کاربر را به‌روز کن؛ بقیهٔ تیم محلی را نگه دار اگر بود
+          var mine=d.staff;
+          var map={};(schoolData.staff||[]).forEach(function(u){if(u&&u.id)map[String(u.id)]=u});
+          mine.forEach(function(u){if(u&&u.id)map[String(u.id)]=Object.assign({},map[String(u.id)]||{},u)});
+          // برای معلم فقط staffهای scope
+          if(d._scopeRole==='teacher')schoolData.staff=mine.slice();
+          else schoolData.staff=Object.keys(map).map(function(k){return map[k]});
+        }
+        if(d.managerPhoto)schoolData.managerPhoto=d.managerPhoto;
+        if(d.theme)schoolData.theme=d.theme;
+        if(d.disciplineTypes)schoolData.disciplineTypes=d.disciplineTypes;
+        schoolData._cloudUpdatedAtMs=d.updatedAtMs||(data&&data.updatedAt)||Date.now();
+        schoolData._localDirtyAt=0;
+        try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+        try{window._serverPullOk=true;window._serverStructOk=true}catch(e){}
+        return true;
+      }catch(eSc){console.warn('scoped apply',eSc)}
     }
     const remoteTs=d.updatedAtMs||(data&&data.updatedAt)||0;
     const localTs=(schoolData&&schoolData._cloudUpdatedAtMs)||0;
@@ -3145,7 +3365,7 @@ function normLoginUser(u){
 }
 function matchManagerCred(s,user,pass){
   if(!s)return false;
-  if(String(s.managerPassword||'')!==String(pass||''))return false;
+  if(toEnDigits(String(s.managerPassword||''))!==toEnDigits(String(pass||'')))return false;
   const u=normLoginUser(user);
   const mu=normLoginUser(s.managerUsername||'');
   const mp=normLoginUser(s.managerPhone||'');
@@ -3230,10 +3450,10 @@ async function doLogin(){
       try{
         showLoginLoading('در حال ورود از سرور...','در حال ارتباط با سرور — ممکن است چند ثانیه طول بکشد');
         toast('در حال ورود از سرور...',5000);
-        sc=await cloudFindSchoolByLogin(user,pass,code||null);
+        sc=await cloudFindSchoolByLogin(user,pass,code||null,loginRole||'manager');
         if(sc) sc.__fromServer = true;
       }catch(e){
-        console.error('login cloud',e);
+        console.warn('login cloud',e);
         sc=null;
         var m=(e&&e.message)?e.message:'';
         window._lastLoginNetErr=m;
@@ -3277,7 +3497,7 @@ async function doLogin(){
     if(sess){
       session=sess;loadSchoolData();
       const localUser=normLoginUser(schoolData.managerUser||'');
-      if(localUser===user&&String(schoolData.managerPass||'')===String(pass)){
+      if(localUser===user&&toEnDigits(String(schoolData.managerPass||''))===toEnDigits(String(pass))){
         if(SYNC_API&&session.schoolId){
           showLoginLoading('در حال تأیید مدرسه...','بررسی وضعیت مدرسه روی سرور');
           toast('در حال تأیید مدرسه روی سرور...',4000);
@@ -3359,7 +3579,7 @@ async function doLogin(){
     if(loginRole==='deputy')return r==='deputy'||r==='معاون'||r==='assistant';
     return r===loginRole;
   }
-  const st=staffList.find(u=>String(u.username||'')===String(user)&&String(u.pass||'')===String(pass)&&_roleOk(u.role)&&u.active!==false);
+  const st=staffList.find(u=>normLoginUser(u.username||'')===String(user)&&toEnDigits(String(u.pass||u.password||''))===toEnDigits(String(pass))&&_roleOk(u.role)&&u.active!==false);
   if(!st){
     hideLoginLoading();
     const sameUser=staffList.find(u=>String(u.username||'')===String(user));
@@ -4971,9 +5191,24 @@ function saveStudent(id){
     try{renderStudents();renderHome();}catch(e){}
     toast('ذخیره شد — ارسال به سرور...');
     if(canManage()){
-      Promise.resolve(cloudPushAppData(true)).then(function(ok){
-        toast(ok===false?'محلی ماند — همگام‌سازی را بزنید':'دانش‌آموز روی سرور ذخیره شد');
-      }).catch(function(){toast('محلی ذخیره شد')});
+      (async function(){
+        try{
+          // اگر فقط ویرایش بود، اول عکس را سبک بفرست
+          if(id && photo!==undefined){
+            var ph=photo||'';
+            try{ph=await shrinkPhotoDataUrl(ph,240,0.5,80000)}catch(e){}
+            try{
+              await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/staff-self',{
+                method:'POST',
+                body:{studentPhotoUpdate:{id:String(id),photo:ph},_photoOnly:true,_compatNoAuth:true},
+                retries:2,timeoutMs:45000
+              });
+            }catch(ePhoto){console.warn('student photo light',ePhoto)}
+          }
+          var ok=await cloudPushAppData(true);
+          toast(ok===false?'محلی ماند — همگام‌سازی را بزنید':'دانش‌آموز روی سرور ذخیره شد');
+        }catch(e){toast('محلی ذخیره شد')}
+      })();
     }
   }catch(err){
     console.error('saveStudent',err);
@@ -5106,10 +5341,24 @@ function renderTeam(){
   if(!schoolData)return;
   if(!Array.isArray(schoolData.staff))schoolData.staff=[];
   if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];
+  // مدیر: قبل از نمایش، تیم را از سرور تازه کن تا رمز عوض‌شده توسط کاربر دیده شود
+  if(typeof isManager==='function'&&isManager()&&session&&session.schoolId&&SYNC_API&&!window._teamPullLock){
+    window._teamPullLock=true;
+    cloudPullStaff(session.schoolId).then(function(){
+      window._teamPullLock=false;
+      try{paintTeamList()}catch(e){}
+    }).catch(function(){window._teamPullLock=false;try{paintTeamList()}catch(e){}});
+  }
+  paintTeamList();
+}
+function paintTeamList(){
+  if(!schoolData)return;
+  if(!Array.isArray(schoolData.staff))schoolData.staff=[];
+  if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];
   const sl=document.getElementById('staff-list');
   if(!sl)return;
   if(!schoolData.staff.length)sl.innerHTML='<p class="hint">معاون/معلمی نیست. با «+ کاربر» اضافه کنید.</p>';
-  else sl.innerHTML=schoolData.staff.map(u=>'<div class="list-item"><div class="who">'+avatarHtml(u.photo,u.name)+'<div><div class="name">'+u.name+'</div><div class="meta">'+(u.role==='deputy'?'معاون':'معلم')+(u.shift?(' · '+shiftLabel(u.shift)):' · هر دو شیفت')+' · '+u.username+(u.phone?' · '+u.phone:'')+'</div></div></div><button class="btn btn-outline btn-sm" onclick="openStaffModal(\''+u.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStaff(\''+u.id+'\')">حذف</button></div>').join('');
+  else sl.innerHTML=schoolData.staff.map(u=>'<div class="list-item"><div class="who">'+avatarHtml(u.photo,u.name)+'<div><div class="name">'+u.name+'</div><div class="meta">'+(u.role==='deputy'?'معاون':'معلم')+(u.shift?(' · '+shiftLabel(u.shift)):' · هر دو شیفت')+' · کاربری: '+u.username+' · رمز: '+(u.pass||'—')+(u.phone?' · '+u.phone:'')+'</div></div></div><button class="btn btn-outline btn-sm" onclick="openStaffModal(\''+u.id+'\')">ویرایش</button><button class="btn btn-danger btn-sm" onclick="delStaff(\''+u.id+'\')">حذف</button></div>').join('');
   const cl=document.getElementById('col-list');
   if(!cl)return;
   if(!schoolData.colleagues.length)cl.innerHTML='<p class="hint">همکاری نیست</p>';
@@ -5160,7 +5409,7 @@ function saveStaff(id){
     const name=nameEl.value.trim();
     const role=roleEl.value||'teacher';
     const username=normLoginUser(userEl.value.trim());
-    const pass=String(passEl.value||'');
+    const pass=toEnDigits(String(passEl.value||''));
     const phone=fixPhone(phoneEl?phoneEl.value:'');
     const shiftRaw=document.getElementById('st-shift')?document.getElementById('st-shift').value:'';
     const shift=shiftRaw===''?null:parseInt(shiftRaw,10);
@@ -5198,13 +5447,22 @@ function saveStaff(id){
     toast('ذخیره شد — در حال ارسال نقش به سرور...');
     if(session&&session.schoolId&&isManager()){
       (async function(){
+        var okStaff=false;
         try{
-          await cloudPushStaff(session.schoolId,schoolData.staff);
-          await cloudPushAppData(true);
-          toast('نقش روی سرور ذخیره شد ✓ — با همان نام کاربری وارد شود');
-        }catch(e){
-          toast('ذخیره محلی شد؛ ارسال سرور ناموفق — دوباره «ارسال به سرور» بزنید',5000);
+          okStaff=await cloudPushStaff(session.schoolId,schoolData.staff);
+        }catch(e){okStaff=false}
+        if(okStaff){
+          toast('نقش و رمز روی سرور ذخیره شد ✓ — کاربر می‌تواند وارد شود');
+        }else{
+          var detail=(window._lastPushError?String(window._lastPushError).slice(0,100):'اتصال برقرار نشد');
+          toast('ارسال نشد: '+detail+' — اینترنت را چک کنید و دوباره ذخیره کنید',6000);
         }
+        // همگام کامل در پس‌زمینه (اختیاری؛ شکستش رمز را خراب نکند)
+        try{
+          schoolData.replaceStructure=true;
+          schoolData._structureWriteToken=true;
+          await cloudPushAppData(true);
+        }catch(e){}
         try{schoolData.replaceStructure=false;schoolData._structureWriteToken=false;saveSchoolData();}catch(e){}
       })();
     }
@@ -6678,6 +6936,14 @@ function openSamplesPage(){
   showAppPage('samples');
   fillSamplesSubjectFilter();
   renderSamplesBySubject();
+  // همیشه از سرور بکش تا نمونه سوال معلم به مدیر/معاون برسد
+  if(session&&session.schoolId&&typeof cloudPullAppData==='function'){
+    cloudPullAppData(true).then(function(ok){
+      if(ok){
+        try{fillSamplesSubjectFilter();renderSamplesBySubject();renderTeacherSamples()}catch(e){}
+      }
+    }).catch(function(){});
+  }
 }
 function openSampleQuestionModal(){
   if(!isTeacher()&&!canManage())return toast('دسترسی ندارید');
@@ -6711,7 +6977,7 @@ function openSampleQuestionModal(){
         '<button type="button" class="btn btn-outline btn-block" id="sq-btn-img">🖼️ انتخاب عکس از گالری</button>'+
         '<button type="button" class="btn btn-outline btn-block" id="sq-btn-cam">📷 عکس با دوربین</button>'+
       '</div>'+
-      '<p class="hint" style="margin-top:8px">حداکثر ۸ مگابایت · PDF، Word، PowerPoint، متن و عکس پشتیبانی می‌شود</p>'+
+      '<p class="hint" style="margin-top:8px">حداکثر ۱٫۵ مگابایت · PDF کوچک، Word، عکس — فایل خیلی بزرگ باعث قطع همگام‌سازی می‌شود</p>'+
     '</div>'+
     '<button class="btn btn-primary btn-block" onclick="saveSampleQuestion()">ذخیره نمونه سوال</button>';
   document.getElementById('modal').classList.add('show');
@@ -6761,6 +7027,60 @@ function openSampleQuestionModal(){
     if(b3)b3.onclick=function(){pick('cam')};
   }catch(e){}
 }
+async function pushSampleQuestionsToServer(){
+  // مسیر امن معلم/معاون: فقط نمونه سوال‌ها — بدون ساختار کلاس
+  if(!SYNC_API||!session||!session.schoolId)return false;
+  var list=schoolData.sampleQuestions||[];
+  // اگر حجم خیلی زیاد است فقط آخرین‌ها با فایل کامل
+  var slim=[];
+  var budget=1800000; // ~1.8MB برای JSON
+  var used=0;
+  var sorted=list.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+  for(var i=0;i<sorted.length;i++){
+    var q=sorted[i];
+    if(!q)continue;
+    var fd=q.fileData||'';
+    var size=fd?String(fd).length:0;
+    if(used+size>budget && slim.length>0){
+      // متادیتا بدون فایل — تا لیست خالی نماند
+      slim.push({
+        id:q.id,teacherId:q.teacherId,teacherName:q.teacherName,subject:q.subject,
+        title:q.title,fileName:q.fileName,fileType:q.fileType,date:q.date,createdAt:q.createdAt,
+        fileData:'',_noFile:true
+      });
+      continue;
+    }
+    slim.push(q);
+    used+=size;
+  }
+  var body={
+    sampleQuestions:slim,
+    deletedSampleQuestionIds:schoolData.deletedSampleQuestionIds||[],
+    _teacherPartial:true,
+    _compatNoAuth:true,
+    auth:{
+      user:(userSession&&userSession.username)||'',
+      pass:(userSession&&userSession.pass)||'',
+      role:(userSession&&userSession.role)||'teacher'
+    }
+  };
+  try{
+    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
+      method:'POST',body:body,retries:2,timeoutMs:90000
+    });
+    return true;
+  }catch(e1){
+    console.warn('push samples teacher path',e1);
+    try{
+      // fallback: appData کامل (الان sampleQuestions در payload هست)
+      await cloudPushAppData(true);
+      return true;
+    }catch(e2){
+      console.warn('push samples fallback',e2);
+      return false;
+    }
+  }
+}
 function saveSampleQuestion(){
   var subject='';
   var sel=document.getElementById('sq-subject');
@@ -6771,39 +7091,56 @@ function saveSampleQuestion(){
   var file=fileInput&&fileInput.files&&fileInput.files[0];
   if(!subject)return toast('نام درس لازم است');
   if(!file)return toast('فایل را انتخاب کنید');
-  if(file.size>8*1024*1024)return toast('حجم فایل حداکثر ۸ مگابایت');
+  // سقف ۱٫۵ مگ — فایل بزرگ‌تر باعث ۵۰۳ روی Worker/D1 می‌شود
+  if(file.size>1.5*1024*1024)return toast('حجم فایل حداکثر ۱٫۵ مگابایت باشد (PDF کوچک یا عکس فشرده)');
   var okExt=/\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt|rtf|odt|ods|odp|png|jpe?g|gif|webp|bmp)$/i.test(file.name||'');
   var okMime=/^(image\/|application\/(pdf|msword|vnd\.|octet-stream)|text\/)/i.test(file.type||'');
   if(!okExt&&!okMime&&file.type){
-    // اجازه بده اگر پسوند شناخته شد؛ وگرنه هشدار نرم
     console.warn('unknown sample type',file.type,file.name);
   }
   var reader=new FileReader();
   reader.onload=function(){
-    if(!Array.isArray(schoolData.sampleQuestions))schoolData.sampleQuestions=[];
-    schoolData.sampleQuestions.push({
-      id:uid(),
-      teacherId:userSession.staffId||userSession.id||'',
-      teacherName:userSession.name||userSession.username||'معلم',
-      subject:subject,
-      title:title||file.name,
-      fileName:file.name,
-      fileType:file.type||'',
-      fileData:reader.result,
-      date:todayStr(),
-      createdAt:Date.now()
-    });
-    schoolData._cloudUpdatedAtMs=Date.now();
-    saveSchoolData();
-    closeModal();
-    try{
-      fillSamplesSubjectFilter();
-      var sf=document.getElementById('samples-subject-filter');
-      if(sf)sf.value=subject;
-      renderSamplesBySubject();
-    }catch(e){}
-    toast('در حال ارسال به سرور...');
-    cloudPushAppData(true).then(function(){toast('نمونه سوال ذخیره و همگام شد ✓')}).catch(function(){toast('محلی ذخیره شد؛ بعداً همگام کنید')});
+    var dataUrl=reader.result;
+    // عکس‌ها را کوچک کن تا همگام‌سازی سبک‌تر شود
+    function finish(finalData, finalType){
+      if(!Array.isArray(schoolData.sampleQuestions))schoolData.sampleQuestions=[];
+      schoolData.sampleQuestions.push({
+        id:uid(),
+        teacherId:userSession.staffId||userSession.id||'',
+        teacherName:userSession.name||userSession.username||'معلم',
+        subject:subject,
+        title:title||file.name,
+        fileName:file.name,
+        fileType:finalType||file.type||'',
+        fileData:finalData,
+        date:todayStr(),
+        createdAt:Date.now()
+      });
+      schoolData._cloudUpdatedAtMs=Date.now();
+      saveSchoolData();
+      closeModal();
+      try{
+        fillSamplesSubjectFilter();
+        var sf=document.getElementById('samples-subject-filter');
+        if(sf)sf.value=subject;
+        renderSamplesBySubject();
+        renderTeacherSamples();
+      }catch(e){}
+      toast('در حال ارسال نمونه سوال به سرور...');
+      pushSampleQuestionsToServer().then(function(ok){
+        toast(ok?'نمونه سوال روی سرور ذخیره شد ✓ — مدیر «دریافت از سرور» بزند':'ارسال ناموفق — فایل کوچک‌تر یا دوباره تلاش کنید');
+      });
+    }
+    if(String(dataUrl||'').indexOf('data:image/')===0 && typeof compressPhoto==='function'){
+      try{
+        // ساخت File از data برای compressPhoto اگر لازم؛ وگرنه مستقیم
+        compressPhoto(file, 1200, function(url){
+          finish(url||dataUrl, 'image/jpeg');
+        });
+        return;
+      }catch(e){}
+    }
+    finish(dataUrl, file.type||'');
   };
   reader.onerror=function(){toast('خواندن فایل ناموفق')};
   reader.readAsDataURL(file);
@@ -6817,8 +7154,7 @@ function delSampleQuestion(id){
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
   try{renderTeacherSamples();fillSamplesSubjectFilter();renderSamplesBySubject()}catch(e){}
-  cloudPushAppData(true).catch(function(){});
-  toast('حذف شد');
+  pushSampleQuestionsToServer().catch(function(){});
 }
 function renderManagerSamples(){
   fillSamplesSubjectFilter();
@@ -6939,8 +7275,9 @@ async function submitAttendance(){
     schoolData._localDirtyAt=Date.now();
     schoolData._cloudUpdatedAtMs=Date.now();
     saveSchoolData();
+    // اول UI آزاد شود — همگام در پس‌زمینه
     var syncOk=false;
-    try{syncOk=!!(await pushAttendanceToServer(3))}catch(eSync){console.warn('att push',eSync);syncOk=false}
+    try{syncOk=!!(await pushAttendanceToServer(2))}catch(eSync){console.warn('att push',eSync);syncOk=false}
     const tName=userSession.name||userSession.username||'معلم';
     const c=schoolData.classes.find(x=>x.id===currentAssign.classId);
     const period=currentAssign.periodName||'زنگ';
@@ -8496,6 +8833,8 @@ function delDiscType(id){
   toast('از لیست حذف شد — سوابق دانش‌آموزان حفظ شد');
 }
 function saveRules(){
+  if(!canManage())return toast('فقط مدیر/معاون می‌تواند قوانین را تغییر دهد');
+
   if(!schoolData.rules)schoolData.rules={};
   schoolData.rules.absent=parseFloat(document.getElementById('rule-absent').value)||0.5;
   schoolData.rules.late=parseFloat(document.getElementById('rule-late').value)||0.25;
@@ -8515,15 +8854,157 @@ function saveRules(){
     }).catch(function(){toast('محلی ذخیره شد')});
   }else toast('ذخیره شد');
 }
-function saveManagerPhoto(){
+async function saveManagerPhoto(){
   if(!isManager())return toast('فقط مدیر');
-  const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';
+  var photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';
+  try{photo=await shrinkPhotoDataUrl(photo,200,0.45,50000)}catch(e){}
   schoolData.managerPhoto=photo||'';
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
-  toast('در حال ذخیره عکس...');
-  cloudPushAppData(true).then(function(){toast('عکس مدیر ذخیره و روی سرور آمد')}).catch(function(){toast('محلی ذخیره شد؛ ارسال سرور ناموفق')});
+  toast('در حال ذخیره عکس مدیر...');
   try{renderHome()}catch(e){}
+  if(!SYNC_API||!session||!session.schoolId){toast('محلی ذخیره شد');return}
+  var body={managerPhoto:photo||'',_photoOnly:true,_compatNoAuth:true,_teacherPartial:true};
+  var ok=false;
+  try{
+    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/staff-self',{method:'POST',body:body,retries:2,timeoutMs:90000});
+    ok=true;
+  }catch(e1){
+    try{
+      // اگر staff-self هنوز Deploy نشده، از teacher با فلگ عکس
+      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
+        method:'POST',
+        body:Object.assign({},body,{staffSelfUpdate:{id:'__manager__',photo:''},managerPhoto:photo||'',_staffSelfOnly:true}),
+        retries:1,timeoutMs:90000
+      });
+      ok=true;
+    }catch(e2){console.warn('mgr photo',e2)}
+  }
+  toast(ok?'عکس مدیر روی سرور ذخیره شد ✓':'محلی ذخیره شد — Worker را Deploy کنید سپس دوباره ذخیره کنید');
+}
+/** عکس شخصی معاون/معلم — در staff ذخیره و همگام می‌شود تا همه ببینند */
+function saveMyStaffPhoto(){
+  if(isManager())return toast('مدیر از بخش «عکس مدیر» استفاده کند');
+  if(!userSession||!userSession.staffId)return toast('جلسه کاربری معتبر نیست — دوباره وارد شوید');
+  if(!schoolData)loadSchoolData();
+  if(!Array.isArray(schoolData.staff))schoolData.staff=[];
+  var u=schoolData.staff.find(function(x){return x&&String(x.id)===String(userSession.staffId)});
+  if(!u)return toast('پروفایل شما در تیم مدرسه یافت نشد — از مدیر بخواهید شما را در تیم تعریف کند');
+  var photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';
+  u.photo=photo||'';
+  userSession.photo=u.photo||'';
+  try{saveUserSession(userSession)}catch(e){}
+  schoolData._cloudUpdatedAtMs=Date.now();
+  schoolData._localDirtyAt=Date.now();
+  saveSchoolData();
+  toast('در حال ذخیره عکس شما...');
+  pushStaffSelfUpdate({photo:u.photo||''}).then(function(ok){
+    toast(ok?'عکس شما ذخیره و روی سرور آمد — در تیم و داشبورد دیده می‌شود':'محلی ذخیره شد؛ بعداً همگام کنید');
+  }).catch(function(){toast('محلی ذخیره شد؛ بعداً همگام کنید')});
+  try{renderHome();renderSettings()}catch(e){}
+}
+/** تغییر رمز معاون/معلم — نام کاربری ثابت؛ رمز در تیم مدیر به‌روز می‌شود */
+
+async function shrinkPhotoDataUrl(photo, maxW, quality, maxLen){
+  maxW=maxW||240; quality=quality||0.5; maxLen=maxLen||80000;
+  photo=photo||'';
+  if(!photo)return '';
+  if(String(photo).length<=maxLen && String(photo).indexOf('data:image/')===0){
+    // still shrink a bit if very large dimensions possible
+  }
+  try{
+    return await new Promise(function(resolve){
+      var img=new Image();
+      img.onload=function(){
+        try{
+          var c=document.createElement('canvas');
+          var w=img.width||maxW,h=img.height||maxW;
+          if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
+          c.width=w;c.height=h;
+          c.getContext('2d').drawImage(img,0,0,w,h);
+          var out=c.toDataURL('image/jpeg',quality);
+          if(out.length>maxLen){
+            out=c.toDataURL('image/jpeg',0.35);
+          }
+          resolve(out);
+        }catch(e){resolve(String(photo).slice(0,maxLen))}
+      };
+      img.onerror=function(){resolve(String(photo).slice(0,maxLen))};
+      img.src=photo;
+    });
+  }catch(e){return String(photo).slice(0,maxLen)}
+}
+
+async function pushStaffSelfUpdate(fields){
+  if(!SYNC_API||!session||!session.schoolId||!userSession||!userSession.staffId)return false;
+  var photo=fields&&fields.photo!==undefined?fields.photo:undefined;
+  if(photo!==undefined){
+    try{photo=await shrinkPhotoDataUrl(photo,200,0.45,50000)}catch(e){photo=String(photo||'').slice(0,50000)}
+  }
+  // اگر رمز عوض شده، auth با رمز قدیمی باشد تا سرور قبول کند
+  var authPass=(fields&&fields.authPass!=null&&fields.authPass!=='')
+    ? String(fields.authPass)
+    : String(userSession.pass||'');
+  var body={
+    staffSelfUpdate:{id:String(userSession.staffId),updatedAt:Date.now()},
+    _staffSelfOnly:true,_photoOnly:!(fields&&fields.pass),_teacherPartial:true,_compatNoAuth:true,
+    auth:{user:userSession.username||'',pass:authPass,role:userSession.role||'teacher'}
+  };
+  if(fields&&fields.pass!=null)body.staffSelfUpdate.pass=toEnDigits(String(fields.pass));
+  if(photo!==undefined)body.staffSelfUpdate.photo=photo||'';
+  var paths=[
+    '/api/schools/'+encodeURIComponent(session.schoolId)+'/staff-self',
+    '/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher'
+  ];
+  for(var pi=0;pi<paths.length;pi++){
+    try{
+      await apiFetch(paths[pi],{method:'POST',body:body,retries:2,timeoutMs:90000});
+      return true;
+    }catch(e){
+      console.warn('staff-self path',paths[pi],e);
+    }
+  }
+  return false;
+}
+async function changeMyStaffPassword(){
+  if(isManager())return toast('مدیر از بخش حساب مدیر استفاده کند');
+  if(!userSession||!userSession.staffId)return toast('جلسه کاربری معتبر نیست');
+  if(!schoolData)loadSchoolData();
+  if(!Array.isArray(schoolData.staff))schoolData.staff=[];
+  var u=schoolData.staff.find(function(x){return x&&String(x.id)===String(userSession.staffId)});
+  if(!u)return toast('پروفایل شما در تیم یافت نشد');
+  var curPass=toEnDigits((document.getElementById('staff-pass-cur')||{}).value||'');
+  var n1=toEnDigits((document.getElementById('staff-pass-new')||{}).value||'');
+  var n2=toEnDigits((document.getElementById('staff-pass-new2')||{}).value||'');
+  if(!curPass)return toast('رمز فعلی را وارد کنید');
+  var stored=toEnDigits(String(u.pass||u.password||''));
+  var sessPass=toEnDigits(String(userSession.pass||''));
+  if(stored!==curPass && sessPass!==curPass){
+    return toast('رمز فعلی اشتباه است');
+  }
+  if(n1.length<4)return toast('رمز جدید حداقل ۴ کاراکتر باشد');
+  if(n1!==n2)return toast('تکرار رمز یکسان نیست');
+  // احراز هویت سرور با رمز فعلی (قدیمی) انجام شود تا قبول کند
+  var oldPassForAuth=curPass;
+  u.pass=n1;
+  u.password=n1;
+  userSession.pass=n1;
+  try{saveUserSession(userSession)}catch(e){}
+  schoolData._cloudUpdatedAtMs=Date.now();
+  schoolData._localDirtyAt=Date.now();
+  saveSchoolData();
+  toast('در حال ذخیره رمز روی سرور...');
+  try{
+    var ok=await pushStaffSelfUpdate({pass:n1, authPass:oldPassForAuth});
+    toast(ok?'رمز جدید ذخیره شد ✓ — مدیر با «دریافت از سرور» رمز به‌روز را می‌بیند':'محلی ذخیره شد؛ ارسال سرور ناموفق');
+  }catch(e){
+    toast('محلی ذخیره شد؛ ارسال سرور ناموفق — بعداً همگام کنید');
+  }
+  try{
+    document.getElementById('staff-pass-cur').value='';
+    document.getElementById('staff-pass-new').value='';
+    document.getElementById('staff-pass-new2').value='';
+  }catch(e){}
 }
 function _accentStyleEl(){
   let el=document.getElementById('nikan-accent-style');
@@ -8899,7 +9380,7 @@ async function changeManagerPassword(){
   let newUser=normLoginUser((document.getElementById('mgr-user-new')||{}).value||'');
   const curUser=normLoginUser(schoolData.managerUser||(userSession&&userSession.username)||'');
   if(!curPass)return toast('رمز فعلی را وارد کنید');
-  if(String(schoolData.managerPass||'')!==String(curPass))return toast('رمز فعلی اشتباه است');
+  if(toEnDigits(String(schoolData.managerPass||''))!==toEnDigits(String(curPass)))return toast('رمز فعلی اشتباه است');
   if(n1.length<6)return toast('رمز جدید حداقل ۶ کاراکتر باشد');
   if(n1!==n2)return toast('تکرار رمز یکسان نیست');
   if(!newUser)newUser=curUser;
@@ -8911,6 +9392,7 @@ async function changeManagerPassword(){
   try{
     if(userSession){
       userSession.username=newUser;
+      userSession.pass=n1;
       saveUserSession(userSession);
     }
   }catch(e){}
@@ -9008,6 +9490,8 @@ function renderSettings(){
   try{
     var discCard=document.getElementById('set-disc-types');
     if(discCard)discCard.style.display=canManage()?'block':'none';
+    var rulesCard=document.getElementById('set-rules-card');
+    if(rulesCard)rulesCard.style.display=canManage()?'block':'none';
   }catch(e){}
 
   // میان‌برهای مرتب داخل «بیشتر»
@@ -9030,6 +9514,10 @@ function renderSettings(){
     h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-theme-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">🎨</span><span class="lb">ظاهر</span><span class="ds">تیره / روشن و فونت</span></button>';
     if(isManager()){
       h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-manager-account-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">🔐</span><span class="lb">حساب مدیر</span><span class="ds">رمز و نام کاربری</span></button>';
+    }
+    if(!isManager()&&(isDeputy()||isTeacher())){
+      h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-staff-account-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">🔐</span><span class="lb">رمز عبور من</span><span class="ds">تغییر رمز ورود</span></button>';
+      h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-staff-photo-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">📷</span><span class="lb">عکس من</span><span class="ds">آواتار شخصی</span></button>';
     }
     if(isManager()){
       h+='<button type="button" class="qa-item" onclick="document.getElementById(\'set-full-backup-card\').scrollIntoView({behavior:\'smooth\',block:\'start\'})"><span class="ic">💾</span><span class="lb">پشتیبان</span><span class="ds">دانلود / بازیابی</span></button>';
@@ -9068,6 +9556,26 @@ function renderSettings(){
   var bc=document.getElementById('set-full-backup-card');if(bc)bc.style.display=isManager()?'block':'none';
   var yrc=document.getElementById('set-year-reset-card');if(yrc)yrc.style.display=isManager()?'block':'none';
   }
+  // کارت عکس و رمز برای معاون/معلم
+  try{
+    var isStaffUser=!isManager()&&(isDeputy()||isTeacher())&&userSession&&userSession.staffId;
+    var spCard=document.getElementById('set-staff-photo-card');
+    var saCard=document.getElementById('set-staff-account-card');
+    if(spCard)spCard.style.display=isStaffUser?'block':'none';
+    if(saCard)saCard.style.display=isStaffUser?'block':'none';
+    if(isStaffUser){
+      var me=(schoolData.staff||[]).find(function(x){return x&&String(x.id)===String(userSession.staffId)});
+      var myPhoto=(me&&me.photo)||userSession.photo||'';
+      var myName=(me&&me.name)||userSession.name||userSession.username||'';
+      var prev=document.getElementById('my-photo-prev');
+      var btns=document.getElementById('my-photo-btns');
+      if(prev)prev.innerHTML=avatarHtml(myPhoto,myName,'avatar-lg');
+      if(btns)btns.innerHTML=photoButtons('my-photo','my-photo-prev');
+      window._pendingPhoto=myPhoto;
+      var uEl=document.getElementById('staff-user-cur');
+      if(uEl)uEl.value=(me&&me.username)||userSession.username||'';
+    }
+  }catch(e){}
   const lim=maxStudentsAllowed();
   const mods=Array.isArray(session&&session.modules)?session.modules:[];
   const modLabels={sms:'پیامک',teacher_attendance:'حضور دبیر',manager_approve:'تأیید مدیر',discipline:'انضباط',advanced_reports:'گزارش پیشرفته',dual_shift:'دو شیفت'};
@@ -9452,8 +9960,17 @@ function openMediaViewer(src, title, fileName){
   body.innerHTML='';
   var s=String(src);
   var name=String(fileName||title||'');
-  var isImg=/^data:image\//i.test(s)||/\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(name)||/^blob:/.test(s);
-  var isPdf=/^data:application\/pdf/i.test(s)||/\.pdf(\?|$)/i.test(name)||/application\/pdf/i.test(s);
+  var isImg=(function(){
+      var ss=String(s||''), nn=String(name||'').toLowerCase().split('?')[0];
+      if(ss.indexOf('data:image/')===0||ss.indexOf('blob:')===0)return true;
+      var ext=nn.slice(nn.lastIndexOf('.'));
+      return ['.png','.jpg','.jpeg','.gif','.webp','.bmp'].indexOf(ext)>=0;
+    })();
+  var isPdf=(function(){
+      var ss=String(s||''), nn=String(name||'').toLowerCase().split('?')[0];
+      if(ss.indexOf('data:application/pdf')===0||ss.toLowerCase().indexOf('application/pdf')>=0)return true;
+      return nn.slice(nn.lastIndexOf('.'))==='.pdf';
+    })();
   if(isImg){
     var img=document.createElement('img');
     img.src=s;
