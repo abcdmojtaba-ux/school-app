@@ -24,10 +24,12 @@ import java.io.FileOutputStream
 
 /**
  * سامانه نیکان — WebView
- * انتخاب فایل:
- *  - capture  => فقط دوربین
- *  - image/*  => فقط گالری/عکس
- *  - بقیه     => انتخاب‌گر فایل سیستم (PDF / Word / PowerPoint / همه فرمت‌ها)
+ *
+ * انتخاب فایل (onShowFileChooser):
+ *  - capture / دوربین     => فقط دوربین
+ *  - فقط image/*          => فقط گالری
+ *  - */* یا PDF/Word/...  => انتخاب‌گر فایل سیستم (DocumentsUI)
+ *    تا PDF، Word، PowerPoint، Excel، متن و عکس همه دیده شوند
  */
 class MainActivity : Activity() {
 
@@ -53,6 +55,12 @@ class MainActivity : Activity() {
         st.allowContentAccess = true
         st.loadWithOverviewMode = true
         st.useWideViewPort = true
+        if (Build.VERSION.SDK_INT >= 16) {
+            @Suppress("DEPRECATION")
+            st.allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
+            st.allowUniversalAccessFromFileURLs = true
+        }
         if (Build.VERSION.SDK_INT >= 21) {
             st.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         }
@@ -60,7 +68,7 @@ class MainActivity : Activity() {
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
-                if (url.startsWith("http") || url.startsWith("file")) return false
+                if (url.startsWith("http") || url.startsWith("file") || url.startsWith("data:")) return false
                 return try {
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                     true
@@ -84,34 +92,57 @@ class MainActivity : Activity() {
 
                 val accepts = params?.acceptTypes
                     ?.map { it.trim().lowercase() }
-                    ?.filter { it.isNotEmpty() } ?: emptyList()
+                    ?.filter { it.isNotEmpty() }
+                    ?: emptyList()
 
                 val wantsCamera = params?.isCaptureEnabled == true
-                val imageOnly = accepts.isNotEmpty() && accepts.all { it.startsWith("image/") }
+                // فقط وقتی همه‌ی acceptها image/* باشند گالری باز شود
+                // اگر خالی، */* یا هر MIME غیرعکس باشد → انتخاب‌گر فایل کامل
+                val imageOnly = accepts.isNotEmpty() &&
+                    accepts.all { it.startsWith("image/") || it == "image" }
+
                 val multiple = params?.mode == FileChooserParams.MODE_OPEN_MULTIPLE
 
                 val intent: Intent = when {
-                    // فقط دوربین
-                    wantsCamera -> Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-
-                    // فقط عکس از گالری
-                    imageOnly -> Intent(Intent.ACTION_GET_CONTENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "image/*"
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+                    wantsCamera -> {
+                        Intent(MediaStore.ACTION_IMAGE_CAPTURE)
                     }
 
-                    // همه فرمت‌ها: PDF / Word / ...
-                    else -> Intent(Intent.ACTION_GET_CONTENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "*/*"
-                        // فقط اگر همه موارد MIME معتبر بودند فیلتر کن؛
-                        // پسوندهایی مثل .csv باعث خراب شدن فیلتر می‌شوند
-                        val mimes = accepts.filter { it.contains("/") && it != "*/*" }
-                        if (mimes.isNotEmpty() && mimes.size == accepts.size) {
-                            putExtra(Intent.EXTRA_MIME_TYPES, mimes.toTypedArray())
+                    imageOnly -> {
+                        Intent(Intent.ACTION_GET_CONTENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "image/*"
+                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
                         }
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+                    }
+
+                    else -> {
+                        // ACTION_OPEN_DOCUMENT روی اندروید جدید DocumentsUI را باز می‌کند
+                        // و همه پسوندها (PDF و docx و ...) را نشان می‌دهد
+                        val openDoc = if (Build.VERSION.SDK_INT >= 19) {
+                            Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "*/*"
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+                            }
+                        } else {
+                            Intent(Intent.ACTION_GET_CONTENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "*/*"
+                                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+                            }
+                        }
+
+                        // فقط MIMEهای معتبر (با /) را فیلتر کن؛ پسوند مثل .csv را نادیده بگیر
+                        val mimes = accepts.filter {
+                            it.contains("/") && it != "*/*" && !it.startsWith(".")
+                        }
+                        if (mimes.isNotEmpty() && mimes.size == accepts.size) {
+                            openDoc.putExtra(Intent.EXTRA_MIME_TYPES, mimes.toTypedArray())
+                        }
+
+                        openDoc
                     }
                 }
 
@@ -119,24 +150,22 @@ class MainActivity : Activity() {
                     val finalIntent = if (wantsCamera) {
                         intent
                     } else {
-                        Intent.createChooser(
-                            intent,
-                            if (imageOnly) "انتخاب عکس" else "انتخاب فایل (PDF / Word / عکس / ...)"
-                        )
+                        val title = when {
+                            imageOnly -> "انتخاب عکس"
+                            else -> "انتخاب فایل (PDF / Word / عکس / ...)"
+                        }
+                        Intent.createChooser(intent, title)
                     }
                     startActivityForResult(finalIntent, FILE_REQ)
                     true
                 } catch (e: Exception) {
-                    // fallback ساده
                     try {
+                        val fallback = Intent(Intent.ACTION_GET_CONTENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*"
+                        }
                         startActivityForResult(
-                            Intent.createChooser(
-                                Intent(Intent.ACTION_GET_CONTENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE)
-                                    type = "*/*"
-                                },
-                                "انتخاب فایل"
-                            ),
+                            Intent.createChooser(fallback, "انتخاب فایل"),
                             FILE_REQ
                         )
                         true
@@ -218,19 +247,26 @@ class MainActivity : Activity() {
         }
 
         try {
-            // انتخاب چندتایی
             val clip = data?.clipData
             if (clip != null && clip.itemCount > 0) {
                 cb.onReceiveValue(Array(clip.itemCount) { i -> clip.getItemAt(i).uri })
                 return
             }
-            // انتخاب تکی
             val single = data?.data
             if (single != null) {
+                try {
+                    if (Build.VERSION.SDK_INT >= 19) {
+                        contentResolver.takePersistableUriPermission(
+                            single,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    }
+                } catch (_: Exception) {
+                }
                 cb.onReceiveValue(arrayOf(single))
                 return
             }
-            // دوربین: thumbnail
+            @Suppress("DEPRECATION")
             val bmp = data?.extras?.get("data") as? Bitmap
             if (bmp != null) {
                 val file = File(cacheDir, "cam_" + System.currentTimeMillis() + ".jpg")
@@ -246,10 +282,12 @@ class MainActivity : Activity() {
         cb.onReceiveValue(null)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (this::webView.isInitialized && webView.canGoBack()) {
             webView.goBack()
         } else {
+            @Suppress("DEPRECATION")
             super.onBackPressed()
         }
     }
