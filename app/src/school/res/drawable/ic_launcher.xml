@@ -6,88 +6,119 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- ===== پس‌زمینه ===== -->
+    <!-- Background -->
     <path android:pathData="M12,0 L96,0 Q108,0 108,12 L108,96 Q108,108 96,108 L12,108 Q0,108 0,96 L0,12 Q0,0 12,0 Z">
         <aapt:attr name="android:fillColor">
             <gradient android:type="linear"
-                android:startX="8" android:startY="5"
-                android:endX="100" android:endY="105">
-                <item android:offset="0" android:color="#03194E"/>
-                <item android:offset="0.48" android:color="#062A83"/>
-                <item android:offset="1" android:color="#075BEA"/>
+                android:startX="4" android:startY="2"
+                android:endX="104" android:endY="106">
+                <item android:offset="0" android:color="#031746"/>
+                <item android:offset="0.45" android:color="#062B78"/>
+                <item android:offset="1" android:color="#064CC4"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- نور و قاب نئونی -->
-    <path android:fillColor="#123C9A" android:pathData="M12,1 L96,1 Q107,1 107,12 L107,96 Q107,107 96,107 L12,107 Q1,107 1,96 L1,12 Q1,1 12,1 Z"
-        android:strokeColor="#167CFF" android:strokeWidth="0.8"/>
+    <!-- Inner blue glass -->
+    <path android:fillColor="#06265F"
+        android:pathData="M13,4 L95,4 Q104,4 104,13 L104,95 Q104,104 95,104 L13,104 Q4,104 4,95 L4,13 Q4,4 13,4 Z"/>
+    <path android:fillColor="#073B91" android:alpha="0.72"
+        android:pathData="M18,10 L90,10 Q99,10 99,19 L99,89 Q99,98 90,98 L18,98 Q9,98 9,89 L9,19 Q9,10 18,10 Z"/>
 
-    <!-- هاله‌های ساده اطراف -->
-    <path android:fillColor="#102C78" android:pathData="M9,60 C9,30 28,9 54,9 C80,9 99,30 99,60 C99,86 80,99 54,99 C28,99 9,86 9,60 Z"/>
-    <path android:fillColor="#073D9D" android:pathData="M13,62 C13,35 30,15 54,15 C78,15 95,35 95,62 C95,82 78,94 54,94 C30,94 13,82 13,62 Z"/>
+    <!-- Digital background blocks -->
+    <path android:fillColor="#0A5BBE" android:alpha="0.42"
+        android:pathData="M11,55 L18,50 L18,72 L11,76 Z"/>
+    <path android:fillColor="#1676D5" android:alpha="0.38"
+        android:pathData="M16,43 L22,39 L22,69 L16,73 Z"/>
+    <path android:fillColor="#1268C9" android:alpha="0.35"
+        android:pathData="M87,47 L96,42 L96,72 L87,77 Z"/>
+    <path android:fillColor="#1781E7" android:alpha="0.30"
+        android:pathData="M92,35 L99,31 L99,64 L92,68 Z"/>
 
-    <!-- مدار نورانی -->
+    <!-- Neon orbit -->
     <path android:fillColor="#00000000"
-        android:strokeColor="#159BFF"
-        android:strokeWidth="1.2"
-        android:pathData="M15,65 C12,37 31,17 54,17 C79,17 97,38 94,67"/>
+        android:strokeColor="#159EFF"
+        android:strokeWidth="1.15"
+        android:pathData="M15,63 C12,37 29,18 53,17 C78,16 97,37 94,64"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#0B67D6"
+        android:strokeWidth="2.3"
+        android:alpha="0.35"
+        android:pathData="M13,65 C11,35 30,14 54,14 C80,14 99,36 96,66"/>
 
-    <!-- ===== کتاب ===== -->
-    <path android:fillColor="#0A1F56"
-        android:pathData="M15,72 Q34,67 54,78 Q74,67 93,72 L90,91 Q72,87 54,96 Q36,87 18,91 Z"/>
-    <path android:fillColor="#0B6BDB"
-        android:pathData="M16,70 Q35,65 54,76 Q73,65 92,70 L89,87 Q72,83 54,92 Q36,83 19,87 Z"/>
+    <!-- Graduation cap shadow -->
+    <path android:fillColor="#020C28" android:alpha="0.75"
+        android:pathData="M26,38 L54,25 L82,38 L54,52 Z"/>
 
-    <!-- صفحات پایین -->
-    <path android:fillColor="#C7E8FF"
-        android:pathData="M17,69 Q35,64 54,75 L54,88 Q36,79 19,84 Z"/>
-    <path android:fillColor="#9BD8FF"
-        android:pathData="M19,72 Q36,67 54,78 L54,90 Q36,81 20,85 Z"/>
-    <path android:fillColor="#EAF8FF"
-        android:pathData="M21,68 Q37,64 54,75 L54,87 Q38,79 21,82 Z"/>
-    <path android:fillColor="#CDEEFF"
-        android:pathData="M87,68 Q71,64 54,75 L54,87 Q70,79 87,82 Z"/>
-    <path android:fillColor="#A8DEFF"
-        android:pathData="M89,72 Q72,67 54,78 L54,90 Q72,81 88,85 Z"/>
-    <path android:fillColor="#F4FBFF"
-        android:pathData="M87,68 Q71,64 54,75 L54,87 Q70,79 87,82 Z"/>
+    <!-- Cap top -->
+    <path android:pathData="M25,35 L54,21 L83,35 L54,49 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="27" android:startY="23"
+                android:endX="81" android:endY="47">
+                <item android:offset="0" android:color="#071B4E"/>
+                <item android:offset="0.5" android:color="#0B347E"/>
+                <item android:offset="1" android:color="#020D2B"/>
+            </gradient>
+        </aapt:attr>
+    </path>
 
-    <!-- خط وسط کتاب -->
-    <path android:fillColor="#FFFFFF" android:pathData="M53.35,75 L54.65,75 L54.65,91 L53.35,91 Z"/>
+    <!-- Gold cap band -->
+    <path android:fillColor="#DFAF36"
+        android:pathData="M36,40 Q54,48 72,40 L72,47 Q54,56 36,47 Z"/>
+    <path android:fillColor="#F4CB55"
+        android:pathData="M37,40 Q54,47 71,40 L71,43 Q54,50 37,43 Z"/>
 
-    <!-- لبه‌های طلایی کتاب -->
-    <path android:fillColor="#F2C94C" android:pathData="M19,84 Q37,80 54,90 L54,92 Q36,83 19,87 Z"/>
-    <path android:fillColor="#E7B83C" android:pathData="M89,84 Q71,80 54,90 L54,92 Q72,83 89,87 Z"/>
+    <!-- Cap top highlight -->
+    <path android:fillColor="#FFFFFF" android:alpha="0.12"
+        android:pathData="M30,34 L54,23 L70,30 L54,27 L38,35 Z"/>
 
-    <!-- ===== کلاه فارغ‌التحصیلی ===== -->
-    <path android:fillColor="#06143D"
-        android:pathData="M27,42 L54,29 L81,42 L54,55 Z"/>
-    <path android:fillColor="#0C2A6F"
-        android:pathData="M27,42 L54,29 L81,42 L54,52 Z"/>
+    <!-- Tassel -->
+    <path android:fillColor="#E9B83E"
+        android:pathData="M77.6,35 L79,35 L79,47 L77.6,47 Z"/>
+    <path android:fillColor="#FFD35C"
+        android:pathData="M75.7,47 A2.7,2.7 0 1,0 81.1,47 A2.7,2.7 0 1,0 75.7,47 Z"/>
+    <path android:fillColor="#E6B137"
+        android:pathData="M76.7,49 L80.2,49 L81.8,57 L75.1,57 Z"/>
 
-    <path android:fillColor="#F2C84B"
-        android:pathData="M27,42 L54,29 L81,42 L54,45.5 Z"/>
-    <path android:fillColor="#FFE07A"
-        android:pathData="M31,42 L54,31 L77,42 L54,44.8 Z"/>
+    <!-- Book shadow -->
+    <path android:fillColor="#010A21" android:alpha="0.8"
+        android:pathData="M14,76 Q35,69 54,80 Q73,69 94,76 L91,94 Q72,88 54,99 Q36,88 17,94 Z"/>
 
-    <!-- تاج کلاه -->
-    <path android:fillColor="#071A4D"
-        android:pathData="M37,43 Q54,51 71,43 L71,51 Q54,60 37,51 Z"/>
-    <path android:fillColor="#0C2B73"
-        android:pathData="M37,46 Q54,54 71,46 L71,52 Q54,60 37,52 Z"/>
-    <path android:fillColor="#E7B83C"
-        android:pathData="M37,48 Q54,55 71,48 L71,51 Q54,58 37,51 Z"/>
+    <!-- Book left pages -->
+    <path android:fillColor="#D8F1FF"
+        android:pathData="M17,69 Q36,64 54,77 L54,92 Q36,82 19,86 Z"/>
+    <path android:fillColor="#8ED7FF"
+        android:pathData="M18,73 Q36,68 54,80 L54,94 Q36,84 20,88 Z"/>
+    <path android:fillColor="#F8FDFF"
+        android:pathData="M20,68 Q37,63 54,76 L54,89 Q37,79 21,84 Z"/>
 
-    <!-- منگوله -->
-    <path android:fillColor="#F4C94F" android:pathData="M78.8,42 L80.2,42 L80.2,55 L78.8,55 Z"/>
-    <path android:fillColor="#FFD96A" android:pathData="M77.2,55.2 A2.3,2.3 0 1,0 81.8,55.2 A2.3,2.3 0 1,0 77.2,55.2 Z"/>
-    <path android:fillColor="#E8B63D" android:pathData="M78.1,57 L80.9,57 L82.5,66 L76.5,66 Z"/>
+    <!-- Book right pages -->
+    <path android:fillColor="#D8F1FF"
+        android:pathData="M91,69 Q72,64 54,77 L54,92 Q72,82 89,86 Z"/>
+    <path android:fillColor="#8ED7FF"
+        android:pathData="M90,73 Q72,68 54,80 L54,94 Q72,84 88,88 Z"/>
+    <path android:fillColor="#F8FDFF"
+        android:pathData="M88,68 Q71,63 54,76 L54,89 Q71,79 87,84 Z"/>
 
-    <!-- درخشش روی لبه کلاه -->
-    <path android:fillColor="#FFFFFF" android:pathData="M34,39 L53,30.8 L54,31.3 L36,40 Z" android:alpha="0.55"/>
+    <!-- Cyan page light -->
+    <path android:fillColor="#23D0FF" android:alpha="0.9"
+        android:pathData="M22,78 Q38,73 54,84 L54,87 Q38,77 22,82 Z"/>
+    <path android:fillColor="#23D0FF" android:alpha="0.9"
+        android:pathData="M86,78 Q70,73 54,84 L54,87 Q70,77 86,82 Z"/>
 
-    <!-- ===== خطوط نور آبی پایین ===== -->
-    <path android:fillColor="#1CC8FF" android:pathData="M16,97 L35,97 L35,98.5 L16,98.5 Z"/>
-    <path android:fillColor="#1CC8FF" android:pathData="M73,97 L92,97 L92,98.5 L73,98.5 Z"/>
+    <!-- Gold book edge -->
+    <path android:fillColor="#F0C447"
+        android:pathData="M19,84 Q37,80 54,91 Q71,80 89,84 L89,87 Q71,83 54,95 Q37,83 19,87 Z"/>
+
+    <!-- Book center -->
+    <path android:fillColor="#FFFFFF" android:alpha="0.95"
+        android:pathData="M53.35,76 L54.65,76 L54.65,95 L53.35,95 Z"/>
+
+    <!-- Lower neon accents -->
+    <path android:fillColor="#12C8FF"
+        android:pathData="M15,97 L34,97 L34,98.5 L15,98.5 Z"/>
+    <path android:fillColor="#12C8FF"
+        android:pathData="M74,97 L93,97 L93,98.5 L74,98.5 Z"/>
+
 </vector>
