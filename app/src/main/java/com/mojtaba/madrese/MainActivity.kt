@@ -23,10 +23,8 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * نسخه پایدار سامانه نیکان
- * - باز شدن از فایل داخل اپ (assets)
- * - گالری + دوربین
- * - دیالوگ‌های JS
+ * سامانه نیکان — WebView
+ * انتخاب فایل: همه فرمت‌ها (PDF/Word/...) + گالری + دوربین
  */
 class MainActivity : Activity() {
 
@@ -42,7 +40,7 @@ class MainActivity : Activity() {
         webView = WebView(this)
         setContentView(webView)
 
-        askCameraPermission()
+        askRuntimePermissions()
 
         val st = webView.settings
         st.javaScriptEnabled = true
@@ -73,34 +71,87 @@ class MainActivity : Activity() {
             override fun onShowFileChooser(
                 wv: WebView?,
                 cb: ValueCallback<Array<Uri>>?,
-                p: FileChooserParams?
+                params: FileChooserParams?
             ): Boolean {
                 try {
                     fileCallback?.onReceiveValue(null)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                 }
                 fileCallback = cb
 
-                val gallery = Intent(Intent.ACTION_GET_CONTENT).apply {
+                // نوع فایل را از HTML بگیر؛ اگر نبود همه فایل‌ها
+                val acceptTypes = params?.acceptTypes?.filter { !it.isNullOrBlank() } ?: emptyList()
+                val acceptJoined = acceptTypes.joinToString(",").lowercase()
+                val isImageOnly = acceptJoined.isNotEmpty() &&
+                    acceptJoined.contains("image") &&
+                    !acceptJoined.contains("pdf") &&
+                    !acceptJoined.contains("msword") &&
+                    !acceptJoined.contains("officedocument") &&
+                    !acceptJoined.contains("*/*") &&
+                    !acceptJoined.contains("application")
+
+                val wantsCamera = params?.isCaptureEnabled == true ||
+                    acceptJoined.contains("capture") ||
+                    isImageOnly
+
+                // انتخاب فایل اصلی
+                val pick = Intent(Intent.ACTION_GET_CONTENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "image/*"
+                    type = if (isImageOnly) "image/*" else "*/*"
+                    // اگر HTML چند نوع داده، به اندروید هم بگو
+                    if (!isImageOnly && acceptTypes.isNotEmpty() && !acceptJoined.contains("*/*")) {
+                        putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes.toTypedArray())
+                    }
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, params?.mode == FileChooserParams.MODE_OPEN_MULTIPLE)
                 }
 
-                // دوربین: بدون FileProvider (نتیجه thumbnail در extras)
-                val camera = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                val initialIntents = ArrayList<Intent>()
 
+                // گالری عکس (همیشه مفید)
+                try {
+                    val gallery = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                    initialIntents.add(gallery)
+                } catch (_: Exception) {
+                }
+
+                // دوربین فقط وقتی HTML عکس می‌خواهد
+                if (wantsCamera || isImageOnly) {
+                    try {
+                        initialIntents.add(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
+                    } catch (_: Exception) {
+                    }
+                }
+
+                val title = if (isImageOnly) "انتخاب عکس" else "انتخاب فایل (PDF / Word / عکس / ...)"
                 val chooser = Intent(Intent.ACTION_CHOOSER).apply {
-                    putExtra(Intent.EXTRA_INTENT, gallery)
-                    putExtra(Intent.EXTRA_TITLE, "انتخاب عکس")
-                    putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(camera))
+                    putExtra(Intent.EXTRA_INTENT, pick)
+                    putExtra(Intent.EXTRA_TITLE, title)
+                    if (initialIntents.isNotEmpty()) {
+                        putExtra(Intent.EXTRA_INITIAL_INTENTS, initialIntents.toTypedArray())
+                    }
                 }
 
                 return try {
                     startActivityForResult(chooser, FILE_REQ)
                     true
                 } catch (e: Exception) {
-                    fileCallback = null
-                    false
+                    // fallback ساده
+                    return try {
+                        startActivityForResult(
+                            Intent.createChooser(
+                                Intent(Intent.ACTION_GET_CONTENT).apply {
+                                    addCategory(Intent.CATEGORY_OPENABLE)
+                                    type = "*/*"
+                                },
+                                "انتخاب فایل"
+                            ),
+                            FILE_REQ
+                        )
+                        true
+                    } catch (e2: Exception) {
+                        fileCallback = null
+                        false
+                    }
                 }
             }
 
@@ -137,12 +188,11 @@ class MainActivity : Activity() {
             }
         }
 
-        // باز شدن از فایل داخل اپ — نه از اینترنت
         val asset = if (BuildConfig.FLAVOR == "mother") "mother-2.html" else "school-app-33.html"
         webView.loadUrl("file:///android_asset/$asset")
     }
 
-    private fun askCameraPermission() {
+    private fun askRuntimePermissions() {
         if (Build.VERSION.SDK_INT < 23) return
         val need = ArrayList<String>()
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -151,6 +201,10 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 33) {
             if (checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
                 need.add(Manifest.permission.READ_MEDIA_IMAGES)
+            }
+        } else {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                need.add(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
         }
         if (need.isNotEmpty()) {
@@ -172,7 +226,6 @@ class MainActivity : Activity() {
         }
 
         try {
-            // گالری / فایل
             if (data?.data != null) {
                 cb.onReceiveValue(arrayOf(data.data!!))
                 return
@@ -182,7 +235,7 @@ class MainActivity : Activity() {
                 cb.onReceiveValue(Array(clip.itemCount) { i -> clip.getItemAt(i).uri })
                 return
             }
-            // دوربین: عکس کوچک در extras
+            // دوربین: thumbnail
             val bmp = data?.extras?.get("data") as? Bitmap
             if (bmp != null) {
                 val file = File(cacheDir, "cam_" + System.currentTimeMillis() + ".jpg")
