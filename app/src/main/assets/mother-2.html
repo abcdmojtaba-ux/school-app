@@ -416,14 +416,20 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
     </div>
     <p class="hint" id="login-hint">اولین ورود: نام کاربری admin و یک رمز حداقل ۶ کاراکتری وارد کنید تا ذخیره شود.</p>
     <button class="btn btn-primary btn-block" onclick="doLogin()">ورود</button>
-    <p style="text-align:center;margin-top:12px">
-      <button type="button" class="btn btn-outline btn-sm" onclick="showForgotPanel()" style="width:100%">فراموشی نام کاربری / رمز عبور</button>
-    </p>
     <p id="login-error" style="color:var(--danger);margin-top:10px;font-size:.85rem;display:none;text-align:center"></p>
-    <div id="forgot-panel" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-      <p class="hint" style="margin-bottom:10px;text-align:center">کد بازیابی را که قبلاً در تنظیمات ذخیره کرده‌اید وارد کنید، سپس نام کاربری و رمز جدید بگذارید.</p>
-      <div class="form-group"><label>کد بازیابی</label>
-        <input type="text" class="form-control" id="forgot-code" placeholder="کد بازیابی" autocomplete="off" /></div>
+
+    <button type="button" class="btn btn-outline btn-block" style="margin-top:10px;border-color:#38bdf8;color:#38bdf8" onclick="openMotherRecovery()">بازیابی نام کاربری / رمز عبور</button>
+    <div id="recovery-box" style="display:none;margin-top:16px;padding-top:12px;border-top:1px solid rgba(56,189,248,.3);text-align:right">
+      <p class="hint" style="margin-bottom:10px">با اطلاعات <b>مدیر یکی از مدارس</b> روی سرور می‌توانید حساب پنل مادر را بازنشانی کنید.</p>
+      <div class="form-group"><label>کد یا نام مدرسه (مثلاً SCH-7060)</label><input class="form-control" id="rec-school" placeholder="SCH-7060" /></div>
+      <div class="form-group"><label>نام کاربری مدیر مدرسه</label><input class="form-control" id="rec-user" autocomplete="username" /></div>
+      <div class="form-group"><label>رمز مدیر مدرسه</label><input class="form-control" id="rec-pass" type="password" autocomplete="current-password" /></div>
+      <div class="form-group"><label>نام کاربری جدید پنل مادر</label><input class="form-control" id="rec-new-user" placeholder="admin" /></div>
+      <div class="form-group"><label>رمز جدید پنل مادر (حداقل ۶ کاراکتر)</label><input class="form-control" id="rec-new-pass" type="password" /></div>
+      <button type="button" class="btn btn-success btn-block" onclick="doMotherRecovery()">بازنشانی حساب مادر</button>
+      <button type="button" class="btn btn-outline btn-block" style="margin-top:8px" onclick="closeMotherRecovery()">انصراف</button>
+    </div>
+
       <div class="form-group"><label>نام کاربری جدید</label>
         <input type="text" class="form-control" id="forgot-user" placeholder="مثلاً admin" autocomplete="off" /></div>
       <div class="form-group"><label>رمز جدید (حداقل ۶ کاراکتر)</label>
@@ -556,11 +562,23 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
           <div class="form-group"><label>فونت</label>
             <select class="form-control" id="brand-font">
               <option value="Tahoma, sans-serif">Tahoma (پیش‌فرض)</option>
-              <option value="Tahoma, 'Segoe UI', Arial, sans-serif">Tahoma + Segoe</option>
-              <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+              <option value="Vazirmatn, Tahoma, sans-serif">وزیر متن (Vazirmatn)</option>
+              <option value="Samim, Tahoma, sans-serif">صمیم (Samim)</option>
+              <option value="Shabnam, Tahoma, sans-serif">شبنم (Shabnam)</option>
+              <option value="Gandom, Tahoma, sans-serif">گندم (Gandom)</option>
+              <option value="Tanha, Tahoma, sans-serif">تنها (Tanha)</option>
+              <option value="Estedad, Tahoma, sans-serif">استعداد (Estedad)</option>
+              <option value="'Noto Naskh Arabic', Tahoma, serif">نسخ (Noto Naskh)</option>
+              <option value="'Noto Nastaliq Urdu', 'Iranian Sans', serif">نستعلیق (Noto Nastaliq)</option>
+              <option value="Amiri, 'Times New Roman', serif">امیری کلاسیک (Amiri)</option>
+              <option value="'Scheherazade New', serif">شهرزاد (Scheherazade)</option>
+              <option value="Markazi Text, serif">مرکزی (Markazi Text)</option>
+              <option value="Lalezar, Tahoma, sans-serif">لاله‌زار نمایشی (Lalezar)</option>
+              <option value="Cairo, Tahoma, sans-serif">قاهره (Cairo)</option>
+              <option value="Tajawal, Tahoma, sans-serif">تجوال (Tajawal)</option>
+              <option value="'IBM Plex Sans Arabic', Tahoma, sans-serif">IBM عربی</option>
+              <option value="Georgia, serif">Georgia</option>
               <option value="Arial, Helvetica, sans-serif">Arial</option>
-              <option value="Georgia, serif">Georgia (رسمی)</option>
-              <option value="'Courier New', monospace">Courier (ساده)</option>
             </select></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="form-group"><label>اندازه عنوان</label>
@@ -1002,6 +1020,105 @@ function jalaliSelectHtml(prefix, iso) {
 }
 
 /* Auth */
+
+function openMotherRecovery(){
+  var box=document.getElementById('recovery-box');
+  if(box){
+    box.style.display='block';
+    try{ box.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
+  }
+  try{
+    var hint=document.getElementById('login-hint');
+    if(hint) hint.innerHTML='بازیابی: کد مدرسه و کاربری/رمز <b>مدیر همان مدرسه</b> را بزنید.';
+  }catch(e){}
+}
+function closeMotherRecovery(){
+  var box=document.getElementById('recovery-box');
+  if(box) box.style.display='none';
+}
+async function doMotherRecovery(){
+  var code=String((document.getElementById('rec-school')||{}).value||'').trim();
+  var user=String((document.getElementById('rec-user')||{}).value||'').trim();
+  var pass=String((document.getElementById('rec-pass')||{}).value||'').trim();
+  var nu=String((document.getElementById('rec-new-user')||{}).value||'').trim()||'admin';
+  var np=String((document.getElementById('rec-new-pass')||{}).value||'').trim();
+  if(!code||!user||!pass) return toast('کد مدرسه و کاربری/رمز مدیر لازم است');
+  if(np.length<6) return toast('رمز جدید مادر حداقل ۶ کاراکتر');
+  toast('در حال بررسی از سرور...');
+  try{
+    var data = await apiFetch('/api/schools', { retries: 2, timeoutMs: 25000 });
+    var schools = (data && data.schools) || [];
+    var codeN = code.toUpperCase().split(' ').join('');
+    var found = null;
+    for(var i=0;i<schools.length;i++){
+      var s=schools[i];
+      if(!s) continue;
+      var sc=String(s.code||'').toUpperCase();
+      var sn=String(s.name||'');
+      if(sc===codeN || sc.indexOf(codeN)>=0 || sn.indexOf(code)>=0){ found=s; break; }
+    }
+    if(!found){
+      // fallback local mother schools
+      try{
+        var local = (typeof loadMother === 'function') ? loadMother() : (state && state.schools);
+        var list = (local && local.schools) || (Array.isArray(local)?local:[]) || [];
+        for(var j=0;j<list.length;j++){
+          var s2=list[j];
+          if(!s2) continue;
+          var sc2=String(s2.code||'').toUpperCase();
+          var sn2=String(s2.name||'');
+          if(sc2===codeN || sc2.indexOf(codeN)>=0 || sn2.indexOf(code)>=0){ found=s2; break; }
+        }
+      }catch(e){}
+    }
+    if(!found) return toast('مدرسه روی سرور پیدا نشد');
+    var mu=String(found.managerUsername||'').trim();
+    var mp=String(found.managerPassword||'').trim();
+    function norm(x){
+      var s = String(x || '').trim();
+      var fa = '۰۱۲۳۴۵۶۷۸۹';
+      var ar = '٠١٢٣٤٥٦٧٨٩';
+      var out = '';
+      for (var i = 0; i < s.length; i++) {
+        var ch = s.charAt(i);
+        var fi = fa.indexOf(ch);
+        if (fi >= 0) { out += String(fi); continue; }
+        var ai = ar.indexOf(ch);
+        if (ai >= 0) { out += String(ai); continue; }
+        out += ch;
+      }
+      return out;
+    }
+    if(norm(mu)!==norm(user) || norm(mp)!==norm(pass)){
+      return toast('نام کاربری یا رمز مدیر این مدرسه اشتباه است');
+    }
+    if(typeof state === 'undefined'){ window.state = window.state || {}; }
+    state.motherUser = nu;
+    state.motherPass = np;
+    if(typeof save === 'function') save();
+    else {
+      try{
+        var m = JSON.parse(localStorage.getItem('nikan_mother')||'{}');
+        m.motherUser = nu; m.motherPass = np;
+        localStorage.setItem('nikan_mother', JSON.stringify(m));
+      }catch(e){}
+    }
+    if(schools && schools.length && typeof state !== 'undefined'){
+      try{
+        state.schools = schools.map(function(s){ return Object.assign({}, s, { _synced:true, _pushed:true }); });
+        if(typeof save === 'function') save();
+      }catch(e){}
+    }
+    try{ document.getElementById('login-user').value = nu; }catch(e){}
+    try{ document.getElementById('login-pass').value = ''; }catch(e){}
+    closeMotherRecovery();
+    toast('حساب مادر بازنشانی شد — با نام کاربری و رمز جدید وارد شوید', 5000);
+  }catch(err){
+    console.error(err);
+    toast('خطا در بازیابی — اتصال اینترنت و سرور را بررسی کنید');
+  }
+}
+
 function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
@@ -1068,7 +1185,7 @@ function showPage(name) {
   if (page) page.classList.add('active');
   if (name === 'dashboard') renderDashboard();
   if (name === 'schools') renderSchools();
-  if (name === 'branding') { try{ loadBrandingIntoMother(); }catch(e){} }
+  if (name === 'branding') { try{ loadBrandingIntoMother(); }catch(e){} try{ setTimeout(bindBrandLivePreview, 50); }catch(e){} try{ setTimeout(updateBrandLivePreview, 100); }catch(e){} }
   if (name === 'settings') { fillMotherAccountForm(); }
 }
 
@@ -1566,64 +1683,11 @@ function fillMotherAccountForm(){
     }
   }
 }
-function showForgotPanel(){
-  var p = document.getElementById('forgot-panel');
-  if (p) p.style.display = 'block';
-  var err = document.getElementById('login-error');
-  if (err) err.style.display = 'none';
-  if (!state.motherPass) {
-    toast('هنوز حسابی ساخته نشده — با admin و رمز جدید وارد شوید');
-  } else if (!state.motherRecoveryCode) {
-    toast('کد بازیابی تنظیم نشده — فقط از دستگاه قبلی یا پشتیبان ممکن است');
-  }
-}
-function hideForgotPanel(){
-  var p = document.getElementById('forgot-panel');
-  if (p) p.style.display = 'none';
-}
-function doForgotReset(){
-  if (!state.motherPass) return toast('حسابی وجود ندارد — از صفحه ورود رمز اولیه بگذارید');
-  if (!state.motherRecoveryCode) return toast('کد بازیابی ذخیره نشده. نمی‌توان بازیابی کرد.');
-  var code = (document.getElementById('forgot-code').value || '').trim();
-  var user = (document.getElementById('forgot-user').value || '').trim();
-  var p1 = document.getElementById('forgot-pass').value || '';
-  var p2 = document.getElementById('forgot-pass2').value || '';
-  if (!code) return toast('کد بازیابی را وارد کنید');
-  if (code !== String(state.motherRecoveryCode)) return toast('کد بازیابی اشتباه است');
-  if (!user || user.length < 3) return toast('نام کاربری حداقل ۳ کاراکتر');
-  if (p1.length < 6) return toast('رمز جدید حداقل ۶ کاراکتر');
-  if (p1 !== p2) return toast('تکرار رمز یکسان نیست');
-  state.motherUser = user;
-  state.motherPass = p1;
-  save();
-  toast('حساب بازیابی شد — وارد می‌شوید');
-  try {
-    document.getElementById('login-user').value = user;
-    document.getElementById('login-pass').value = p1;
-  } catch (e) {}
-  hideForgotPanel();
-  enterApp();
-}
-function genRecoveryCodeHint(){
-  var a = Math.random().toString(36).slice(2, 6).toUpperCase();
-  var b = Math.random().toString(36).slice(2, 6).toUpperCase();
-  var c = Math.random().toString(36).slice(2, 4).toUpperCase();
-  var el = document.getElementById('recovery-code-new');
-  if (el) el.value = a + '-' + b + '-' + c;
-  toast('کد پیشنهادی در فیلد قرار گرفت — ذخیره را بزنید');
-}
-function saveRecoveryCode(){
-  var cur = document.getElementById('recovery-cur-pass').value || '';
-  if (cur !== state.motherPass) return toast('رمز فعلی اشتباه است');
-  var code = (document.getElementById('recovery-code-new').value || '').trim();
-  if (code.length < 8) return toast('کد بازیابی حداقل ۸ کاراکتر باشد');
-  state.motherRecoveryCode = code;
-  save();
-  document.getElementById('recovery-code-new').value = '';
-  document.getElementById('recovery-cur-pass').value = '';
-  fillMotherAccountForm();
-  toast('کد بازیابی ذخیره شد — آن را جایی امن یادداشت کنید');
-}
+
+
+
+
+
 
 function downloadJsonFile(obj, filename) {
   const json = JSON.stringify(obj, null, 2);
@@ -1955,7 +2019,8 @@ async function loadBrandingIntoMother(){
     fillBrandForm(data);
     var st = document.getElementById('brand-status');
     if(st) st.textContent = (data.logo || data.bgImage || data.announce) ? 'ظاهر سفارشی روی سرور ذخیره شده است.' : 'هنوز ظاهر سفارشی تنظیم نشده.';
-  }catch(err){ console.warn('load branding', err); }
+    try{ bindBrandLivePreview(); updateBrandLivePreview(); }catch(_e){}
+  }catch(err){ console.warn('load branding', err); try{ bindBrandLivePreview(); updateBrandLivePreview(); }catch(_e2){} }
 }
 
 function brandIsImageFile(file){
@@ -2123,96 +2188,132 @@ function collectBrandForm(){
 }
 
 
+
+
+window._nikanFontLinks = window._nikanFontLinks || {};
+function ensureNikanBrandFonts(fontFamily){
+  try{
+    var ff = String(fontFamily || '');
+    var links = [];
+    if(/Vazirmatn/i.test(ff)) links.push({id:'nf-vazir', href:'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css'});
+    if(/Samim/i.test(ff)) links.push({id:'nf-samim', href:'https://cdn.jsdelivr.net/gh/rastikerdar/samim-font@v4.0.5/dist/font-face.css'});
+    if(/Shabnam/i.test(ff)) links.push({id:'nf-shabnam', href:'https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css'});
+    if(/Gandom/i.test(ff)) links.push({id:'nf-gandom', href:'https://cdn.jsdelivr.net/gh/rastikerdar/gandom-font@v1.0.0/dist/font-face.css'});
+    if(/Tanha/i.test(ff)) links.push({id:'nf-tanha', href:'https://cdn.jsdelivr.net/gh/rastikerdar/tanha-font@v0.9.0/dist/font-face.css'});
+    if(/Estedad/i.test(ff)) links.push({id:'nf-estedad', href:'https://cdn.jsdelivr.net/gh/aminabedi68/Estedad@v7.3/fonts/webfonts/estedad.css'});
+    if(/Noto Naskh/i.test(ff) || /Noto Nastaliq/i.test(ff) || /Amiri/i.test(ff) || /Scheherazade/i.test(ff) || /Markazi/i.test(ff) || /Lalezar/i.test(ff) || /Cairo/i.test(ff) || /Tajawal/i.test(ff) || /IBM Plex/i.test(ff)){
+      links.push({id:'nf-gfonts', href:'https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Lalezar&family=Markazi+Text:wght@400;600;700&family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Scheherazade+New:wght@400;700&family=Tajawal:wght@400;500;700&display=swap'});
+    }
+    links.forEach(function(L){
+      if(document.getElementById(L.id)) return;
+      var link = document.createElement('link');
+      link.id = L.id;
+      link.rel = 'stylesheet';
+      link.href = L.href;
+      document.head.appendChild(link);
+    });
+  }catch(e){ console.warn('font load', e); }
+}
+
 function updateBrandLivePreview(){
   try{
-    var d = (typeof collectBrandForm === 'function') ? collectBrandForm() : null;
-    if(!d){
-      d = {
-        logo: window._brandLogoData || '',
-        bgImage: window._brandBgData || '',
-        title: (document.getElementById('brand-title')||{}).value || 'سامانه نیکان',
-        subtitle: (document.getElementById('brand-subtitle')||{}).value || '',
-        announce: (document.getElementById('brand-announce')||{}).value || '',
-        ad: (document.getElementById('brand-ad')||{}).value || '',
-        bg: (document.getElementById('brand-bg')||{}).value || '#070b14',
-        accent: (document.getElementById('brand-accent')||{}).value || '#38bdf8',
-        text: (document.getElementById('brand-text')||{}).value || '#e8eef7',
-        card: (document.getElementById('brand-card')||{}).value || '#111a2e',
-        font: (document.getElementById('brand-font')||{}).value || 'Tahoma, sans-serif',
-        titleSize: (document.getElementById('brand-title-size')||{}).value || '1.65rem',
-        bodySize: (document.getElementById('brand-body-size')||{}).value || '14.5px',
-        bgOverlay: parseInt((document.getElementById('brand-bg-overlay')||{}).value, 10) || 55
-      };
+    try{ var _ff=(document.getElementById("brand-font")||{}).value; ensureNikanBrandFonts(_ff); }catch(_e){}
+    function gv(id, fallback){
+      var el = document.getElementById(id);
+      if(!el) return fallback;
+      if(el.type === 'checkbox') return el.checked;
+      return el.value != null ? el.value : fallback;
     }
+    var d = {
+      logo: window._brandLogoData || '',
+      bgImage: window._brandBgData || '',
+      title: gv('brand-title', 'سامانه نیکان'),
+      subtitle: gv('brand-subtitle', 'ورود مدارس · مدیر / معاون / معلم'),
+      announce: gv('brand-announce', ''),
+      ad: gv('brand-ad', ''),
+      bg: gv('brand-bg', '#070b14'),
+      accent: gv('brand-accent', '#38bdf8'),
+      text: gv('brand-text', '#e8eef7'),
+      card: gv('brand-card', '#111a2e'),
+      font: gv('brand-font', 'Tahoma, sans-serif'),
+      titleSize: gv('brand-title-size', '1.65rem'),
+      bodySize: gv('brand-body-size', '14.5px'),
+      bgOverlay: parseInt(gv('brand-bg-overlay', '55'), 10) || 55
+    };
+
     var root = document.getElementById('brand-live-preview');
     if(!root) return;
-    root.style.fontFamily = d.font || 'Tahoma, sans-serif';
-    root.style.fontSize = d.bodySize || '14.5px';
-    root.style.color = d.text || '#e8eef7';
+    root.style.fontFamily = d.font;
+    root.style.fontSize = d.bodySize;
+    root.style.color = d.text;
 
     var bg = document.getElementById('blp-bg');
     if(bg){
-      var ov = Math.min(90, Math.max(0, parseInt(d.bgOverlay, 10) || 55)) / 100;
+      var ov = Math.min(90, Math.max(0, d.bgOverlay)) / 100;
       if(d.bgImage){
-        bg.style.background = 'linear-gradient(rgba(0,0,0,'+ov+'), rgba(0,0,0,'+ov+')), url('+d.bgImage+') center/cover no-repeat';
+        bg.style.backgroundImage = 'linear-gradient(rgba(0,0,0,'+ov+'), rgba(0,0,0,'+ov+')), url(\"'+d.bgImage+'\")';
+        bg.style.backgroundSize = 'cover';
+        bg.style.backgroundPosition = 'center';
+        bg.style.backgroundRepeat = 'no-repeat';
       }else{
-        bg.style.background = 'radial-gradient(600px 300px at 50% 0%, '+(d.accent||'#38bdf8')+'33, transparent 60%), linear-gradient(180deg, '+(d.bg||'#070b14')+', '+(d.bg||'#070b14')+')';
+        bg.style.backgroundImage = 'radial-gradient(600px 300px at 50% 0%, '+d.accent+'33, transparent 60%), linear-gradient(180deg, '+d.bg+', '+d.bg+')';
+        bg.style.backgroundSize = '';
+        bg.style.backgroundPosition = '';
       }
     }
 
     var logo = document.getElementById('blp-logo');
     if(logo){
       if(d.logo){
-        logo.innerHTML = '';
-        var im = document.createElement('img');
-        im.src = d.logo;
-        im.alt = 'logo';
-        im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
-        logo.appendChild(im);
+        logo.innerHTML = '<img src=\"'+d.logo+'\" alt=\"logo\" style=\"width:100%;height:100%;object-fit:cover;display:block\" />';
         logo.style.background = 'transparent';
       }else{
-        logo.textContent = 'ن';
-        logo.style.background = 'linear-gradient(145deg,'+(d.accent||'#67e8f9')+','+(d.accent||'#0ea5e9')+')';
+        logo.innerHTML = 'ن';
+        logo.style.background = 'linear-gradient(145deg,'+d.accent+','+d.accent+')';
       }
-      logo.style.boxShadow = '0 8px 28px '+(d.accent||'#0ea5e9')+'55';
+      logo.style.boxShadow = '0 8px 28px '+d.accent+'55';
     }
 
     var title = document.getElementById('blp-title');
     if(title){
       title.textContent = d.title || 'سامانه نیکان';
-      title.style.fontSize = d.titleSize || '1.65rem';
-      title.style.color = d.text || '#fff';
-      title.style.fontFamily = d.font || 'Tahoma, sans-serif';
+      title.style.fontSize = d.titleSize;
+      title.style.color = d.text;
+      title.style.fontFamily = d.font;
     }
     var sub = document.getElementById('blp-subtitle');
     if(sub){
-      sub.textContent = d.subtitle || 'ورود مدارس · مدیر / معاون / معلم';
-      sub.style.color = d.text || '#e8eef7';
-      sub.style.fontFamily = d.font || 'Tahoma, sans-serif';
+      sub.textContent = d.subtitle || '';
+      sub.style.color = d.text;
+      sub.style.opacity = '0.9';
+      sub.style.fontFamily = d.font;
+      sub.style.fontSize = d.bodySize;
     }
 
     var card = document.getElementById('blp-card');
     if(card){
-      card.style.background = (d.card || '#111a2e');
-      card.style.borderColor = (d.accent || '#38bdf8')+'44';
-      card.style.color = d.text || '#e8eef7';
-      card.style.fontFamily = d.font || 'Tahoma, sans-serif';
+      card.style.background = d.card;
+      card.style.borderColor = d.accent + '44';
+      card.style.color = d.text;
+      card.style.fontFamily = d.font;
     }
     var ct = document.getElementById('blp-card-title');
-    if(ct) ct.style.color = d.accent || '#38bdf8';
+    if(ct){ ct.style.color = d.accent; ct.style.fontFamily = d.font; }
     var btn = document.getElementById('blp-btn');
     if(btn){
-      btn.style.background = 'linear-gradient(135deg,'+(d.accent||'#38bdf8')+','+(d.accent||'#0ea5e9')+')';
+      btn.style.background = 'linear-gradient(135deg,'+d.accent+','+d.accent+')';
+      btn.style.fontFamily = d.font;
     }
 
     var ann = document.getElementById('blp-announce');
     if(ann){
-      if(d.announce){
+      if(d.announce && String(d.announce).trim()){
         ann.style.display = 'block';
         ann.textContent = d.announce;
-        ann.style.background = (d.accent || '#38bdf8')+'22';
-        ann.style.color = d.accent || '#38bdf8';
-        ann.style.border = '1px solid '+(d.accent||'#38bdf8')+'55';
+        ann.style.background = d.accent + '22';
+        ann.style.color = d.accent;
+        ann.style.border = '1px solid ' + d.accent + '55';
+        ann.style.fontFamily = d.font;
       }else{
         ann.style.display = 'none';
         ann.textContent = '';
@@ -2220,11 +2321,12 @@ function updateBrandLivePreview(){
     }
     var ad = document.getElementById('blp-ad');
     if(ad){
-      if(d.ad){
+      if(d.ad && String(d.ad).trim()){
         ad.style.display = 'block';
         ad.textContent = d.ad;
-        ad.style.color = d.text || '#e8eef7';
-        ad.style.borderColor = (d.accent || '#38bdf8')+'33';
+        ad.style.color = d.text;
+        ad.style.borderColor = d.accent + '33';
+        ad.style.fontFamily = d.font;
       }else{
         ad.style.display = 'none';
         ad.textContent = '';
@@ -2234,16 +2336,36 @@ function updateBrandLivePreview(){
 }
 
 function bindBrandLivePreview(){
-  var ids = ['brand-title','brand-subtitle','brand-announce','brand-ad','brand-ad-link','brand-bg','brand-accent','brand-text','brand-card','brand-font','brand-title-size','brand-body-size','brand-bg-overlay','brand-enabled'];
-  ids.forEach(function(id){
-    var el = document.getElementById(id);
-    if(!el || el._brandPrevBound) return;
-    el._brandPrevBound = true;
-    el.addEventListener('input', updateBrandLivePreview);
-    el.addEventListener('change', updateBrandLivePreview);
-  });
-  updateBrandLivePreview();
+  try{
+    var page = document.getElementById('page-branding');
+    if(page && !page._brandDelegated){
+      page._brandDelegated = true;
+      page.addEventListener('input', function(ev){
+        var t = ev.target;
+        if(!t || !t.id) return;
+        if(String(t.id).indexOf('brand-') === 0) updateBrandLivePreview();
+      }, true);
+      page.addEventListener('change', function(ev){
+        var t = ev.target;
+        if(!t || !t.id) return;
+        if(String(t.id).indexOf('brand-') === 0) updateBrandLivePreview();
+      }, true);
+    }
+    var ids = ['brand-title','brand-subtitle','brand-announce','brand-ad','brand-ad-link','brand-bg','brand-accent','brand-text','brand-card','brand-font','brand-title-size','brand-body-size','brand-bg-overlay','brand-enabled'];
+    ids.forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      if(!el._brandPrevBound){
+        el._brandPrevBound = true;
+        el.addEventListener('input', updateBrandLivePreview);
+        el.addEventListener('change', updateBrandLivePreview);
+        el.addEventListener('keyup', updateBrandLivePreview);
+      }
+    });
+    updateBrandLivePreview();
+  }catch(err){ console.warn('bind preview', err); }
 }
+
 
 async function saveBranding(){
   toast('در حال ارسال ظاهر ورود به سرور...');
