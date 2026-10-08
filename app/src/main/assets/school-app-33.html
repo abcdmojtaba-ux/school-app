@@ -10029,10 +10029,13 @@ function ensureNikanBrandFonts(fontFamily){
   }catch(e){ console.warn('font load', e); }
 }
 
+
 function applyBrandingToDom(raw){
   try{
     var d = Object.assign(defaultBrand(), raw || {});
-    try{ ensureNikanBrandFonts(d.font); }catch(_e){}
+    try{
+      ensureNikanBrandFonts(d.fontTitle||d.font, d.fontSubtitle||d.font, d.fontBody||d.font, d.fontAnnounce||d.font, d.font);
+    }catch(_e){}
     var st = ensureBrandStyleEl();
     if(d.enabled === false){
       st.textContent = '';
@@ -10042,8 +10045,11 @@ function applyBrandingToDom(raw){
       if(ad0) ad0.style.display = 'none';
       return;
     }
+    var fTitle = d.fontTitle || d.font || 'Tahoma, sans-serif';
+    var fSub = d.fontSubtitle || d.font || 'Tahoma, sans-serif';
+    var fBody = d.fontBody || d.font || 'Tahoma, sans-serif';
+    var fAnn = d.fontAnnounce || d.font || 'Tahoma, sans-serif';
 
-    // فقط صفحات ورود (.auth-bg / .auth-logo / .auth-card) — داخل اپ مدرسه دست نخورده می‌ماند
     document.querySelectorAll('.auth-bg .brand-orb, .auth-logo .brand-orb, #screen-gate .brand-orb, #screen-login .brand-orb, #screen-register .brand-orb').forEach(function(el){
       if(d.logo){
         el.innerHTML = '<img src="'+d.logo+'" alt="logo" />';
@@ -10051,7 +10057,6 @@ function applyBrandingToDom(raw){
         el.innerHTML = 'ن';
       }
     });
-
     document.querySelectorAll('.auth-logo h1').forEach(function(h, idx){
       if(d.title && idx === 0) h.textContent = d.title;
     });
@@ -10066,6 +10071,7 @@ function applyBrandingToDom(raw){
       ann.style.background = 'rgba(56,189,248,.15)';
       ann.style.color = d.accent || '#38bdf8';
       ann.style.border = '1px solid '+(d.accent||'#38bdf8')+'55';
+      ann.style.fontFamily = fAnn;
       var host = document.querySelector('#screen-gate .auth-bg, .screen.active .auth-bg, .auth-bg');
       if(host && !host.contains(ann)){
         try{ host.insertBefore(ann, host.firstChild); }catch(e){}
@@ -10079,6 +10085,7 @@ function applyBrandingToDom(raw){
       ad.style.display = 'block';
       ad.style.background = (d.card || '#111a2e');
       ad.style.color = d.text || '#e8eef7';
+      ad.style.fontFamily = fAnn;
       if(d.adLink){
         ad.innerHTML = '<a href="'+String(d.adLink).replace(/"/g,'&quot;')+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">'+String(d.ad).replace(/</g,'&lt;')+'</a>';
       }else{
@@ -10097,23 +10104,18 @@ function applyBrandingToDom(raw){
       ? ('linear-gradient(rgba(0,0,0,'+ov+'), rgba(0,0,0,'+ov+')), url('+d.bgImage+') center/cover no-repeat fixed')
       : ('radial-gradient(600px 300px at 50% 0%, '+ (d.accent||'#38bdf8') +'33, transparent 60%), linear-gradient(180deg, '+ (d.bg||'#070b14') +' 0%, '+ (d.bg||'#070b14') +' 100%)');
 
-    // همه سلکتورها فقط زیر صفحات ورود — بدون تأثیر روی #screen-app و داشبورد
     var css = ''
-      + '.auth-bg{'
-      + 'background:'+bgImg+' !important;'
-      + 'font-family:'+(d.font||'Tahoma,sans-serif')+' !important;'
-      + 'color:'+(d.text||'#e8eef7')+' !important;'
-      + 'font-size:'+(d.bodySize||'14.5px')+' !important;'
-      + '}'
-      + '.auth-bg .auth-logo h1, .auth-logo h1{font-size:'+(d.titleSize||'1.65rem')+' !important;color:'+(d.text||'#fff')+' !important;font-family:'+(d.font||'Tahoma,sans-serif')+' !important;}'
-      + '.auth-bg .auth-logo p, .auth-logo p{color:'+(d.text||'#e8eef7')+' !important;opacity:.9;font-family:'+(d.font||'Tahoma,sans-serif')+' !important;}'
-      + '.auth-bg .auth-card, .auth-card{background:'+(d.card||'#111a2e')+'ee !important;border-color:'+(d.accent||'#38bdf8')+'33 !important;color:'+(d.text||'#e8eef7')+' !important;font-family:'+(d.font||'Tahoma,sans-serif')+' !important;}'
+      + '.auth-bg{background:'+bgImg+' !important;color:'+(d.text||'#e8eef7')+' !important;}'
+      + '.auth-bg .auth-logo h1, .auth-logo h1{font-size:'+(d.titleSize||'1.65rem')+' !important;color:'+(d.text||'#fff')+' !important;font-family:'+fTitle+' !important;}'
+      + '.auth-bg .auth-logo p, .auth-logo p{color:'+(d.text||'#e8eef7')+' !important;opacity:.9;font-family:'+fSub+' !important;}'
+      + '.auth-bg .auth-card, .auth-card{background:'+(d.card||'#111a2e')+'ee !important;border-color:'+(d.accent||'#38bdf8')+'33 !important;color:'+(d.text||'#e8eef7')+' !important;font-family:'+fBody+' !important;font-size:'+(d.bodySize||'14.5px')+' !important;}'
+      + '.auth-bg .auth-card h2, .auth-card h2, .auth-bg .auth-card label, .auth-card label, .auth-bg .auth-card input, .auth-card input, .auth-bg .auth-card button, .auth-card button, .auth-bg .btn, .auth-card .btn{font-family:'+fBody+' !important;}'
       + '.auth-bg .auth-card h2, .auth-card h2{color:'+(d.accent||'#38bdf8')+' !important;}'
       + '.auth-bg .btn-primary, .auth-card .btn-primary{background:linear-gradient(135deg,'+(d.accent||'#38bdf8')+','+(d.accent||'#0ea5e9')+') !important;}'
       + '.auth-bg .role-btn.active, .auth-card .role-btn.active{border-color:'+(d.accent||'#38bdf8')+' !important;color:'+(d.accent||'#38bdf8')+' !important;background:'+(d.accent||'#38bdf8')+'22 !important;}'
       + '.auth-bg .brand-orb, .auth-logo .brand-orb{box-shadow:0 0 0 1px '+(d.accent||'#38bdf8')+'55,0 12px 40px '+(d.accent||'#0ea5e9')+'55 !important;overflow:hidden;}'
       + '.auth-bg .brand-orb img, .auth-logo .brand-orb img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;}'
-      + '#nikan-brand-announce,#nikan-brand-ad{font-family:'+(d.font||'Tahoma,sans-serif')+' !important;}'
+      + '#nikan-brand-announce,#nikan-brand-ad{font-family:'+fAnn+' !important;}'
       + '#screen-app #nikan-brand-announce, #screen-app #nikan-brand-ad, .app-shell #nikan-brand-announce, .app-shell #nikan-brand-ad{display:none !important;}';
     st.textContent = css;
   }catch(e){ console.warn('apply brand', e); }
