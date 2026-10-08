@@ -105,6 +105,9 @@ body.theme-light .auth-logo{color:#0f172a}
   background:linear-gradient(145deg,#67e8f9,#0ea5e9);
   box-shadow:0 0 0 1px rgba(103,232,249,.4),0 12px 40px rgba(14,165,233,.35);
 }
+.brand-orb{overflow:hidden}
+.brand-orb img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+
 .auth-card{
   background:rgba(17,26,46,.92);
   border:1px solid rgba(56,189,248,.18);
@@ -462,10 +465,72 @@ body.theme-light .contact-item{background:#fff;color:#0f172a!important}
 #live-cam-box video{width:min(100%,360px);max-height:50vh;background:#000;border-radius:12px}
 #live-cam-box .row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
 
+#photo-crop-overlay{display:none;position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:12px;flex-direction:column}
+#photo-crop-overlay.show{display:flex}
+#photo-crop-box{background:#111a2e;border:1px solid rgba(56,189,248,.25);border-radius:16px;width:100%;max-width:420px;max-height:96vh;overflow:auto;padding:14px;color:#e8eef7}
+#photo-crop-box h3{margin:0 0 10px;font-size:1rem;color:#38bdf8;text-align:center}
+#photo-crop-stage{position:relative;width:100%;height:280px;background:#0a1220;border-radius:12px;overflow:hidden;touch-action:none;user-select:none}
+#photo-crop-canvas{display:block;width:100%;height:100%}
+#photo-crop-mask{position:absolute;inset:0;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,.55)}
+.photo-crop-controls{margin-top:12px}
+.photo-crop-controls label{display:flex;align-items:center;justify-content:space-between;font-size:.82rem;color:#cbd5e1;margin-bottom:4px}
+.photo-crop-controls input[type=range]{width:100%;margin-bottom:10px}
+.photo-crop-actions{display:flex;gap:8px;margin-top:8px}
+.photo-crop-actions .btn{flex:1}
+.photo-crop-hint{font-size:.75rem;color:#8b9cb3;text-align:center;margin:6px 0 0}
+
 </style>
 
 
 <script>
+
+/* —— ذخیره فایل روی اندروید (WebView) —— */
+function isAndroidBridge(){
+  try{ return !!(window.NikanAndroid && typeof window.NikanAndroid.saveFile === 'function'); }catch(e){ return false; }
+}
+function saveFileAndroidOrWeb(content, filename, mime){
+  mime = mime || 'application/json;charset=utf-8';
+  filename = filename || ('nikan-' + Date.now() + '.json');
+  try{
+    if(isAndroidBridge()){
+      var payload = content;
+      var isDataUrl = typeof content === 'string' && content.indexOf('data:') === 0;
+      if(!isDataUrl && typeof content === 'string'){
+        try{
+          payload = 'data:' + mime.split(';')[0] + ';base64,' + btoa(unescape(encodeURIComponent(content)));
+        }catch(e1){
+          try{ payload = 'data:application/json;base64,' + btoa(content); }catch(e2){ payload = content; }
+        }
+      }
+      var ok = window.NikanAndroid.saveFile(payload, filename, mime);
+      if(ok){ try{ toast('فایل در پوشه Downloads ذخیره شد: ' + filename); }catch(e){} return true; }
+      try{ toast('ذخیره روی دستگاه ناموفق بود'); }catch(e){}
+      return false;
+    }
+  }catch(e){ console.warn('android save', e); }
+  try{
+    if(typeof content === 'string' && content.indexOf('data:') === 0){
+      var a = document.createElement('a');
+      a.href = content;
+      a.download = filename;
+      a.click();
+      return true;
+    }
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a2 = document.createElement('a');
+    a2.href = url;
+    a2.download = filename;
+    a2.click();
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 2000);
+    return true;
+  }catch(e3){
+    try{ toast('دانلود پشتیبانی نشد'); }catch(e){}
+    return false;
+  }
+}
+
+
 /* bootstrap — حتی اگر اسکریپت اصلی دیر/ناقص لود شود دکمه‌های ورود کار کنند */
 window.showScreen=window.showScreen||function(n){
   try{
@@ -525,12 +590,10 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <div class="form-group"><label>نام مدیر *</label><input class="form-control" id="r-manager" /></div>
       <div class="form-group"><label>شماره تماس *</label><input class="form-control" id="r-phone" type="tel" /></div>
       <div class="form-group"><label>شهر</label><input class="form-control" id="r-city" /></div>
-      <form onsubmit="event.preventDefault();doRegister();return false;" autocomplete="on">
-      <div class="form-group"><label>نام کاربری مدیر *</label><input class="form-control" id="r-user" name="username" autocomplete="username" /></div>
-      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="r-pass" name="password" type="password" autocomplete="new-password" /></div>
-      <div class="form-group"><label>تکرار رمز *</label><input class="form-control" id="r-pass2" name="password-confirm" type="password" autocomplete="new-password" /></div>
-      <button class="btn btn-success btn-block" type="submit">ثبت‌نام و ورود</button>
-      </form>
+      <div class="form-group"><label>نام کاربری مدیر *</label><input class="form-control" id="r-user" /></div>
+      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="r-pass" type="password" /></div>
+      <div class="form-group"><label>تکرار رمز *</label><input class="form-control" id="r-pass2" type="password" /></div>
+      <button class="btn btn-success btn-block" onclick="doRegister()">ثبت‌نام و ورود</button>
       <p style="text-align:center;margin-top:12px"><button class="linkish" onclick="showScreen('gate')">بازگشت</button></p>
     </div>
   </div>
@@ -545,17 +608,15 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
         <button type="button" class="role-btn" data-role="deputy" onclick="pickRole(this)"><span>📋</span>معاون</button>
         <button type="button" class="role-btn" data-role="teacher" onclick="pickRole(this)"><span>📚</span>معلم</button>
       </div>
-      <form onsubmit="event.preventDefault();doLogin();return false;" autocomplete="on">
-      <div class="form-group"><label>کد مدرسه</label><input class="form-control" id="l-code" name="organization" placeholder="SCH-...." autocomplete="organization" inputmode="text" /></div>
-      <div class="form-group"><label>نام کاربری *</label><input class="form-control" id="l-user" name="username" autocomplete="username" inputmode="text" /></div>
-      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="l-pass" name="password" type="password" autocomplete="current-password" /></div>
+      <div class="form-group"><label>کد مدرسه</label><input class="form-control" id="l-code" placeholder="SCH-...." autocomplete="organization" inputmode="text" /></div>
+      <div class="form-group"><label>نام کاربری *</label><input class="form-control" id="l-user" autocomplete="username" inputmode="text" /></div>
+      <div class="form-group"><label>رمز عبور *</label><input class="form-control" id="l-pass" type="password" autocomplete="current-password" /></div>
       <label style="display:flex;align-items:center;gap:8px;margin:10px 0 14px;cursor:pointer;user-select:none">
         <input type="checkbox" id="l-remember" checked style="width:18px;height:18px" />
         <span>ذخیره کد مدرسه و نام کاربری روی این دستگاه</span>
       </label>
       <p class="hint" style="margin-top:-8px;margin-bottom:10px">دفعه بعد لازم نیست دوباره کد و نام کاربری را بنویسید. رمز ذخیره نمی‌شود.</p>
-      <button class="btn btn-primary btn-block" id="btn-login" type="submit">ورود</button>
-      </form>
+      <button class="btn btn-primary btn-block" id="btn-login" onclick="doLogin()">ورود</button>
       <p class="hint" id="hint-vpn-login" style="margin-top:8px">کد مدرسه را از مدیر بگیرید. این برنامه فقط سامانه مدرسه است.</p>
       <p style="text-align:center;margin-top:12px"><button class="linkish" onclick="showScreen('gate')">بازگشت</button></p>
     </div>
@@ -568,11 +629,9 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
     <div class="auth-card">
       <div class="form-group"><label>کد مدرسه</label><input class="form-control" id="a-code" /></div>
       <div class="form-group"><label>کد فعال‌سازی</label><input class="form-control" id="a-act" /></div>
-      <form onsubmit="event.preventDefault();activateWithCode();return false;" autocomplete="on">
-      <div class="form-group"><label>نام کاربری مدیر</label><input class="form-control" id="a-user" name="username" autocomplete="username" /></div>
-      <div class="form-group"><label>رمز عبور</label><input class="form-control" id="a-pass" name="password" type="password" autocomplete="current-password" /></div>
-      <button class="btn btn-primary btn-block" type="submit">فعال‌سازی</button>
-      </form>
+      <div class="form-group"><label>نام کاربری مدیر</label><input class="form-control" id="a-user" /></div>
+      <div class="form-group"><label>رمز عبور</label><input class="form-control" id="a-pass" type="password" /></div>
+      <button class="btn btn-primary btn-block" onclick="activateWithCode()">فعال‌سازی</button>
       <p style="text-align:center;margin-top:12px"><button class="linkish" onclick="showScreen('gate')">بازگشت</button></p>
     </div>
   </div>
@@ -1086,7 +1145,7 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
       <p class="hint">می‌توانید قالب اضافه، ویرایش یا حذف کنید. متغیرها: {نام} و {تاریخ}</p>
       <div id="sms-tpl-list"></div>
     </div>
-    <div class="card" id="set-rules-card" style="display:none">
+    <div class="card">
       <div class="card-title">قوانین پایه (از ۲۰)</div>
       <div class="form-group"><label>غیبت</label><input type="number" step="0.25" class="form-control" id="rule-absent" onchange="saveRules()" /></div>
       <div class="form-group"><label>تأخیر</label><input type="number" step="0.25" class="form-control" id="rule-late" onchange="saveRules()" /></div>
@@ -1121,14 +1180,12 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
     <div class="card" id="set-manager-account-card" style="display:none">
       <div class="card-title">حساب ورود مدیر</div>
       <p class="hint" style="margin-bottom:10px">نام کاربری و رمز ورود خودتان را از اینجا عوض کنید.</p>
-      <form onsubmit="event.preventDefault();changeManagerPassword();return false;" autocomplete="on">
-      <div class="form-group"><label>نام کاربری فعلی</label><input class="form-control" id="mgr-user-cur" name="username" autocomplete="username" readonly /></div>
-      <div class="form-group"><label>نام کاربری جدید (اختیاری)</label><input class="form-control" id="mgr-user-new" name="new-username" autocomplete="off" placeholder="خالی = بدون تغییر" /></div>
+      <div class="form-group"><label>نام کاربری فعلی</label><input class="form-control" id="mgr-user-cur" readonly /></div>
+      <div class="form-group"><label>نام کاربری جدید (اختیاری)</label><input class="form-control" id="mgr-user-new" autocomplete="username" placeholder="خالی = بدون تغییر" /></div>
       <div class="form-group"><label>رمز فعلی *</label><input class="form-control" id="mgr-pass-cur" type="password" autocomplete="current-password" /></div>
       <div class="form-group"><label>رمز جدید *</label><input class="form-control" id="mgr-pass-new" type="password" autocomplete="new-password" placeholder="حداقل ۶ کاراکتر" /></div>
-      <div class="form-group"><label>تکرار رمز جدید *</label><input class="form-control" id="mgr-pass-new2" name="password-confirm" type="password" autocomplete="new-password" /></div>
-      <button class="btn btn-primary btn-block" type="submit">ذخیره حساب ورود</button>
-      </form>
+      <div class="form-group"><label>تکرار رمز جدید *</label><input class="form-control" id="mgr-pass-new2" type="password" autocomplete="new-password" /></div>
+      <button class="btn btn-primary btn-block" type="button" onclick="changeManagerPassword()">ذخیره حساب ورود</button>
     </div>
     <div class="card" id="set-manager-photo-card">
       <div class="card-title">عکس مدیر</div>
@@ -1155,13 +1212,11 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
     <div class="card" id="set-staff-account-card" style="display:none">
       <div class="card-title">تغییر رمز عبور</div>
       <p class="hint" style="margin-bottom:10px">نام کاربری را مدیر تعیین می‌کند و قابل تغییر نیست. فقط رمز را عوض کنید — رمز جدید برای مدیر در بخش تیم نمایش داده می‌شود.</p>
-      <form onsubmit="event.preventDefault();changeMyStaffPassword();return false;" autocomplete="on">
-      <div class="form-group"><label>نام کاربری (ثابت)</label><input class="form-control" id="staff-user-cur" name="username" autocomplete="username" readonly /></div>
-      <div class="form-group"><label>رمز فعلی *</label><input class="form-control" id="staff-pass-cur" name="current-password" type="password" autocomplete="current-password" /></div>
-      <div class="form-group"><label>رمز جدید *</label><input class="form-control" id="staff-pass-new" name="new-password" type="password" autocomplete="new-password" placeholder="حداقل ۴ کاراکتر" /></div>
-      <div class="form-group"><label>تکرار رمز جدید *</label><input class="form-control" id="staff-pass-new2" name="new-password-confirm" type="password" autocomplete="new-password" /></div>
-      <button class="btn btn-primary btn-block" type="submit">ذخیره رمز جدید</button>
-      </form>
+      <div class="form-group"><label>نام کاربری (ثابت)</label><input class="form-control" id="staff-user-cur" readonly /></div>
+      <div class="form-group"><label>رمز فعلی *</label><input class="form-control" id="staff-pass-cur" type="password" autocomplete="current-password" /></div>
+      <div class="form-group"><label>رمز جدید *</label><input class="form-control" id="staff-pass-new" type="password" autocomplete="new-password" placeholder="حداقل ۴ کاراکتر" /></div>
+      <div class="form-group"><label>تکرار رمز جدید *</label><input class="form-control" id="staff-pass-new2" type="password" autocomplete="new-password" /></div>
+      <button class="btn btn-primary btn-block" type="button" onclick="changeMyStaffPassword()">ذخیره رمز جدید</button>
     </div>
     
     <div class="card" id="contact-sales-card">
@@ -1389,18 +1444,12 @@ async function apiFetch(path,options){
   }
   if(!bases.length)throw new Error('آدرس سرور تنظیم نشده');
   var _meth=String((opts.method||'GET')).toUpperCase();
-  // ارسال کامل مدیر ممکن است بیش از ۴۵ثانیه طول بکشد
-  const tOut=opts.timeoutMs!=null?opts.timeoutMs:((_meth==='PUT'||_meth==='POST'||_meth==='DELETE')?90000:20000);
+  const tOut=opts.timeoutMs!=null?opts.timeoutMs:((_meth==='PUT'||_meth==='POST'||_meth==='DELETE')?45000:15000);
   for(const base of bases){
     for(let i=1;i<=maxTry;i++){
       try{
         const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-        const timer=ctrl?setTimeout(function(){
-          try{
-            if(typeof DOMException!=='undefined')ctrl.abort(new DOMException('timeout','TimeoutError'));
-            else ctrl.abort('timeout');
-          }catch(e){try{ctrl.abort()}catch(e2){}}
-        },tOut):null;
+        const timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},tOut):null;
         var _auth=(typeof getWriteAuth==='function')?getWriteAuth():{user:'',pass:'',role:'manager',schoolId:''};
         var _hdrs=Object.assign({
           'Content-Type':'application/json',
@@ -1438,21 +1487,10 @@ async function apiFetch(path,options){
       }catch(e){
         lastErr=e;
         try{
-          var em=String((e&&e.message)||e||'');
-          var en=String((e&&e.name)||'');
-          var msg=em;
-          if(en==='AbortError'||em.indexOf('timeout')>=0||em.indexOf('TimeoutError')>=0){
-            msg='زمان پاسخ سرور تمام شد — دوباره ارسال کنید';
-          }else if(em.indexOf('CERT')>=0||em.indexOf('SSL')>=0||em.indexOf('certificate')>=0||em.indexOf('Failed to fetch')>=0||em.indexOf('NetworkError')>=0||em.indexOf('Load failed')>=0){
-            msg='اتصال به سرور برقرار نشد (شبکه یا گواهی SSL) — صفحه را یک‌بار کامل ببندید و دوباره باز کنید';
-          }
-          lastErr=new Error(msg);
-        }catch(e3){}
-        try{
           var st=localStorage.getItem('school_sync_api')||'';
           if(st&&String(base).indexOf(st)>=0)localStorage.removeItem('school_sync_api');
         }catch(e2){}
-        if(i<maxTry)await new Promise(r=>setTimeout(r,700*i));
+        if(i<maxTry)await new Promise(r=>setTimeout(r,300*i));
       }
     }
   }
@@ -1580,28 +1618,10 @@ async function manualSyncAll(){
   }
 }
 
-async function cloudFindSchoolByLogin(user,pass,code,role){
+async function cloudFindSchoolByLogin(user,pass,code){
   if(!SYNC_API)return null;
-  try{
-    const data=await apiFetch('/api/login',{
-      method:'POST',
-      body:{
-        user:String(user||'').trim(),
-        pass:String(pass||''),
-        code:String(code||'').trim(),
-        role:String(role||(typeof loginRole!=='undefined'?loginRole:'manager')||'manager')
-      },
-      retries:2,
-      timeoutMs:25000
-    });
-    if(data&&data.ok===false)return null;
-    return data&&data.school?data.school:null;
-  }catch(e){
-    // 404 not_found = کاربر/رمز اشتباه — خطای شبکه نیست
-    var m=String((e&&e.message)||e||'');
-    if(/not_found|404|code_required/i.test(m))return null;
-    throw e;
-  }
+  const data=await apiFetch('/api/login',{method:'POST',body:{user:String(user||'').trim(),pass:String(pass||''),code:String(code||'').trim()}});
+  return data&&data.school?data.school:null;
 }
 async function cloudFindSchoolByCodeAct(code,act){
   if(!SYNC_API)return null;
@@ -1670,108 +1690,53 @@ async function cloudDeleteSubmission(schoolId,subId){
     await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/submissions',{method:'DELETE',body:{id:subId}});
   }catch(e){console.warn(e)}
 }
-function _slimStaffForPush(list){
-  return (Array.isArray(list)?list:[]).map(function(s){
-    if(!s)return s;
-    var o={
-      id:s.id,
-      name:s.name||'',
-      role:s.role||'teacher',
-      username:s.username||'',
-      pass:s.pass||s.password||'',
-      password:s.pass||s.password||'',
-      phone:s.phone||'',
-      shift:s.shift||'',
-      active:s.active!==false
-    };
-    // عکس فقط اگر کوچک باشد (کمتر از ۳۰KB) — عکس بزرگ timeout می‌سازد
-    var ph=s.photo||s.image||'';
-    if(ph&&String(ph).length>0&&String(ph).length<30000)o.photo=ph;
-    return o;
-  });
-}
 async function cloudPushStaff(schoolId,staffList){
-  if(!SYNC_API||!schoolId)return false;
+  if(!SYNC_API||!schoolId)return;
+  // فقط مدیر — معلم/معاون هرگز نقش‌ها را به سرور نفرستند
   var role=(userSession&&userSession.role)||'';
   if(role==='teacher'||role==='معلم'||role==='دبیر'||role==='deputy'||role==='معاون'){
     console.warn('cloudPushStaff blocked for non-manager');
-    return false;
+    return;
   }
-  if(window._loginPulling){console.warn('cloudPushStaff blocked during login');return false;}
-  var list=_slimStaffForPush(staffList);
-  if(!list.length){console.warn('cloudPushStaff skip empty staff');return false;}
+  if(window._loginPulling){console.warn('cloudPushStaff blocked during login');return;}
+  var list=Array.isArray(staffList)?staffList:[];
+  // لیست خالی هرگز نفرست — نقش‌های سرور را پاک می‌کند
+  if(!list.length){console.warn('cloudPushStaff skip empty staff');return;}
   try{
-    if(userSession&&!userSession.pass&&schoolData&&schoolData.managerPass){
-      userSession.pass=schoolData.managerPass;
-      try{saveUserSession(userSession)}catch(e){}
-    }
-    var authUser=(userSession&&userSession.username)||(schoolData&&schoolData.managerUser)||(schoolData&&schoolData.managerUsername)||'';
-    var authPass=(userSession&&userSession.pass)||(schoolData&&schoolData.managerPass)||(schoolData&&schoolData.managerPassword)||'';
-    // مسیر سبک: فقط staff — بدون replaceStructure و بدون کل داده مدرسه
-    await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/appData',{
-      method:'PUT',
-      body:{
-        staff:list,
-        deletedStaffIds:(schoolData&&schoolData.deletedStaffIds)||[],
-        managerAuthority:true,
-        _staffOnly:true,
-        _compatNoAuth:true,
-        updatedAtMs:Date.now(),
-        auth:{user:authUser,pass:authPass,role:'manager'}
-      },
-      retries:3,
-      timeoutMs:45000
-    });
-    return true;
-  }catch(e){
-    console.warn('cloudPushStaff',e);
-    try{window._lastPushError=(e&&e.message)?String(e.message):String(e)}catch(e2){}
-    return false;
-  }
+    await apiFetch('/api/schools',{method:'POST',body:{
+      id:schoolId,
+      staff:list,
+      managerAuthority:true,
+      structureWriteToken:!!(schoolData&&schoolData._structureWriteToken)
+    }});
+  }catch(e){console.warn('cloudPushStaff',e)}
 }
 async function cloudPullStaff(schoolId){
   if(!SYNC_API||!schoolId)return;
   try{
-    // تیم از app_data می‌آید (نه جدول schools)
-    const data=await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/appData',{retries:2});
-    var d=(data&&data.data)||null;
-    var remoteStaff=(d&&Array.isArray(d.staff))?d.staff:[];
-    if(!remoteStaff.length){
-      // fallback قدیمی
-      try{
-        const sc=await apiFetch('/api/schools/'+encodeURIComponent(schoolId));
-        if(sc&&sc.school&&Array.isArray(sc.school.staff)&&sc.school.staff.length){
-          remoteStaff=sc.school.staff;
-        }
-      }catch(e2){}
+    const data=await apiFetch('/api/schools/'+encodeURIComponent(schoolId));
+    const d=data&&data.school;
+    if(d&&Array.isArray(d.staff)){
+      // لیست خالی هرگز تیم را پاک/جایگزین نکند (دستگاه جدید هم با خالی پر نشود)
+      if(d.staff.length===0){
+        console.warn('cloudPullStaff: skip empty staff from server');
+        return;
+      }
+      // ادغام؛ جایگزین کامل فقط اگر محلی خالی است
+      if(!(schoolData.staff||[]).length){
+        schoolData.staff=d.staff.slice();
+      }else{
+        var map={};
+        (schoolData.staff||[]).forEach(function(x){if(x&&x.id)map[String(x.id)]=x});
+        d.staff.forEach(function(x){
+          if(!x||!x.id)return;
+          map[String(x.id)]=Object.assign({},map[String(x.id)]||{},x);
+        });
+        schoolData.staff=Object.keys(map).map(function(k){return map[k]});
+      }
+      try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
     }
-    if(!remoteStaff.length){
-      console.warn('cloudPullStaff: skip empty staff from server');
-      return;
-    }
-    if(!(schoolData.staff||[]).length){
-      schoolData.staff=remoteStaff.slice();
-    }else{
-      var map={};
-      (schoolData.staff||[]).forEach(function(x){if(x&&x.id)map[String(x.id)]=Object.assign({},x)});
-      remoteStaff.forEach(function(x){
-        if(!x||!x.id)return;
-        var id=String(x.id);
-        var prev=map[id]||{};
-        var merged=Object.assign({},prev,x);
-        // رمز سرور اولویت دارد اگر غیرخالی باشد (کاربر خودش عوض کرده)
-        if(x.pass!=null&&String(x.pass).length>=4)merged.pass=String(x.pass);
-        else if(prev.pass)merged.pass=prev.pass;
-        if(!(x.photo||x.image)&&(prev.photo||prev.image)){
-          merged.photo=prev.photo||'';
-          if(prev.image)merged.image=prev.image;
-        }
-        map[id]=merged;
-      });
-      schoolData.staff=Object.keys(map).map(function(k){return map[k]});
-    }
-    try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
-  }catch(e){console.warn('cloudPullStaff',e)}
+  }catch(e){}
 }
 
 function _localStructCount(){
@@ -1869,68 +1834,62 @@ function mergeDisciplineTypes(local, remote){
 /** ارسال اجباری حضور/انضباط به سرور با چند تلاش */
 async function pushAttendanceToServer(retries){
   if(!session||!session.schoolId||!schoolData)return false;
-  var n=retries!=null?retries:2;
+  var n=retries!=null?retries:3;
+  var ok=false, lastErr=null;
   var del={};
   try{(schoolData.deletedSubmissionIds||[]).forEach(function(id){if(id)del[String(id)]=true})}catch(e){}
-  // فقط آخرین ارسال‌ها (حداکثر ۳) — نه ۲۰ تا پشت‌سرهم
   var subs=(schoolData.submissions||[]).filter(function(s){return s&&s.id&&!del[String(s.id)]})
-    .slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,3);
-  var lastErr=null;
+    .slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,20);
   for(var attempt=1;attempt<=n;attempt++){
     try{
-      // ۱) فقط جدول submissions — سریع
-      for(var si=0;si<subs.length;si++){
+      for(var i=0;i<subs.length;i++){
         try{
           await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/submissions',{
-            method:'POST', body:subs[si], retries:1, timeoutMs:15000
+            method:'POST', body:subs[i], retries:1, timeoutMs:20000
           });
         }catch(eSub){
           if(/submission_deleted|410/.test(String(eSub&&eSub.message||eSub)))continue;
           throw eSub;
         }
       }
-      // ۲) appData سبک — فقط حضور اخیر همین معلم (بدون بلاک طولانی)
       var _attAll=schoolData.attendance||[];
-      var _attSlim=(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll,120):(_attAll.length>120?_attAll.slice(-120):_attAll));
+      var _attSlim=(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll,200):(_attAll.length>200?_attAll.slice(-200):_attAll));
       await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
         method:'PUT',
         body:{
           attendance:_attSlim,
           submissions:subs,
+          exams:(schoolData.exams||[]).slice(-30),
+          messages:(schoolData.messages||[]).slice(-20),
+          teacherNotes:(schoolData.teacherNotes||[]).slice(-40),
+          deletedSubmissionIds:schoolData.deletedSubmissionIds||[],
+          updatedAtMs:Date.now(),
           _teacherPartial:true,
+          _softOnly:true,
           _compatNoAuth:true
         },
-        retries:1,
-        timeoutMs:25000
+        retries:1, timeoutMs:25000
       });
-      return true;
+      ok=true;
+      try{window._serverPullOk=true}catch(e){}
+      break;
     }catch(e){
       lastErr=e;
-      console.warn('pushAttendance attempt',attempt,e);
-      if(attempt<n)await new Promise(function(r){setTimeout(r,400*attempt)});
+      if(attempt<n)await new Promise(function(r){setTimeout(r,600*attempt)});
     }
   }
-  if(lastErr)throw lastErr;
-  return false;
+  if(!ok){try{window._lastPushError=String(lastErr&&lastErr.message||lastErr||'push_failed')}catch(e2){}}
+  return ok;
 }
 
 async function cloudPushAppData(force){
   if(!session||!session.schoolId||!schoolData){try{window._lastPushError='نشست/داده نیست'}catch(e){}return false;}
   try{
     window._lastPushError='';
-    // دکمه «ارسال به سرور» (force): بدون محدودیت نقش — همه بتوانند بفرستند
-    if(force){
-      try{
-        window._serverPullOk=true;
-        window._loginPulling=false;
-        window._serverStructOk=true;
-        window._blockStructUntil=0;
-      }catch(e){}
-    }
-    // معلم/معاون: حضور حتی قبل از pull موفق هم باید برود
+    // معلم: حضور حتی قبل از pull موفق هم باید برود
     var _roleSoft=(userSession&&(userSession.role==='teacher'||userSession.role==='معلم'||userSession.role==='دبیر'||userSession.role==='deputy'||userSession.role==='معاون'));
     var _hasSoftLocal=((schoolData.attendance||[]).length+(schoolData.submissions||[]).length+(schoolData.exams||[]).length)>0;
-    if(!force&&!window._serverPullOk&&!window._allowLoginRestore&&!(_roleSoft&&_hasSoftLocal)){
+    if(!window._serverPullOk&&!window._allowLoginRestore&&!(_roleSoft&&_hasSoftLocal)){
       try{window._lastPushError='ابتدا دریافت از سرور'}catch(e){}
       console.warn('push blocked: no successful pull yet');
       return false;
@@ -1966,10 +1925,13 @@ async function cloudPushAppData(force){
   // force بدون توکن: فقط اگر قبلاً از سرور خوانده یا داده نرم/ساختار محلی هست
   if(!window._serverPullOk && !intentionalWrite){
     var _hasLocal=((schoolData.classes||[]).length+(schoolData.students||[]).length+(schoolData.assignments||[]).length+(schoolData.attendance||[]).length+(schoolData.exams||[]).length)>0;
-    if(force){
+    if(force && _hasLocal){
       try{window._serverPullOk=true;window._loginPulling=false;}catch(e){}
-    }else if(!_hasLocal){
+    }else if(!force){
       console.warn('PUSH BLOCKED: must read from server first');
+      return false;
+    }else{
+      console.warn('PUSH BLOCKED: empty device without prior pull');
       return false;
     }
   }
@@ -2070,19 +2032,15 @@ async function cloudPushAppData(force){
           submissions:_subSlim,
           exams:(schoolData.exams||[]).slice(-30),
           messages:(schoolData.messages||[]).slice(-20),
-          sampleQuestions:(schoolData.sampleQuestions||[]).slice(-15),
-          deletedSampleQuestionIds:schoolData.deletedSampleQuestionIds||[],
           updatedAtMs:Date.now(),
           _teacherPartial:true,
-          _softOnly:true,
-          _compatNoAuth:true,
-          auth:{user:(userSession&&userSession.username)||'',pass:(userSession&&userSession.pass)||'',role:(userSession&&userSession.role)||'teacher'}
+          _softOnly:true
         },
-        retries:2,timeoutMs:force?60000:25000
+        retries:1,timeoutMs:15000
       });
       schoolData._localDirtyAt=0;
       return true;
-    }catch(e){console.warn('teacher push',e);if(force)throw e;return false}
+    }catch(e){console.warn('teacher push',e);if(force)throw e;return}
   }
   // —— معاون: بدون دست‌زدن به کلاس/دانش‌آموز/برنامه (مگر تأیید حضور) ——
   // معاون: اگر ذخیره ساختار/برنامه عمدی نباشد → فقط حضور
@@ -2090,46 +2048,21 @@ async function cloudPushAppData(force){
     try{
       var _attAll2=schoolData.attendance||[];
       var _subAll2=schoolData.submissions||[];
-      var _depBody={
-        attendance:(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll2,1500):(_attAll2.length>1000?_attAll2.slice(-1000):_attAll2)),
-        submissions:_subAll2.length>200?_subAll2.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,200):_subAll2,
-        messages:(schoolData.messages||[]).slice(-50),
-        exams:(schoolData.exams||[]).slice(-40),
-        teacherNotes:(schoolData.teacherNotes||[]).slice(-40),
-        sampleQuestions:(schoolData.sampleQuestions||[]).slice(-20),
-        staff:schoolData.staff||[],
-        updatedAtMs:Date.now(),
-        _deputyPartial:true,
-        _compatNoAuth:true
-      };
       await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
         method:'PUT',
-        body:_depBody,
-        retries:3,timeoutMs:120000
+        body:{
+          attendance:(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(_attAll2,1200):(_attAll2.length>800?_attAll2.slice(-800):_attAll2)),
+          submissions:_subAll2.length>150?_subAll2.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).slice(0,150):_subAll2,
+          messages:schoolData.messages||[],
+          exams:schoolData.exams||[],
+          updatedAtMs:Date.now(),
+          _deputyPartial:true
+        },
+        retries:3,timeoutMs:45000
       });
       schoolData._localDirtyAt=0;
       return true;
-    }catch(e){
-      console.warn('deputy push',e);
-      // اگر مسیر کامل شکست، مثل معلم با مسیر سبک‌تر تلاش کن
-      try{
-        await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
-          method:'PUT',
-          body:{
-            attendance:(typeof slimAttendanceForPush==='function'?slimAttendanceForPush(schoolData.attendance||[],200):[]),
-            submissions:(schoolData.submissions||[]).slice(-20),
-            exams:(schoolData.exams||[]).slice(-30),
-            messages:(schoolData.messages||[]).slice(-20),
-            staff:schoolData.staff||[],
-            updatedAtMs:Date.now(),
-            _teacherPartial:true,_softOnly:true,_compatNoAuth:true
-          },
-          retries:2,timeoutMs:60000
-        });
-        schoolData._localDirtyAt=0;
-        return true;
-      }catch(e2){console.warn('deputy fallback',e2);if(force)throw e2;return false}
-    }
+    }catch(e){console.warn('deputy push',e);if(force)throw e;return}
   }
   // —— مدیر (یا معاون با replaceStructure): قبل از ارسال، سرور را چک کن ——
   if(isMgr||schoolData.replaceStructure||schoolData.replaceAssignments||schoolData.resetYear){
@@ -2261,7 +2194,7 @@ async function cloudPushAppData(force){
       }
     }
     await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-      method:'PUT',body:payload,retries:3,timeoutMs:120000
+      method:'PUT',body:payload,retries:3,timeoutMs:60000
     });
     schoolData._localDirtyAt=0;
     schoolData.replaceStructure=false;
@@ -2308,10 +2241,6 @@ function _mergeById(local,remote,preferRemote){
     var merged;
     if(preferRemote) merged=Object.assign({}, prev, x);
     else merged=Object.assign({}, x, prev, x); // remote fields + keep local overrides for soft flags
-    // رمز/پسورد: اگر سرور مقدار دارد همان را بگیر (تغییر رمز توسط کاربر)
-    if(x.pass!=null&&String(x.pass).length>=4)merged.pass=String(x.pass);
-    else if(prev.pass!=null&&String(prev.pass).length>=4)merged.pass=String(prev.pass);
-    if(x.password!=null&&String(x.password).length>=4)merged.password=String(x.password);
     // پرچم‌های انضباطی: اگر هر طرف قفل/دستی بود حفظ شود
     if(prev.scoreLocked||x.scoreLocked) merged.scoreLocked=true;
     if(prev.fromDiscipline||x.fromDiscipline) merged.fromDiscipline=true;
@@ -2351,14 +2280,8 @@ function _mergeStructural(local,remote,preferRemote){
       if(!x||!x.id)return;
       if(map[x.id]){
         var r=map[x.id];
-        var merged;
-        if((x.photo||x.image)&&!(r.photo||r.image))merged=Object.assign({},r,{photo:x.photo||'',image:x.image||''});
-        else merged=Object.assign({},x,r);
-        // رمز: سرور منبع حقیقت است اگر مقدار داشته باشد
-        if(r.pass!=null&&String(r.pass).length>=4)merged.pass=String(r.pass);
-        else if(x.pass!=null&&String(x.pass).length>=4)merged.pass=String(x.pass);
-        if(r.password!=null&&String(r.password).length>=4)merged.password=String(r.password);
-        map[x.id]=merged;
+        if((x.photo||x.image)&&!(r.photo||r.image))map[x.id]=Object.assign({},r,{photo:x.photo||'',image:x.image||''});
+        else map[x.id]=Object.assign({},x,r);
       }
     });
     return Object.keys(map).map(function(k){return map[k]});
@@ -2545,32 +2468,10 @@ async function cloudPullAppData(force){
     }else if(forcePull&&schoolData&&schoolData._localDirtyAt&&(Date.now()-schoolData._localDirtyAt)<20000&&(schoolData.replaceAssignments||schoolData._structureWriteToken)){
       forcePull=false;
     }
-    var role=(userSession&&userSession.role)||'';
-    var isMgr=role==='manager'||role==='مدیر'||(typeof isManager==='function'&&isManager());
-    var isTeach=role==='teacher'||role==='معلم'||role==='دبیر'||(typeof isTeacher==='function'&&isTeacher());
-    var isDep=role==='deputy'||role==='معاون'||role==='assistant'||(typeof isDeputy==='function'&&isDeputy());
-    // معلم/معاون: فقط دادهٔ مربوط به خودشان (سبک) — مدیر: کل مدرسه
-    var needFull=!!forcePull||isTeach||isDep;
-    var qs=[];
-    if(!needFull&&schoolData&&schoolData._cloudUpdatedAtMs){
-      qs.push('since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs)));
-    }
-    if(!isMgr&&(isTeach||isDep)){
-      qs.push('scope=mine');
-      qs.push('role='+encodeURIComponent(isDep?'deputy':'teacher'));
-      if(userSession&&userSession.staffId)qs.push('staffId='+encodeURIComponent(String(userSession.staffId)));
-      if(userSession&&userSession.username)qs.push('user='+encodeURIComponent(String(userSession.username)));
-    }
-    var qstr=qs.length?('?'+qs.join('&')):'';
-    var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+qstr,{
-      retries:needFull?3:2,
-      timeoutMs:needFull?45000:20000,
-      headers:(!isMgr&&(isTeach||isDep))?{
-        'X-Auth-Role':isDep?'deputy':'teacher',
-        'X-Staff-Id':(userSession&&userSession.staffId)?String(userSession.staffId):'',
-        'X-Auth-User':(userSession&&userSession.username)?String(userSession.username):''
-      }:undefined
-    });
+    // همیشه برای همگام‌سازی چنددستگاهی full بکش اگر force یا معلم
+    var needFull=!!forcePull||(userSession&&userSession.role==='teacher');
+    var since=(!needFull&&schoolData&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
+    var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:needFull?3:2,timeoutMs:needFull?45000:20000});
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
@@ -2583,36 +2484,6 @@ async function cloudPullAppData(force){
       }
       schoolData._localDirtyAt=0;
       return false;
-    }
-    // پاسخ محدود معلم/معاون: فقط دادهٔ خودش — جایگزین کامل همان محدوده
-    if(d._scoped){
-      try{
-        if(Array.isArray(d.classes))schoolData.classes=d.classes.slice();
-        if(Array.isArray(d.students))schoolData.students=d.students.slice();
-        if(Array.isArray(d.assignments))schoolData.assignments=d.assignments.slice();
-        if(Array.isArray(d.attendance))schoolData.attendance=_mergeById(schoolData.attendance||[],d.attendance,false);
-        if(Array.isArray(d.submissions))schoolData.submissions=_mergeById(schoolData.submissions||[],d.submissions,false);
-        if(Array.isArray(d.exams))schoolData.exams=_mergeById(schoolData.exams||[],d.exams,false);
-        if(Array.isArray(d.messages))schoolData.messages=_mergeById(schoolData.messages||[],d.messages,false);
-        if(Array.isArray(d.sampleQuestions))schoolData.sampleQuestions=_mergeById(schoolData.sampleQuestions||[],d.sampleQuestions,false);
-        if(Array.isArray(d.staff)&&d.staff.length){
-          // فقط خود کاربر را به‌روز کن؛ بقیهٔ تیم محلی را نگه دار اگر بود
-          var mine=d.staff;
-          var map={};(schoolData.staff||[]).forEach(function(u){if(u&&u.id)map[String(u.id)]=u});
-          mine.forEach(function(u){if(u&&u.id)map[String(u.id)]=Object.assign({},map[String(u.id)]||{},u)});
-          // برای معلم فقط staffهای scope
-          if(d._scopeRole==='teacher')schoolData.staff=mine.slice();
-          else schoolData.staff=Object.keys(map).map(function(k){return map[k]});
-        }
-        if(d.managerPhoto)schoolData.managerPhoto=d.managerPhoto;
-        if(d.theme)schoolData.theme=d.theme;
-        if(d.disciplineTypes)schoolData.disciplineTypes=d.disciplineTypes;
-        schoolData._cloudUpdatedAtMs=d.updatedAtMs||(data&&data.updatedAt)||Date.now();
-        schoolData._localDirtyAt=0;
-        try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
-        try{window._serverPullOk=true;window._serverStructOk=true}catch(e){}
-        return true;
-      }catch(eSc){console.warn('scoped apply',eSc)}
     }
     const remoteTs=d.updatedAtMs||(data&&data.updatedAt)||0;
     const localTs=(schoolData&&schoolData._cloudUpdatedAtMs)||0;
@@ -2914,26 +2785,143 @@ function onPhotoPick(inputId, previewId){
   toast('در حال آماده‌سازی عکس...');
   compressPhoto(inp.files[0], 160, function(url){applyPickedPhoto(url, previewId)});
 }
+window._photoCrop={img:null,previewId:'',zoom:1,bright:0,contrast:0,offsetX:0,offsetY:0,dragging:false,lastX:0,lastY:0,outSize:320};
+function openPhotoCropEditor(dataUrl,previewId){
+  var st=window._photoCrop;
+  st.previewId=previewId||window._photoPreviewId||'';
+  st.zoom=1;st.bright=0;st.contrast=0;st.offsetX=0;st.offsetY=0;
+  var img=new Image();
+  img.onload=function(){
+    st.img=img;
+    var overlay=document.getElementById('photo-crop-overlay');
+    if(!overlay){applyPickedPhoto(dataUrl,st.previewId);return}
+    overlay.classList.add('show');
+    var z=document.getElementById('crop-zoom'),b=document.getElementById('crop-bright'),c=document.getElementById('crop-contrast');
+    if(z)z.value=1;if(b)b.value=0;if(c)c.value=0;
+    try{document.getElementById('crop-zoom-val').textContent='1.0'}catch(e){}
+    try{document.getElementById('crop-bright-val').textContent='0'}catch(e){}
+    try{document.getElementById('crop-contrast-val').textContent='0'}catch(e){}
+    bindPhotoCropEvents();
+    drawPhotoCrop();
+  };
+  img.onerror=function(){toast('بارگذاری عکس برای کراپ ناموفق');applyPickedPhoto(dataUrl,previewId)};
+  img.src=dataUrl;
+}
+function closePhotoCrop(){
+  var overlay=document.getElementById('photo-crop-overlay');
+  if(overlay)overlay.classList.remove('show');
+  window._photoCrop.img=null;
+}
+function bindPhotoCropEvents(){
+  var stage=document.getElementById('photo-crop-stage');
+  if(!stage||stage._cropBound)return;
+  stage._cropBound=true;
+  function onDown(e){
+    window._photoCrop.dragging=true;
+    var p=e.touches?e.touches[0]:e;
+    window._photoCrop.lastX=p.clientX;window._photoCrop.lastY=p.clientY;
+    e.preventDefault();
+  }
+  function onMove(e){
+    if(!window._photoCrop.dragging)return;
+    var p=e.touches?e.touches[0]:e;
+    window._photoCrop.offsetX+=p.clientX-window._photoCrop.lastX;
+    window._photoCrop.offsetY+=p.clientY-window._photoCrop.lastY;
+    window._photoCrop.lastX=p.clientX;window._photoCrop.lastY=p.clientY;
+    drawPhotoCrop();e.preventDefault();
+  }
+  function onUp(){window._photoCrop.dragging=false}
+  stage.addEventListener('mousedown',onDown);
+  stage.addEventListener('mousemove',onMove);
+  stage.addEventListener('mouseup',onUp);
+  stage.addEventListener('mouseleave',onUp);
+  stage.addEventListener('touchstart',onDown,{passive:false});
+  stage.addEventListener('touchmove',onMove,{passive:false});
+  stage.addEventListener('touchend',onUp);
+  var z=document.getElementById('crop-zoom'),b=document.getElementById('crop-bright'),c=document.getElementById('crop-contrast');
+  if(z)z.oninput=function(){window._photoCrop.zoom=parseFloat(z.value)||1;try{document.getElementById('crop-zoom-val').textContent=window._photoCrop.zoom.toFixed(2)}catch(e){}drawPhotoCrop()};
+  if(b)b.oninput=function(){window._photoCrop.bright=parseInt(b.value,10)||0;try{document.getElementById('crop-bright-val').textContent=String(window._photoCrop.bright)}catch(e){}drawPhotoCrop()};
+  if(c)c.oninput=function(){window._photoCrop.contrast=parseInt(c.value,10)||0;try{document.getElementById('crop-contrast-val').textContent=String(window._photoCrop.contrast)}catch(e){}drawPhotoCrop()};
+  var circ=document.getElementById('crop-circle');
+  if(circ)circ.onchange=function(){drawPhotoCrop()};
+}
+function drawPhotoCrop(){
+  var st=window._photoCrop,canvas=document.getElementById('photo-crop-canvas'),stage=document.getElementById('photo-crop-stage');
+  if(!canvas||!st.img||!stage)return;
+  var rect=stage.getBoundingClientRect();
+  var W=Math.max(200,Math.floor(rect.width)||300),H=Math.max(200,Math.floor(rect.height)||280);
+  canvas.width=W;canvas.height=H;
+  var ctx=canvas.getContext('2d');
+  ctx.fillStyle='#0a1220';ctx.fillRect(0,0,W,H);
+  var img=st.img,cropSize=Math.min(W,H)*0.78;
+  var base=Math.max(cropSize/img.width,cropSize/img.height),scale=base*(st.zoom||1);
+  var dw=img.width*scale,dh=img.height*scale;
+  var dx=(W-dw)/2+(st.offsetX||0),dy=(H-dh)/2+(st.offsetY||0);
+  ctx.filter='brightness('+(100+(st.bright||0))+'%) contrast('+(100+(st.contrast||0))+'%)';
+  ctx.drawImage(img,dx,dy,dw,dh);ctx.filter='none';
+  var cx=W/2,cy=H/2,half=cropSize/2,circle=true;
+  try{circle=!!(document.getElementById('crop-circle')||{}).checked}catch(e){}
+  ctx.save();ctx.fillStyle='rgba(0,0,0,0.55)';ctx.beginPath();ctx.rect(0,0,W,H);
+  if(circle){ctx.moveTo(cx+half,cy);ctx.arc(cx,cy,half,0,Math.PI*2,true)}
+  else{ctx.rect(cx-half,cy-half,cropSize,cropSize)}
+  ctx.fill('evenodd');ctx.restore();
+  ctx.strokeStyle='#38bdf8';ctx.lineWidth=2;
+  if(circle){ctx.beginPath();ctx.arc(cx,cy,half,0,Math.PI*2);ctx.stroke()}
+  else{ctx.strokeRect(cx-half,cy-half,cropSize,cropSize)}
+}
+function confirmPhotoCrop(){
+  var st=window._photoCrop;
+  if(!st.img){closePhotoCrop();return}
+  try{
+    var out=st.outSize||180,stage=document.getElementById('photo-crop-stage');
+    var rect=stage.getBoundingClientRect();
+    var W=Math.max(200,Math.floor(rect.width)||300),H=Math.max(200,Math.floor(rect.height)||280);
+    var img=st.img,cropSize=Math.min(W,H)*0.78;
+    var base=Math.max(cropSize/img.width,cropSize/img.height),scale=base*(st.zoom||1);
+    var dw=img.width*scale,dh=img.height*scale;
+    var dx=(W-dw)/2+(st.offsetX||0),dy=(H-dh)/2+(st.offsetY||0);
+    var tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;
+    var tctx=tmp.getContext('2d');
+    tctx.filter='brightness('+(100+(st.bright||0))+'%) contrast('+(100+(st.contrast||0))+'%)';
+    tctx.drawImage(img,dx,dy,dw,dh);tctx.filter='none';
+    var canvas=document.createElement('canvas');canvas.width=out;canvas.height=out;
+    var ctx=canvas.getContext('2d');
+    var circle=true;try{circle=!!(document.getElementById('crop-circle')||{}).checked}catch(e){}
+    if(circle){ctx.beginPath();ctx.arc(out/2,out/2,out/2,0,Math.PI*2);ctx.closePath();ctx.clip()}
+    var cx=W/2,cy=H/2,half=cropSize/2;
+    ctx.drawImage(tmp,cx-half,cy-half,cropSize,cropSize,0,0,out,out);
+    var url=canvas.toDataURL('image/jpeg',0.55);
+    applyPickedPhoto(url,st.previewId);
+    closePhotoCrop();
+    toast('عکس برش‌خورده آماده شد — ذخیره را بزنید');
+  }catch(e){console.error(e);toast('خطا در برش عکس')}
+}
+
 function handlePhotoFile(file, previewId){
   if(!file){toast('فایلی انتخاب نشد');return}
   var t=String(file.type||'');
   var n=String(file.name||'');
-  if(t && !/^image\//i.test(t) && !/\.(jpe?g|png|gif|webp|heic|heif)$/i.test(n)){
+  if(t && !/^image\\//i.test(t) && !/\\.(jpe?g|png|gif|webp|heic|heif)$/i.test(n)){
     toast('لطفاً یک تصویر انتخاب کنید');
     return;
   }
   window._photoPreviewId = previewId || window._photoPreviewId || '';
-  toast('در حال آماده‌سازی عکس...');
+  toast('در حال آماده‌سازی عکس برای برش...');
   try{
-    compressPhoto(file, 280, function(url){
-      if(!url){toast('پردازش عکس ناموفق بود — فرمت دیگری امتحان کنید');return}
-      applyPickedPhoto(url, window._photoPreviewId || previewId);
-    });
+    var reader=new FileReader();
+    reader.onerror=function(){toast('خواندن عکس ناموفق')};
+    reader.onload=function(){
+      var raw=typeof reader.result==='string'?reader.result:'';
+      if(!raw){toast('پردازش عکس ناموفق بود');return}
+      openPhotoCropEditor(raw, window._photoPreviewId || previewId);
+    };
+    reader.readAsDataURL(file);
   }catch(e){
     console.error(e);
     toast('خطا در خواندن عکس');
   }
 }
+
 function photoButtons(fileId, prevId){
   var p = String(prevId || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   var fid = String(fileId || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -3257,17 +3245,10 @@ function dualShift(){
     if(session){
       if(Number(session.shifts)===2)return true;
       if(Array.isArray(session.modules)&&session.modules.indexOf('dual_shift')>=0)return true;
+      if(session.shifts!=null&&Number(session.shifts)===1)return false;
+      if(Array.isArray(session.modules)&&session.modules.indexOf('dual_shift')<0)return false;
     }
     if(schoolData&&Number(schoolData.shifts)===2)return true;
-    // اگر روی کلاس‌ها شیفت صبح/عصر ست شده باشد، دو شیفت حساب کن
-    var cls=(schoolData&&schoolData.classes)||[];
-    var has1=false,has2=false;
-    for(var i=0;i<cls.length;i++){
-      var s=parseInt(cls[i]&&cls[i].shift,10);
-      if(s===1)has1=true;
-      if(s===2)has2=true;
-    }
-    if(has1&&has2)return true;
   }catch(e){}
   return false;
 }
@@ -3282,8 +3263,11 @@ function hasModule(id){
   try{
     if(!session)return true;
     const mods=session.modules;
-    if(!Array.isArray(mods)||!mods.length)return true;
-    return mods.indexOf(id)>=0;
+    if(Array.isArray(mods)){
+      if(!mods.length)return false;
+      return mods.indexOf(id)>=0;
+    }
+    return true;
   }catch(e){return true}
 }
 function maxStudentsAllowed(){
@@ -3365,7 +3349,7 @@ function normLoginUser(u){
 }
 function matchManagerCred(s,user,pass){
   if(!s)return false;
-  if(toEnDigits(String(s.managerPassword||''))!==toEnDigits(String(pass||'')))return false;
+  if(String(s.managerPassword||'')!==String(pass||''))return false;
   const u=normLoginUser(user);
   const mu=normLoginUser(s.managerUsername||'');
   const mp=normLoginUser(s.managerPhone||'');
@@ -3450,10 +3434,10 @@ async function doLogin(){
       try{
         showLoginLoading('در حال ورود از سرور...','در حال ارتباط با سرور — ممکن است چند ثانیه طول بکشد');
         toast('در حال ورود از سرور...',5000);
-        sc=await cloudFindSchoolByLogin(user,pass,code||null,loginRole||'manager');
+        sc=await cloudFindSchoolByLogin(user,pass,code||null);
         if(sc) sc.__fromServer = true;
       }catch(e){
-        console.warn('login cloud',e);
+        console.error('login cloud',e);
         sc=null;
         var m=(e&&e.message)?e.message:'';
         window._lastLoginNetErr=m;
@@ -3497,7 +3481,7 @@ async function doLogin(){
     if(sess){
       session=sess;loadSchoolData();
       const localUser=normLoginUser(schoolData.managerUser||'');
-      if(localUser===user&&toEnDigits(String(schoolData.managerPass||''))===toEnDigits(String(pass))){
+      if(localUser===user&&String(schoolData.managerPass||'')===String(pass)){
         if(SYNC_API&&session.schoolId){
           showLoginLoading('در حال تأیید مدرسه...','بررسی وضعیت مدرسه روی سرور');
           toast('در حال تأیید مدرسه روی سرور...',4000);
@@ -3579,7 +3563,7 @@ async function doLogin(){
     if(loginRole==='deputy')return r==='deputy'||r==='معاون'||r==='assistant';
     return r===loginRole;
   }
-  const st=staffList.find(u=>normLoginUser(u.username||'')===String(user)&&toEnDigits(String(u.pass||u.password||''))===toEnDigits(String(pass))&&_roleOk(u.role)&&u.active!==false);
+  const st=staffList.find(u=>String(u.username||'')===String(user)&&String(u.pass||'')===String(pass)&&_roleOk(u.role)&&u.active!==false);
   if(!st){
     hideLoginLoading();
     const sameUser=staffList.find(u=>String(u.username||'')===String(user));
@@ -3607,15 +3591,22 @@ function applyLicenseFields(s){
   if(s.name)session.name=s.name;
   if(s.plan)session.plan=s.plan;
   if(s.shifts!=null)session.shifts=Number(s.shifts)||1;
-  if(s.modules)session.modules=Array.isArray(s.modules)?s.modules.slice():s.modules;
+  if(s.modules!=null)session.modules=Array.isArray(s.modules)?s.modules.slice():[];
   if(s.maxUsers!=null)session.maxUsers=parseInt(s.maxUsers,10)||20;
-  // هم‌تراز شیفت با لایسنس مادر (تک‌شیفت = اجباری ۱)
   try{
+    let sh=Number(session.shifts)||1;
+    var mods=Array.isArray(session.modules)?session.modules:[];
+    if(Number(s.shifts)===2||mods.indexOf('dual_shift')>=0){
+      sh=2;
+      if(mods.indexOf('dual_shift')<0){mods=mods.concat(['dual_shift']);session.modules=mods;}
+    }else{
+      sh=1;
+      if(mods.indexOf('dual_shift')>=0){
+        session.modules=mods.filter(function(m){return m!=='dual_shift';});
+      }
+    }
+    session.shifts=sh;
     if(typeof schoolData!=='undefined'&&schoolData){
-      let sh=Number(session.shifts)||1;
-      if(Array.isArray(session.modules)&&session.modules.indexOf('dual_shift')>=0)sh=2;
-      if(Number(s.shifts)===1&&(!s.modules||s.modules.indexOf('dual_shift')<0))sh=1;
-      session.shifts=sh;
       schoolData.shifts=sh;
       try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
     }
@@ -5191,24 +5182,9 @@ function saveStudent(id){
     try{renderStudents();renderHome();}catch(e){}
     toast('ذخیره شد — ارسال به سرور...');
     if(canManage()){
-      (async function(){
-        try{
-          // اگر فقط ویرایش بود، اول عکس را سبک بفرست
-          if(id && photo!==undefined){
-            var ph=photo||'';
-            try{ph=await shrinkPhotoDataUrl(ph,240,0.5,80000)}catch(e){}
-            try{
-              await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/staff-self',{
-                method:'POST',
-                body:{studentPhotoUpdate:{id:String(id),photo:ph},_photoOnly:true,_compatNoAuth:true},
-                retries:2,timeoutMs:45000
-              });
-            }catch(ePhoto){console.warn('student photo light',ePhoto)}
-          }
-          var ok=await cloudPushAppData(true);
-          toast(ok===false?'محلی ماند — همگام‌سازی را بزنید':'دانش‌آموز روی سرور ذخیره شد');
-        }catch(e){toast('محلی ذخیره شد')}
-      })();
+      Promise.resolve(cloudPushAppData(true)).then(function(ok){
+        toast(ok===false?'محلی ماند — همگام‌سازی را بزنید':'دانش‌آموز روی سرور ذخیره شد');
+      }).catch(function(){toast('محلی ذخیره شد')});
     }
   }catch(err){
     console.error('saveStudent',err);
@@ -5341,20 +5317,6 @@ function renderTeam(){
   if(!schoolData)return;
   if(!Array.isArray(schoolData.staff))schoolData.staff=[];
   if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];
-  // مدیر: قبل از نمایش، تیم را از سرور تازه کن تا رمز عوض‌شده توسط کاربر دیده شود
-  if(typeof isManager==='function'&&isManager()&&session&&session.schoolId&&SYNC_API&&!window._teamPullLock){
-    window._teamPullLock=true;
-    cloudPullStaff(session.schoolId).then(function(){
-      window._teamPullLock=false;
-      try{paintTeamList()}catch(e){}
-    }).catch(function(){window._teamPullLock=false;try{paintTeamList()}catch(e){}});
-  }
-  paintTeamList();
-}
-function paintTeamList(){
-  if(!schoolData)return;
-  if(!Array.isArray(schoolData.staff))schoolData.staff=[];
-  if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];
   const sl=document.getElementById('staff-list');
   if(!sl)return;
   if(!schoolData.staff.length)sl.innerHTML='<p class="hint">معاون/معلمی نیست. با «+ کاربر» اضافه کنید.</p>';
@@ -5409,7 +5371,7 @@ function saveStaff(id){
     const name=nameEl.value.trim();
     const role=roleEl.value||'teacher';
     const username=normLoginUser(userEl.value.trim());
-    const pass=toEnDigits(String(passEl.value||''));
+    const pass=String(passEl.value||'');
     const phone=fixPhone(phoneEl?phoneEl.value:'');
     const shiftRaw=document.getElementById('st-shift')?document.getElementById('st-shift').value:'';
     const shift=shiftRaw===''?null:parseInt(shiftRaw,10);
@@ -5447,22 +5409,13 @@ function saveStaff(id){
     toast('ذخیره شد — در حال ارسال نقش به سرور...');
     if(session&&session.schoolId&&isManager()){
       (async function(){
-        var okStaff=false;
         try{
-          okStaff=await cloudPushStaff(session.schoolId,schoolData.staff);
-        }catch(e){okStaff=false}
-        if(okStaff){
-          toast('نقش و رمز روی سرور ذخیره شد ✓ — کاربر می‌تواند وارد شود');
-        }else{
-          var detail=(window._lastPushError?String(window._lastPushError).slice(0,100):'اتصال برقرار نشد');
-          toast('ارسال نشد: '+detail+' — اینترنت را چک کنید و دوباره ذخیره کنید',6000);
-        }
-        // همگام کامل در پس‌زمینه (اختیاری؛ شکستش رمز را خراب نکند)
-        try{
-          schoolData.replaceStructure=true;
-          schoolData._structureWriteToken=true;
+          await cloudPushStaff(session.schoolId,schoolData.staff);
           await cloudPushAppData(true);
-        }catch(e){}
+          toast('نقش روی سرور ذخیره شد ✓ — با همان نام کاربری وارد شود');
+        }catch(e){
+          toast('ذخیره محلی شد؛ ارسال سرور ناموفق — دوباره «ارسال به سرور» بزنید',5000);
+        }
         try{schoolData.replaceStructure=false;schoolData._structureWriteToken=false;saveSchoolData();}catch(e){}
       })();
     }
@@ -6299,6 +6252,9 @@ function openTakeAtt(assignId){
     if(n.assignId===assignId&&n.date===todayStr())noteMap[n.studentId]=n;
   });
   window._attNotePhotos=window._attNotePhotos||{};
+  var allowNote=(typeof hasModule==='function')?hasModule('att_class_note'):true;
+  var allowPhoto=(typeof hasModule==='function')?hasModule('att_class_photo'):true;
+  if(typeof session!=='undefined'&&session&&!Array.isArray(session.modules)){ allowNote=true; allowPhoto=true; }
   document.getElementById('take-list').innerHTML=st.length?st.map(s=>{
     const cur=lastMap[s.id]||'present';
     const prev=noteMap[s.id];
@@ -6312,8 +6268,8 @@ function openTakeAtt(assignId){
       '<div class="form-group" style="margin:0"><label style="font-size:.72rem">یادداشت دفتر کلاسی (فقط شما می‌بینید)</label>'+
       '<input class="form-control att-note" data-sid="'+s.id+'" placeholder="مثلاً فعال بود / نیاز به تمرین..." value="'+prevText+'" /></div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
-      '<label class="btn btn-outline btn-sm" style="margin:0;cursor:pointer">📷 افزودن عکس نمونه کار'+
-      '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="onAttNotePhoto(this,\''+s.id+'\')" /></label>'+
+      '<button type="button" class="btn btn-outline btn-sm" onclick="pickAttNotePhoto(\''+s.id+'\',\'camera\')">📷 دوربین</button>'+
+      '<button type="button" class="btn btn-outline btn-sm" onclick="pickAttNotePhoto(\''+s.id+'\',\'gallery\')">📁 گالری</button>'+
       '<span class="hint att-photo-count" data-sid="'+s.id+'" style="color:var(--muted)">'+(window._attNotePhotos[s.id]&&window._attNotePhotos[s.id].length?(window._attNotePhotos[s.id].length+' عکس'):'بدون عکس')+'</span>'+
       '</div>'+
       '<div class="att-photo-thumbs" data-sid="'+s.id+'" style="display:flex;gap:8px;flex-wrap:wrap"></div>'+
@@ -6325,6 +6281,42 @@ function openTakeAtt(assignId){
   if(btn){btn.disabled=false;btn.textContent=done?'به‌روزرسانی و ارسال مجدد':'ثبت و ارسال برای مدیر/معاون';btn.onclick=submitAttendance}
   showAppPage('take-att');
 }
+
+function pickAttNotePhoto(sid, mode){
+  try{
+    window._attPhotoSid = sid;
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if(mode === 'camera'){
+      input.setAttribute('capture', 'environment');
+    }else{
+      try{ input.removeAttribute('capture'); }catch(e){}
+    }
+    input.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;z-index:99999;';
+    var cleaned = false;
+    function cleanup(){
+      if(cleaned) return;
+      cleaned = true;
+      try{ if(input.parentNode) input.parentNode.removeChild(input); }catch(e){}
+    }
+    input.addEventListener('change', function(){
+      var f = input.files && input.files[0];
+      cleanup();
+      if(!f){ toast('فایلی انتخاب نشد'); return; }
+      // reuse existing handler shape
+      var fake = { files: [f], value: '' };
+      onAttNotePhoto(fake, sid);
+    });
+    document.body.appendChild(input);
+    input.click();
+    setTimeout(cleanup, 120000);
+  }catch(e){
+    console.error(e);
+    toast('باز کردن انتخاب عکس ممکن نشد');
+  }
+}
+
 function onAttNotePhoto(input,sid){
   var file=input.files&&input.files[0];
   if(!file)return;
@@ -7131,7 +7123,7 @@ function saveSampleQuestion(){
         toast(ok?'نمونه سوال روی سرور ذخیره شد ✓ — مدیر «دریافت از سرور» بزند':'ارسال ناموفق — فایل کوچک‌تر یا دوباره تلاش کنید');
       });
     }
-    if(String(dataUrl||'').indexOf('data:image/')===0 && typeof compressPhoto==='function'){
+    if(/^data:image\//i.test(String(dataUrl||'')) && typeof compressPhoto==='function'){
       try{
         // ساخت File از data برای compressPhoto اگر لازم؛ وگرنه مستقیم
         compressPhoto(file, 1200, function(url){
@@ -7155,6 +7147,8 @@ function delSampleQuestion(id){
   saveSchoolData();
   try{renderTeacherSamples();fillSamplesSubjectFilter();renderSamplesBySubject()}catch(e){}
   pushSampleQuestionsToServer().catch(function(){});
+}
+  toast('حذف شد');
 }
 function renderManagerSamples(){
   fillSamplesSubjectFilter();
@@ -7275,9 +7269,8 @@ async function submitAttendance(){
     schoolData._localDirtyAt=Date.now();
     schoolData._cloudUpdatedAtMs=Date.now();
     saveSchoolData();
-    // اول UI آزاد شود — همگام در پس‌زمینه
     var syncOk=false;
-    try{syncOk=!!(await pushAttendanceToServer(2))}catch(eSync){console.warn('att push',eSync);syncOk=false}
+    try{syncOk=!!(await pushAttendanceToServer(3))}catch(eSync){console.warn('att push',eSync);syncOk=false}
     const tName=userSession.name||userSession.username||'معلم';
     const c=schoolData.classes.find(x=>x.id===currentAssign.classId);
     const period=currentAssign.periodName||'زنگ';
@@ -7862,7 +7855,29 @@ function openPrintWindow(title, bodyHtml){
     document.getElementById('nikan-print-share').onclick=function(){
       try{
         var plain=document.getElementById('nikan-print-body');
-        var htmlDoc='<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"/><title>'+String(title||'report')+'</title></head><body>'+(plain?plain.innerHTML:'')+'</body></html>';
+        var htmlDoc='<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"/><title>'+String(title||'report')+'</title></head><body>'+(plain?plain.innerHTML:'')+'<div id="photo-crop-overlay">
+  <div id="photo-crop-box">
+    <h3>برش و روتوش عکس</h3>
+    <div id="photo-crop-stage">
+      <canvas id="photo-crop-canvas"></canvas>
+    </div>
+    <div class="photo-crop-controls">
+      <label><span>بزرگ‌نمایی</span><span id="crop-zoom-val">1.0</span></label>
+      <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1" />
+      <label><span>روشنایی</span><span id="crop-bright-val">0</span></label>
+      <input type="range" id="crop-bright" min="-40" max="40" step="1" value="0" />
+      <label><span>کنتراست</span><span id="crop-contrast-val">0</span></label>
+      <input type="range" id="crop-contrast" min="-40" max="40" step="1" value="0" />
+      <label class="checkbox-row" style="margin-top:4px"><input type="checkbox" id="crop-circle" checked /> کراپ دایره‌ای (پروفایل)</label>
+    </div>
+    <p class="photo-crop-hint">انگشت یا ماوس را بکشید تا جابه‌جا شود · زوم و روتوش را تنظیم کنید</p>
+    <div class="photo-crop-actions">
+      <button type="button" class="btn btn-outline" onclick="closePhotoCrop()">انصراف</button>
+      <button type="button" class="btn btn-primary" onclick="confirmPhotoCrop()">تأیید عکس</button>
+    </div>
+  </div>
+</div>
+</body></html>';
         var blob=new Blob([htmlDoc],{type:'text/html;charset=utf-8'});
         var url=URL.createObjectURL(blob);
         var a=document.createElement('a');
@@ -8833,8 +8848,6 @@ function delDiscType(id){
   toast('از لیست حذف شد — سوابق دانش‌آموزان حفظ شد');
 }
 function saveRules(){
-  if(!canManage())return toast('فقط مدیر/معاون می‌تواند قوانین را تغییر دهد');
-
   if(!schoolData.rules)schoolData.rules={};
   schoolData.rules.absent=parseFloat(document.getElementById('rule-absent').value)||0.5;
   schoolData.rules.late=parseFloat(document.getElementById('rule-late').value)||0.25;
@@ -8854,33 +8867,15 @@ function saveRules(){
     }).catch(function(){toast('محلی ذخیره شد')});
   }else toast('ذخیره شد');
 }
-async function saveManagerPhoto(){
+function saveManagerPhoto(){
   if(!isManager())return toast('فقط مدیر');
-  var photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';
-  try{photo=await shrinkPhotoDataUrl(photo,200,0.45,50000)}catch(e){}
+  const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';
   schoolData.managerPhoto=photo||'';
   schoolData._cloudUpdatedAtMs=Date.now();
   saveSchoolData();
-  toast('در حال ذخیره عکس مدیر...');
+  toast('در حال ذخیره عکس...');
+  cloudPushAppData(true).then(function(){toast('عکس مدیر ذخیره و روی سرور آمد')}).catch(function(){toast('محلی ذخیره شد؛ ارسال سرور ناموفق')});
   try{renderHome()}catch(e){}
-  if(!SYNC_API||!session||!session.schoolId){toast('محلی ذخیره شد');return}
-  var body={managerPhoto:photo||'',_photoOnly:true,_compatNoAuth:true,_teacherPartial:true};
-  var ok=false;
-  try{
-    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/staff-self',{method:'POST',body:body,retries:2,timeoutMs:90000});
-    ok=true;
-  }catch(e1){
-    try{
-      // اگر staff-self هنوز Deploy نشده، از teacher با فلگ عکس
-      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
-        method:'POST',
-        body:Object.assign({},body,{staffSelfUpdate:{id:'__manager__',photo:''},managerPhoto:photo||'',_staffSelfOnly:true}),
-        retries:1,timeoutMs:90000
-      });
-      ok=true;
-    }catch(e2){console.warn('mgr photo',e2)}
-  }
-  toast(ok?'عکس مدیر روی سرور ذخیره شد ✓':'محلی ذخیره شد — Worker را Deploy کنید سپس دوباره ذخیره کنید');
 }
 /** عکس شخصی معاون/معلم — در staff ذخیره و همگام می‌شود تا همه ببینند */
 function saveMyStaffPhoto(){
@@ -8904,67 +8899,37 @@ function saveMyStaffPhoto(){
   try{renderHome();renderSettings()}catch(e){}
 }
 /** تغییر رمز معاون/معلم — نام کاربری ثابت؛ رمز در تیم مدیر به‌روز می‌شود */
-
-async function shrinkPhotoDataUrl(photo, maxW, quality, maxLen){
-  maxW=maxW||240; quality=quality||0.5; maxLen=maxLen||80000;
-  photo=photo||'';
-  if(!photo)return '';
-  if(String(photo).length<=maxLen && String(photo).indexOf('data:image/')===0){
-    // still shrink a bit if very large dimensions possible
-  }
-  try{
-    return await new Promise(function(resolve){
-      var img=new Image();
-      img.onload=function(){
-        try{
-          var c=document.createElement('canvas');
-          var w=img.width||maxW,h=img.height||maxW;
-          if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
-          c.width=w;c.height=h;
-          c.getContext('2d').drawImage(img,0,0,w,h);
-          var out=c.toDataURL('image/jpeg',quality);
-          if(out.length>maxLen){
-            out=c.toDataURL('image/jpeg',0.35);
-          }
-          resolve(out);
-        }catch(e){resolve(String(photo).slice(0,maxLen))}
-      };
-      img.onerror=function(){resolve(String(photo).slice(0,maxLen))};
-      img.src=photo;
-    });
-  }catch(e){return String(photo).slice(0,maxLen)}
-}
-
 async function pushStaffSelfUpdate(fields){
+  // ارسال امن عکس/رمز شخصی بدون دست‌زدن به ساختار کلاس‌ها
   if(!SYNC_API||!session||!session.schoolId||!userSession||!userSession.staffId)return false;
-  var photo=fields&&fields.photo!==undefined?fields.photo:undefined;
-  if(photo!==undefined){
-    try{photo=await shrinkPhotoDataUrl(photo,200,0.45,50000)}catch(e){photo=String(photo||'').slice(0,50000)}
-  }
-  // اگر رمز عوض شده، auth با رمز قدیمی باشد تا سرور قبول کند
-  var authPass=(fields&&fields.authPass!=null&&fields.authPass!=='')
-    ? String(fields.authPass)
-    : String(userSession.pass||'');
   var body={
-    staffSelfUpdate:{id:String(userSession.staffId),updatedAt:Date.now()},
-    _staffSelfOnly:true,_photoOnly:!(fields&&fields.pass),_teacherPartial:true,_compatNoAuth:true,
-    auth:{user:userSession.username||'',pass:authPass,role:userSession.role||'teacher'}
-  };
-  if(fields&&fields.pass!=null)body.staffSelfUpdate.pass=toEnDigits(String(fields.pass));
-  if(photo!==undefined)body.staffSelfUpdate.photo=photo||'';
-  var paths=[
-    '/api/schools/'+encodeURIComponent(session.schoolId)+'/staff-self',
-    '/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher'
-  ];
-  for(var pi=0;pi<paths.length;pi++){
-    try{
-      await apiFetch(paths[pi],{method:'POST',body:body,retries:2,timeoutMs:90000});
-      return true;
-    }catch(e){
-      console.warn('staff-self path',paths[pi],e);
+    staffSelfUpdate:{
+      id:String(userSession.staffId),
+      updatedAt:Date.now()
+    },
+    _teacherPartial:true,
+    _compatNoAuth:true,
+    auth:{
+      user:userSession.username||'',
+      pass:userSession.pass||'',
+      role:userSession.role||'teacher'
     }
+  };
+  if(fields&&fields.pass!=null)body.staffSelfUpdate.pass=String(fields.pass);
+  if(fields&&fields.photo!==undefined)body.staffSelfUpdate.photo=fields.photo||'';
+  try{
+    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
+      method:'POST',body:body,retries:2,timeoutMs:45000
+    });
+    return true;
+  }catch(e){
+    console.warn('pushStaffSelfUpdate',e);
+    // fallback: appData عمومی
+    try{
+      await cloudPushAppData(true);
+      return true;
+    }catch(e2){return false}
   }
-  return false;
 }
 async function changeMyStaffPassword(){
   if(isManager())return toast('مدیر از بخش حساب مدیر استفاده کند');
@@ -8977,17 +8942,13 @@ async function changeMyStaffPassword(){
   var n1=toEnDigits((document.getElementById('staff-pass-new')||{}).value||'');
   var n2=toEnDigits((document.getElementById('staff-pass-new2')||{}).value||'');
   if(!curPass)return toast('رمز فعلی را وارد کنید');
-  var stored=toEnDigits(String(u.pass||u.password||''));
-  var sessPass=toEnDigits(String(userSession.pass||''));
-  if(stored!==curPass && sessPass!==curPass){
+  if(String(u.pass||'')!==String(curPass) && String(userSession.pass||'')!==String(curPass)){
     return toast('رمز فعلی اشتباه است');
   }
   if(n1.length<4)return toast('رمز جدید حداقل ۴ کاراکتر باشد');
   if(n1!==n2)return toast('تکرار رمز یکسان نیست');
-  // احراز هویت سرور با رمز فعلی (قدیمی) انجام شود تا قبول کند
-  var oldPassForAuth=curPass;
+  // فقط رمز عوض می‌شود — نام کاربری دست‌نخورده می‌ماند
   u.pass=n1;
-  u.password=n1;
   userSession.pass=n1;
   try{saveUserSession(userSession)}catch(e){}
   schoolData._cloudUpdatedAtMs=Date.now();
@@ -8995,8 +8956,8 @@ async function changeMyStaffPassword(){
   saveSchoolData();
   toast('در حال ذخیره رمز روی سرور...');
   try{
-    var ok=await pushStaffSelfUpdate({pass:n1, authPass:oldPassForAuth});
-    toast(ok?'رمز جدید ذخیره شد ✓ — مدیر با «دریافت از سرور» رمز به‌روز را می‌بیند':'محلی ذخیره شد؛ ارسال سرور ناموفق');
+    var ok=await pushStaffSelfUpdate({pass:n1});
+    toast(ok?'رمز جدید ذخیره شد ✓ — مدیر در بخش تیم رمز به‌روز را می‌بیند':'محلی ذخیره شد؛ ارسال سرور ناموفق');
   }catch(e){
     toast('محلی ذخیره شد؛ ارسال سرور ناموفق — بعداً همگام کنید');
   }
@@ -9380,7 +9341,7 @@ async function changeManagerPassword(){
   let newUser=normLoginUser((document.getElementById('mgr-user-new')||{}).value||'');
   const curUser=normLoginUser(schoolData.managerUser||(userSession&&userSession.username)||'');
   if(!curPass)return toast('رمز فعلی را وارد کنید');
-  if(toEnDigits(String(schoolData.managerPass||''))!==toEnDigits(String(curPass)))return toast('رمز فعلی اشتباه است');
+  if(String(schoolData.managerPass||'')!==String(curPass))return toast('رمز فعلی اشتباه است');
   if(n1.length<6)return toast('رمز جدید حداقل ۶ کاراکتر باشد');
   if(n1!==n2)return toast('تکرار رمز یکسان نیست');
   if(!newUser)newUser=curUser;
@@ -9392,7 +9353,6 @@ async function changeManagerPassword(){
   try{
     if(userSession){
       userSession.username=newUser;
-      userSession.pass=n1;
       saveUserSession(userSession);
     }
   }catch(e){}
@@ -9490,8 +9450,6 @@ function renderSettings(){
   try{
     var discCard=document.getElementById('set-disc-types');
     if(discCard)discCard.style.display=canManage()?'block':'none';
-    var rulesCard=document.getElementById('set-rules-card');
-    if(rulesCard)rulesCard.style.display=canManage()?'block':'none';
   }catch(e){}
 
   // میان‌برهای مرتب داخل «بیشتر»
@@ -9893,17 +9851,10 @@ function exportFullSchoolBackupLocal(){
       note:'پشتیبان کامل صفر تا صد از پنل مدرسه'
     };
     var json=JSON.stringify(payload);
-    var blob=new Blob([json],{type:'application/json;charset=utf-8'});
-    var url=URL.createObjectURL(blob);
-    var a=document.createElement('a');
     var safe=String(session.code||session.name||'school').replace(/[^\w\u0600-\u06FF\-]+/g,'_');
-    a.href=url;
-    a.download='school-FULL-backup-'+safe+'-'+(typeof todayStr==='function'?todayStr():Date.now())+'.json';
-    a.style.display='none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function(){try{document.body.removeChild(a);URL.revokeObjectURL(url)}catch(e){}},1500);
-    toast('پشتیبان دانلود شد · کلاس '+payload.summary.classes+' · دانش‌آموز '+payload.summary.students+' · برنامه '+payload.summary.assignments);
+    var fname='school-FULL-backup-'+safe+'-'+(typeof todayStr==='function'?todayStr():Date.now())+'.json';
+    saveFileAndroidOrWeb(json, fname, 'application/json;charset=utf-8');
+    toast('پشتیبان آماده شد · کلاس '+payload.summary.classes+' · دانش‌آموز '+payload.summary.students);
   }catch(e){
     toast('خطا در پشتیبان: '+(e&&e.message?e.message:e));
   }
@@ -9960,17 +9911,8 @@ function openMediaViewer(src, title, fileName){
   body.innerHTML='';
   var s=String(src);
   var name=String(fileName||title||'');
-  var isImg=(function(){
-      var ss=String(s||''), nn=String(name||'').toLowerCase().split('?')[0];
-      if(ss.indexOf('data:image/')===0||ss.indexOf('blob:')===0)return true;
-      var ext=nn.slice(nn.lastIndexOf('.'));
-      return ['.png','.jpg','.jpeg','.gif','.webp','.bmp'].indexOf(ext)>=0;
-    })();
-  var isPdf=(function(){
-      var ss=String(s||''), nn=String(name||'').toLowerCase().split('?')[0];
-      if(ss.indexOf('data:application/pdf')===0||ss.toLowerCase().indexOf('application/pdf')>=0)return true;
-      return nn.slice(nn.lastIndexOf('.'))==='.pdf';
-    })();
+  var isImg=/^data:image\//i.test(s)||/\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(name)||/^blob:/.test(s);
+  var isPdf=/^data:application\/pdf/i.test(s)||/\.pdf(\?|$)/i.test(name)||/application\/pdf/i.test(s);
   if(isImg){
     var img=document.createElement('img');
     img.src=s;
@@ -10003,16 +9945,8 @@ function openMediaViewer(src, title, fileName){
   try{document.body.style.overflow='hidden'}catch(e){}
 }
 function downloadDataUrl(dataUrl, fileName){
-  try{
-    var a=document.createElement('a');
-    a.href=dataUrl;
-    a.download=fileName||'download';
-    a.style.display='none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function(){try{document.body.removeChild(a)}catch(e){}},500);
-    toast('دانلود شروع شد');
-  }catch(e){toast('دانلود ناموفق')}
+  try{ saveFileAndroidOrWeb(dataUrl, fileName||'download', 'application/octet-stream'); }
+  catch(e){toast('دانلود ناموفق')}
 }
 function downloadSampleById(id){
   var q=(schoolData.sampleQuestions||[]).find(function(x){return x&&String(x.id)===String(id)});
@@ -10028,6 +9962,159 @@ function openSampleInApp(id){
 function openModal(){var m=document.getElementById('modal');if(m)m.classList.add('show')}
 function closeModal(){document.getElementById('modal').classList.remove('show')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+
+
+/* —— ظاهر سفارشی صفحه ورود از پنل مادر —— */
+function defaultBrand(){
+  return {
+    logo:'', bgImage:'', enabled:true,
+    title:'', subtitle:'', announce:'', ad:'', adLink:'',
+    bg:'#070b14', accent:'#38bdf8', text:'#e8eef7', card:'#111a2e',
+    font:"Tahoma, sans-serif", titleSize:'1.65rem', bodySize:'14.5px', bgOverlay:55
+  };
+}
+async function fetchAndApplyBranding(){
+  var cached = null;
+  try{ cached = JSON.parse(localStorage.getItem('nikan_branding')||'null'); }catch(e){}
+  if(cached && (cached.logo || cached.title || cached.bg || cached.announce)){
+    applyBrandingToDom(cached);
+  }
+  try{
+    var data = null;
+    if(typeof apiFetch === 'function'){
+      try{ data = await apiFetch('/api/branding', { retries: 1, timeoutMs: 12000 }); }catch(e){}
+    }
+    if(!data){
+      var base = (typeof SYNC_API !== 'undefined' && SYNC_API) ? SYNC_API : '';
+      try{
+        var res = await fetch((base||'') + '/api/branding', { cache: 'no-store' });
+        data = await res.json();
+      }catch(e){}
+    }
+    if(data && data.ok !== false){
+      try{ localStorage.setItem('nikan_branding', JSON.stringify(Object.assign({}, data, { ts: Date.now() }))); }catch(e){}
+      applyBrandingToDom(data);
+    }
+  }catch(e){ console.warn('branding', e); }
+}
+function ensureBrandStyleEl(){
+  var el = document.getElementById('nikan-brand-style');
+  if(!el){
+    el = document.createElement('style');
+    el.id = 'nikan-brand-style';
+    document.head.appendChild(el);
+  }
+  return el;
+}
+function ensureBrandBanner(){
+  var el = document.getElementById('nikan-brand-announce');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'nikan-brand-announce';
+    el.style.cssText = 'display:none;text-align:center;padding:10px 14px;font-size:.86rem;font-weight:700;border-radius:12px;margin:0 0 12px;line-height:1.6';
+  }
+  return el;
+}
+function ensureBrandAd(){
+  var el = document.getElementById('nikan-brand-ad');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'nikan-brand-ad';
+    el.style.cssText = 'display:none;text-align:center;padding:12px;font-size:.82rem;border-radius:12px;margin:12px 0 0;line-height:1.65;border:1px solid rgba(255,255,255,.12)';
+  }
+  return el;
+}
+
+function applyBrandingToDom(raw){
+  try{
+    var d = Object.assign(defaultBrand(), raw || {});
+    var st = ensureBrandStyleEl();
+    if(d.enabled === false){
+      st.textContent = '';
+      var ann0 = document.getElementById('nikan-brand-announce');
+      if(ann0) ann0.style.display = 'none';
+      var ad0 = document.getElementById('nikan-brand-ad');
+      if(ad0) ad0.style.display = 'none';
+      return;
+    }
+
+    // فقط صفحات ورود (.auth-bg / .auth-logo / .auth-card) — داخل اپ مدرسه دست نخورده می‌ماند
+    document.querySelectorAll('.auth-bg .brand-orb, .auth-logo .brand-orb, #screen-gate .brand-orb, #screen-login .brand-orb, #screen-register .brand-orb').forEach(function(el){
+      if(d.logo){
+        el.innerHTML = '<img src="'+d.logo+'" alt="logo" />';
+      }else if(el.querySelector('img')){
+        el.innerHTML = 'ن';
+      }
+    });
+
+    document.querySelectorAll('.auth-logo h1').forEach(function(h, idx){
+      if(d.title && idx === 0) h.textContent = d.title;
+    });
+    document.querySelectorAll('.auth-logo p').forEach(function(p, idx){
+      if(d.subtitle && idx === 0) p.textContent = d.subtitle;
+    });
+
+    var ann = ensureBrandBanner();
+    if(d.announce){
+      ann.style.display = 'block';
+      ann.textContent = d.announce;
+      ann.style.background = 'rgba(56,189,248,.15)';
+      ann.style.color = d.accent || '#38bdf8';
+      ann.style.border = '1px solid '+(d.accent||'#38bdf8')+'55';
+      var host = document.querySelector('#screen-gate .auth-bg, .screen.active .auth-bg, .auth-bg');
+      if(host && !host.contains(ann)){
+        try{ host.insertBefore(ann, host.firstChild); }catch(e){}
+      }
+    }else{
+      ann.style.display = 'none';
+    }
+
+    var ad = ensureBrandAd();
+    if(d.ad){
+      ad.style.display = 'block';
+      ad.style.background = (d.card || '#111a2e');
+      ad.style.color = d.text || '#e8eef7';
+      if(d.adLink){
+        ad.innerHTML = '<a href="'+String(d.adLink).replace(/"/g,'&quot;')+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">'+String(d.ad).replace(/</g,'&lt;')+'</a>';
+      }else{
+        ad.textContent = d.ad;
+      }
+      var card0 = document.querySelector('#screen-gate .auth-card, .screen.active .auth-card, .auth-card');
+      if(card0 && ad.parentNode !== card0){
+        try{ card0.appendChild(ad); }catch(e){}
+      }
+    }else{
+      ad.style.display = 'none';
+    }
+
+    var ov = Math.min(90, Math.max(0, parseInt(d.bgOverlay, 10) || 55)) / 100;
+    var bgImg = d.bgImage
+      ? ('linear-gradient(rgba(0,0,0,'+ov+'), rgba(0,0,0,'+ov+')), url('+d.bgImage+') center/cover no-repeat fixed')
+      : ('radial-gradient(600px 300px at 50% 0%, '+ (d.accent||'#38bdf8') +'33, transparent 60%), linear-gradient(180deg, '+ (d.bg||'#070b14') +' 0%, '+ (d.bg||'#070b14') +' 100%)');
+
+    // همه سلکتورها فقط زیر صفحات ورود — بدون تأثیر روی #screen-app و داشبورد
+    var css = ''
+      + '.auth-bg{'
+      + 'background:'+bgImg+' !important;'
+      + 'font-family:'+(d.font||'Tahoma,sans-serif')+' !important;'
+      + 'color:'+(d.text||'#e8eef7')+' !important;'
+      + 'font-size:'+(d.bodySize||'14.5px')+' !important;'
+      + '}'
+      + '.auth-bg .auth-logo h1, .auth-logo h1{font-size:'+(d.titleSize||'1.65rem')+' !important;color:'+(d.text||'#fff')+' !important;font-family:'+(d.font||'Tahoma,sans-serif')+' !important;}'
+      + '.auth-bg .auth-logo p, .auth-logo p{color:'+(d.text||'#e8eef7')+' !important;opacity:.9;font-family:'+(d.font||'Tahoma,sans-serif')+' !important;}'
+      + '.auth-bg .auth-card, .auth-card{background:'+(d.card||'#111a2e')+'ee !important;border-color:'+(d.accent||'#38bdf8')+'33 !important;color:'+(d.text||'#e8eef7')+' !important;font-family:'+(d.font||'Tahoma,sans-serif')+' !important;}'
+      + '.auth-bg .auth-card h2, .auth-card h2{color:'+(d.accent||'#38bdf8')+' !important;}'
+      + '.auth-bg .btn-primary, .auth-card .btn-primary{background:linear-gradient(135deg,'+(d.accent||'#38bdf8')+','+(d.accent||'#0ea5e9')+') !important;}'
+      + '.auth-bg .role-btn.active, .auth-card .role-btn.active{border-color:'+(d.accent||'#38bdf8')+' !important;color:'+(d.accent||'#38bdf8')+' !important;background:'+(d.accent||'#38bdf8')+'22 !important;}'
+      + '.auth-bg .brand-orb, .auth-logo .brand-orb{box-shadow:0 0 0 1px '+(d.accent||'#38bdf8')+'55,0 12px 40px '+(d.accent||'#0ea5e9')+'55 !important;overflow:hidden;}'
+      + '.auth-bg .brand-orb img, .auth-logo .brand-orb img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;}'
+      + '#nikan-brand-announce,#nikan-brand-ad{font-family:'+(d.font||'Tahoma,sans-serif')+' !important;}'
+      + '#screen-app #nikan-brand-announce, #screen-app #nikan-brand-ad, .app-shell #nikan-brand-announce, .app-shell #nikan-brand-ad{display:none !important;}';
+    st.textContent = css;
+  }catch(e){ console.warn('apply brand', e); }
+}
+
 
 async function tryAutoEnterFromMother(){
   try{
