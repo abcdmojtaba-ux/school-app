@@ -2468,10 +2468,32 @@ async function cloudPullAppData(force){
     }else if(forcePull&&schoolData&&schoolData._localDirtyAt&&(Date.now()-schoolData._localDirtyAt)<20000&&(schoolData.replaceAssignments||schoolData._structureWriteToken)){
       forcePull=false;
     }
-    // همیشه برای همگام‌سازی چنددستگاهی full بکش اگر force یا معلم
-    var needFull=!!forcePull||(userSession&&userSession.role==='teacher');
-    var since=(!needFull&&schoolData&&schoolData._cloudUpdatedAtMs)?('?since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs))):'';
-    var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+since,{retries:needFull?3:2,timeoutMs:needFull?45000:20000});
+    var role=(userSession&&userSession.role)||'';
+    var isMgr=role==='manager'||role==='مدیر'||(typeof isManager==='function'&&isManager());
+    var isTeach=role==='teacher'||role==='معلم'||role==='دبیر'||(typeof isTeacher==='function'&&isTeacher());
+    var isDep=role==='deputy'||role==='معاون'||role==='assistant'||(typeof isDeputy==='function'&&isDeputy());
+    // معلم/معاون: فقط دادهٔ مربوط به خودشان (سبک) — مدیر: کل مدرسه
+    var needFull=!!forcePull||isTeach||isDep;
+    var qs=[];
+    if(!needFull&&schoolData&&schoolData._cloudUpdatedAtMs){
+      qs.push('since='+encodeURIComponent(String(schoolData._cloudUpdatedAtMs)));
+    }
+    if(!isMgr&&(isTeach||isDep)){
+      qs.push('scope=mine');
+      qs.push('role='+encodeURIComponent(isDep?'deputy':'teacher'));
+      if(userSession&&userSession.staffId)qs.push('staffId='+encodeURIComponent(String(userSession.staffId)));
+      if(userSession&&userSession.username)qs.push('user='+encodeURIComponent(String(userSession.username)));
+    }
+    var qstr=qs.length?('?'+qs.join('&')):'';
+    var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+qstr,{
+      retries:needFull?3:2,
+      timeoutMs:needFull?45000:20000,
+      headers:(!isMgr&&(isTeach||isDep))?{
+        'X-Auth-Role':isDep?'deputy':'teacher',
+        'X-Staff-Id':(userSession&&userSession.staffId)?String(userSession.staffId):'',
+        'X-Auth-User':(userSession&&userSession.username)?String(userSession.username):''
+      }:undefined
+    });
     if(data&&data.unchanged)return false;
     const d=(data&&data.data)||null;
     if(!d){
@@ -2484,6 +2506,44 @@ async function cloudPullAppData(force){
       }
       schoolData._localDirtyAt=0;
       return false;
+    }
+    // پاسخ محدود معلم/معاون: فقط دادهٔ خودش — جایگزین کامل همان محدوده
+    if(d._scoped){
+      try{
+        if(Array.isArray(d.classes))schoolData.classes=d.classes.slice();
+        if(Array.isArray(d.students))schoolData.students=d.students.slice();
+        // برنامه: اگر سرور لیست خالی فرستاد ولی محلی برنامه داشت، محلی را نگه دار تا پنل معلم خالی نشود
+        if(Array.isArray(d.assignments)){
+          if(d.assignments.length>0){
+            schoolData.assignments=d.assignments.slice();
+          }else if(!(schoolData.assignments&&schoolData.assignments.length)){
+            schoolData.assignments=[];
+          }
+          // اگر سرور خالی و محلی پر بود: محلی بماند (ممکن است push هنوز کامل نشده)
+        }
+        if(Array.isArray(d.attendance))schoolData.attendance=_mergeById(schoolData.attendance||[],d.attendance,false);
+        if(Array.isArray(d.submissions))schoolData.submissions=_mergeById(schoolData.submissions||[],d.submissions,false);
+        if(Array.isArray(d.exams))schoolData.exams=_mergeById(schoolData.exams||[],d.exams,false);
+        if(Array.isArray(d.messages))schoolData.messages=_mergeById(schoolData.messages||[],d.messages,false);
+        if(Array.isArray(d.sampleQuestions))schoolData.sampleQuestions=_mergeById(schoolData.sampleQuestions||[],d.sampleQuestions,false);
+        if(Array.isArray(d.staff)&&d.staff.length){
+          // فقط خود کاربر را به‌روز کن؛ بقیهٔ تیم محلی را نگه دار اگر بود
+          var mine=d.staff;
+          var map={};(schoolData.staff||[]).forEach(function(u){if(u&&u.id)map[String(u.id)]=u});
+          mine.forEach(function(u){if(u&&u.id)map[String(u.id)]=Object.assign({},map[String(u.id)]||{},u)});
+          // برای معلم فقط staffهای scope
+          if(d._scopeRole==='teacher')schoolData.staff=mine.slice();
+          else schoolData.staff=Object.keys(map).map(function(k){return map[k]});
+        }
+        if(d.managerPhoto)schoolData.managerPhoto=d.managerPhoto;
+        if(d.theme)schoolData.theme=d.theme;
+        if(d.disciplineTypes)schoolData.disciplineTypes=d.disciplineTypes;
+        schoolData._cloudUpdatedAtMs=d.updatedAtMs||(data&&data.updatedAt)||Date.now();
+        schoolData._localDirtyAt=0;
+        try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+        try{window._serverPullOk=true;window._serverStructOk=true}catch(e){}
+        return true;
+      }catch(eSc){console.warn('scoped apply',eSc)}
     }
     const remoteTs=d.updatedAtMs||(data&&data.updatedAt)||0;
     const localTs=(schoolData&&schoolData._cloudUpdatedAtMs)||0;
