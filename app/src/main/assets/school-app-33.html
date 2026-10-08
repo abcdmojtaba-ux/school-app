@@ -7147,7 +7147,6 @@ function delSampleQuestion(id){
   saveSchoolData();
   try{renderTeacherSamples();fillSamplesSubjectFilter();renderSamplesBySubject()}catch(e){}
   pushSampleQuestionsToServer().catch(function(){});
-}
   toast('حذف شد');
 }
 function renderManagerSamples(){
@@ -7855,29 +7854,7 @@ function openPrintWindow(title, bodyHtml){
     document.getElementById('nikan-print-share').onclick=function(){
       try{
         var plain=document.getElementById('nikan-print-body');
-        var htmlDoc='<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"/><title>'+String(title||'report')+'</title></head><body>'+(plain?plain.innerHTML:'')+'<div id="photo-crop-overlay">
-  <div id="photo-crop-box">
-    <h3>برش و روتوش عکس</h3>
-    <div id="photo-crop-stage">
-      <canvas id="photo-crop-canvas"></canvas>
-    </div>
-    <div class="photo-crop-controls">
-      <label><span>بزرگ‌نمایی</span><span id="crop-zoom-val">1.0</span></label>
-      <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1" />
-      <label><span>روشنایی</span><span id="crop-bright-val">0</span></label>
-      <input type="range" id="crop-bright" min="-40" max="40" step="1" value="0" />
-      <label><span>کنتراست</span><span id="crop-contrast-val">0</span></label>
-      <input type="range" id="crop-contrast" min="-40" max="40" step="1" value="0" />
-      <label class="checkbox-row" style="margin-top:4px"><input type="checkbox" id="crop-circle" checked /> کراپ دایره‌ای (پروفایل)</label>
-    </div>
-    <p class="photo-crop-hint">انگشت یا ماوس را بکشید تا جابه‌جا شود · زوم و روتوش را تنظیم کنید</p>
-    <div class="photo-crop-actions">
-      <button type="button" class="btn btn-outline" onclick="closePhotoCrop()">انصراف</button>
-      <button type="button" class="btn btn-primary" onclick="confirmPhotoCrop()">تأیید عکس</button>
-    </div>
-  </div>
-</div>
-</body></html>';
+        var htmlDoc='<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"/><title>'+String(title||'report')+'</title></head><body>'+(plain?plain.innerHTML:'')+'</body></html>';
         var blob=new Blob([htmlDoc],{type:'text/html;charset=utf-8'});
         var url=URL.createObjectURL(blob);
         var a=document.createElement('a');
@@ -10026,9 +10003,36 @@ function ensureBrandAd(){
   return el;
 }
 
+
+window._nikanFontLinks = window._nikanFontLinks || {};
+function ensureNikanBrandFonts(fontFamily){
+  try{
+    var ff = String(fontFamily || '');
+    var links = [];
+    if(/Vazirmatn/i.test(ff)) links.push({id:'nf-vazir', href:'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css'});
+    if(/Samim/i.test(ff)) links.push({id:'nf-samim', href:'https://cdn.jsdelivr.net/gh/rastikerdar/samim-font@v4.0.5/dist/font-face.css'});
+    if(/Shabnam/i.test(ff)) links.push({id:'nf-shabnam', href:'https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css'});
+    if(/Gandom/i.test(ff)) links.push({id:'nf-gandom', href:'https://cdn.jsdelivr.net/gh/rastikerdar/gandom-font@v1.0.0/dist/font-face.css'});
+    if(/Tanha/i.test(ff)) links.push({id:'nf-tanha', href:'https://cdn.jsdelivr.net/gh/rastikerdar/tanha-font@v0.9.0/dist/font-face.css'});
+    if(/Estedad/i.test(ff)) links.push({id:'nf-estedad', href:'https://cdn.jsdelivr.net/gh/aminabedi68/Estedad@v7.3/fonts/webfonts/estedad.css'});
+    if(/Noto Naskh/i.test(ff) || /Noto Nastaliq/i.test(ff) || /Amiri/i.test(ff) || /Scheherazade/i.test(ff) || /Markazi/i.test(ff) || /Lalezar/i.test(ff) || /Cairo/i.test(ff) || /Tajawal/i.test(ff) || /IBM Plex/i.test(ff)){
+      links.push({id:'nf-gfonts', href:'https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Lalezar&family=Markazi+Text:wght@400;600;700&family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Scheherazade+New:wght@400;700&family=Tajawal:wght@400;500;700&display=swap'});
+    }
+    links.forEach(function(L){
+      if(document.getElementById(L.id)) return;
+      var link = document.createElement('link');
+      link.id = L.id;
+      link.rel = 'stylesheet';
+      link.href = L.href;
+      document.head.appendChild(link);
+    });
+  }catch(e){ console.warn('font load', e); }
+}
+
 function applyBrandingToDom(raw){
   try{
     var d = Object.assign(defaultBrand(), raw || {});
+    try{ ensureNikanBrandFonts(d.font); }catch(_e){}
     var st = ensureBrandStyleEl();
     if(d.enabled === false){
       st.textContent = '';
@@ -10182,6 +10186,7 @@ async function tryAutoEnterFromMother(){
 }
 
 (async function(){
+  try{ fetchAndApplyBranding(); }catch(e){ console.warn('branding', e); }
   if(await tryAutoEnterFromMother())return;
   session=loadSession();userSession=loadUserSession();
   if(session&&userSession){
