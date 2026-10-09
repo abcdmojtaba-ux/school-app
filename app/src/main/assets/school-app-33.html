@@ -902,6 +902,30 @@ window.openContactSalesModal=window.openContactSalesModal||function(){
           <option value="2">عصر</option>
         </select>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+        <div class="form-group" style="margin-bottom:8px">
+          <label>فیلتر کلاس</label>
+          <select class="form-control" id="assign-class-filter" onchange="renderAssignments()">
+            <option value="all">همه کلاس‌ها</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label>فیلتر روز هفته</label>
+          <select class="form-control" id="assign-day-filter" onchange="renderAssignments()">
+            <option value="all">همه روزها</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <label>مرتب‌سازی لیست</label>
+        <select class="form-control" id="assign-sort-by" onchange="renderAssignments()">
+          <option value="class-day">کلاس ← روز ← ساعت</option>
+          <option value="day-time">روز ← ساعت ← کلاس</option>
+          <option value="teacher">نام معلم ← روز ← ساعت</option>
+          <option value="shift-class">شیفت ← کلاس ← روز</option>
+          <option value="subject">درس ← روز ← ساعت</option>
+        </select>
+      </div>
       <div id="teacher-schedule-stats" style="margin-top:10px"></div>
       <div id="assign-list" style="margin-top:12px"></div>
     </div>
@@ -2799,28 +2823,68 @@ function fixPhone(s){
 function formatPhone(s){return fixPhone(s)}
 
 
-function compressPhoto(file, maxW, cb){
-  maxW=maxW||160;
+/** فشرده‌سازی هوشمند عکس — کیفیت قابل‌استفاده، حجم کم برای سرور
+ * maxW: حداکثر عرض (پیکسل)
+ * qualityOrOpts: عدد کیفیت 0..1 یا آبجکت {quality, maxBytes, minQuality}
+ */
+function compressPhoto(file, maxW, cb, qualityOrOpts){
+  maxW=maxW||320;
+  var opts=typeof qualityOrOpts==='object'&&qualityOrOpts?qualityOrOpts:{};
+  var quality=typeof qualityOrOpts==='number'?qualityOrOpts:(opts.quality!=null?opts.quality:0.8);
+  var maxBytes=opts.maxBytes||280000; // حدود ۲۸۰KB برای dataURL پایه
+  var minQuality=opts.minQuality!=null?opts.minQuality:0.62;
   if(!file){if(cb)cb('');return}
   const done=function(url){try{cb(url)}catch(e){}};
+  function encode(img, w, h, q){
+    var c=document.createElement('canvas');
+    c.width=w;c.height=h;
+    var ctx=c.getContext('2d');
+    ctx.imageSmoothingEnabled=true;
+    try{ctx.imageSmoothingQuality='high'}catch(e){}
+    ctx.drawImage(img,0,0,w,h);
+    return c.toDataURL('image/jpeg', q);
+  }
+  function processImage(img, rawFallback){
+    try{
+      var w0=img.width||maxW,h0=img.height||maxW;
+      if(!w0||!h0){done(rawFallback||'');return}
+      var scale=Math.min(1, maxW/Math.max(w0,h0));
+      // اگر عکس خیلی کوچک است کوچک‌تر نکن
+      if(w0<=maxW&&h0<=maxW)scale=1;
+      var w=Math.max(1,Math.round(w0*scale));
+      var h=Math.max(1,Math.round(h0*scale));
+      var q=quality;
+      var out=encode(img,w,h,q);
+      // اگر هنوز خیلی بزرگ بود کیفیت را پله‌ای کم کن (نه کمتر از minQuality)
+      var guard=0;
+      while(out&&out.length>maxBytes&&q>minQuality&&guard<6){
+        q=Math.max(minQuality, q-0.08);
+        out=encode(img,w,h,q);
+        guard++;
+      }
+      // اگر باز هم بزرگ بود یک پله کوچک‌تر کن ابعاد
+      if(out&&out.length>maxBytes*1.35&&w>480){
+        w=Math.max(480,Math.round(w*0.82));
+        h=Math.max(1,Math.round(h0*(w/w0)));
+        out=encode(img,w,h,Math.max(minQuality,q));
+      }
+      done(out||rawFallback||'');
+    }catch(e){done(rawFallback||'')}
+  }
+  // file می‌تواند File باشد یا dataURL رشته
+  if(typeof file==='string'&&file.indexOf('data:')===0){
+    var img0=new Image();
+    img0.onload=function(){processImage(img0,file)};
+    img0.onerror=function(){done(file)};
+    img0.src=file;
+    return;
+  }
   const reader=new FileReader();
   reader.onerror=function(){toast('خواندن عکس ناموفق');done('')};
   reader.onload=function(){
     const img=new Image();
     img.onerror=function(){done(typeof reader.result==='string'?reader.result:'')};
-    img.onload=function(){
-      try{
-        let w=img.width||maxW,h=img.height||maxW;
-        if(!w||!h){done(reader.result);return}
-        const r=Math.min(1, maxW/w);
-        w=Math.max(1,Math.round(w*r));
-        h=Math.max(1,Math.round(h*r));
-        const c=document.createElement('canvas');
-        c.width=w;c.height=h;
-        c.getContext('2d').drawImage(img,0,0,w,h);
-        done(c.toDataURL('image/jpeg',0.65));
-      }catch(e){done(typeof reader.result==='string'?reader.result:'')}
-    };
+    img.onload=function(){processImage(img, typeof reader.result==='string'?reader.result:'')};
     img.src=reader.result;
   };
   try{reader.readAsDataURL(file)}catch(e){toast('انتخاب عکس ممکن نشد');done('')}
@@ -2842,10 +2906,11 @@ function applyPickedPhoto(url, previewId){
 function onPhotoPick(inputId, previewId){
   const inp=document.getElementById(inputId);
   if(!inp||!inp.files||!inp.files[0])return;
-  toast('در حال آماده‌سازی عکس...');
-  compressPhoto(inp.files[0], 160, function(url){applyPickedPhoto(url, previewId)});
+  toast('در حال فشرده‌سازی و آماده‌سازی عکس...');
+  /* پرتره دانش‌آموز/پرسنل: وضوح خوب، حجم مناسب سرور */
+  compressPhoto(inp.files[0], 360, function(url){applyPickedPhoto(url, previewId)}, {quality:0.82, maxBytes:220000, minQuality:0.68});
 }
-window._photoCrop={img:null,previewId:'',zoom:1,bright:0,contrast:0,offsetX:0,offsetY:0,dragging:false,lastX:0,lastY:0,outSize:320};
+window._photoCrop={img:null,previewId:'',zoom:1,bright:0,contrast:0,offsetX:0,offsetY:0,dragging:false,lastX:0,lastY:0,outSize:360};
 function openPhotoCropEditor(dataUrl,previewId){
   var st=window._photoCrop;
   st.previewId=previewId||window._photoPreviewId||'';
@@ -2950,7 +3015,15 @@ function confirmPhotoCrop(){
     if(circle){ctx.beginPath();ctx.arc(out/2,out/2,out/2,0,Math.PI*2);ctx.closePath();ctx.clip()}
     var cx=W/2,cy=H/2,half=cropSize/2;
     ctx.drawImage(tmp,cx-half,cy-half,cropSize,cropSize,0,0,out,out);
-    var url=canvas.toDataURL('image/jpeg',0.55);
+    var url=canvas.toDataURL('image/jpeg',0.8);
+    /* فشرده نهایی اگر لازم باشد */
+    if(url&&url.length>240000){
+      try{
+        var c2=document.createElement('canvas');c2.width=out;c2.height=out;
+        c2.getContext('2d').drawImage(canvas,0,0);
+        url=c2.toDataURL('image/jpeg',0.72);
+      }catch(e){}
+    }
     applyPickedPhoto(url,st.previewId);
     closePhotoCrop();
     toast('عکس برش‌خورده آماده شد — ذخیره را بزنید');
@@ -2959,9 +3032,14 @@ function confirmPhotoCrop(){
 
 function handlePhotoFile(file, previewId){
   if(!file){toast('فایلی انتخاب نشد');return}
-  var t=String(file.type||'');
-  var n=String(file.name||'');
-  if(t && !/^image\\//i.test(t) && !/\\.(jpe?g|png|gif|webp|heic|heif)$/i.test(n)){
+  var mime=String(file.type||'').toLowerCase();
+  var fname=String(file.name||'').toLowerCase();
+  var looksImage = (mime.indexOf('image/')===0)
+    || fname.endsWith('.jpg') || fname.endsWith('.jpeg') || fname.endsWith('.png')
+    || fname.endsWith('.gif') || fname.endsWith('.webp') || fname.endsWith('.heic')
+    || fname.endsWith('.heif') || fname.endsWith('.jfif') || fname.endsWith('.bmp');
+  // اگر type خالی باشد (بعضی اندروید) باز هم اجازه بده
+  if(mime && !looksImage){
     toast('لطفاً یک تصویر انتخاب کنید');
     return;
   }
@@ -3096,12 +3174,12 @@ function captureLiveCamera(){
   try{
     const w=video.videoWidth||640,h=video.videoHeight||480;
     if(!w||!h){toast('هنوز تصویر دوربین نیامده — چند لحظه صبر کنید');return}
-    const maxW=400;
+    const maxW=480;
     const r=Math.min(1,maxW/w);
     canvas.width=Math.round(w*r);
     canvas.height=Math.round(h*r);
     canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
-    const url=canvas.toDataURL('image/jpeg',0.7);
+    const url=canvas.toDataURL('image/jpeg',0.8);
     applyPickedPhoto(url, window._photoPreviewId||'');
     closeLiveCamera();
     toast('عکس گرفته شد — ذخیره را بزنید');
@@ -3180,10 +3258,7 @@ function ensureStudentSortOrders(classId){
 }
 function sortStudentsForDisplay(stus){
   stus=Array.isArray(stus)?stus.slice():[];
-  if(isTeacher()){
-    stus.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'fa')});
-    return stus;
-  }
+  /* ترتیب مدیر (sortOrder) برای همه نقش‌ها — از جمله لیست حضور معلم */
   stus.sort(function(a,b){
     var oa=a.sortOrder!=null?Number(a.sortOrder):99999;
     var ob=b.sortOrder!=null?Number(b.sortOrder):99999;
@@ -3192,25 +3267,139 @@ function sortStudentsForDisplay(stus){
   });
   return stus;
 }
-function moveStudent(id,dir){
-  if(!canManage())return toast('دسترسی ندارید');
-  if(!currentClassId)return;
+function _studentsOfCurrentClass(){
+  if(!currentClassId)return [];
   ensureStudentSortOrders(currentClassId);
   var list=(schoolData.students||[]).filter(function(s){return s&&s.classId===currentClassId});
   list.sort(function(a,b){return (Number(a.sortOrder)||0)-(Number(b.sortOrder)||0)});
-  var i=list.findIndex(function(s){return s.id===id});
-  if(i<0)return;
-  var j=i+(dir<0?-1:1);
-  if(j<0||j>=list.length)return;
-  var tmp=list[i].sortOrder;list[i].sortOrder=list[j].sortOrder;list[j].sortOrder=tmp;
-  list.sort(function(a,b){return (Number(a.sortOrder)||0)-(Number(b.sortOrder)||0)});
+  return list;
+}
+function _applyStudentOrder(list, silent){
   list.forEach(function(s,idx){s.sortOrder=idx+1});
   schoolData._cloudUpdatedAtMs=Date.now();
   if(canManage()){schoolData.replaceStructure=true;schoolData._structureWriteToken=true;}
   saveSchoolData();
   renderStudents();
-  if(canManage())cloudPushAppData(true).catch(function(){});
-  toast('ترتیب ذخیره شد');
+  if(!silent){
+    clearTimeout(window._stuOrderPushT);
+    window._stuOrderPushT=setTimeout(function(){
+      if(canManage())cloudPushAppData(true).catch(function(){});
+    },600);
+  }
+}
+function moveStudent(id,dir){
+  if(!canManage())return toast('دسترسی ندارید');
+  if(!currentClassId)return;
+  var list=_studentsOfCurrentClass();
+  var i=list.findIndex(function(s){return s.id===id});
+  if(i<0)return;
+  var j=i+(dir<0?-1:1);
+  if(j<0||j>=list.length)return;
+  var item=list.splice(i,1)[0];
+  list.splice(j,0,item);
+  _applyStudentOrder(list);
+  toast('ردیف '+(j+1));
+}
+/** جابه‌جایی مستقیم به شماره ردیف (۱ = اول) */
+function moveStudentToIndex(id, newIndex1Based){
+  if(!canManage())return toast('دسترسی ندارید');
+  if(!currentClassId)return;
+  var list=_studentsOfCurrentClass();
+  var i=list.findIndex(function(s){return String(s.id)===String(id)});
+  if(i<0)return;
+  var n=list.length;
+  var j=parseInt(newIndex1Based,10);
+  if(isNaN(j))return toast('شماره ردیف نامعتبر');
+  j=Math.max(1,Math.min(n,j))-1;
+  if(j===i)return;
+  var item=list.splice(i,1)[0];
+  list.splice(j,0,item);
+  _applyStudentOrder(list);
+  toast('رفت به ردیف '+(j+1));
+}
+function moveStudentToEdge(id, edge){
+  if(!canManage())return;
+  var list=_studentsOfCurrentClass();
+  if(!list.length)return;
+  moveStudentToIndex(id, edge==='end'?list.length:1);
+}
+function promptMoveStudent(id){
+  if(!canManage())return;
+  var list=_studentsOfCurrentClass();
+  var i=list.findIndex(function(s){return String(s.id)===String(id)});
+  if(i<0)return;
+  var n=list.length;
+  var ans=prompt('شماره ردیف جدید را وارد کنید (۱ تا '+n+'):', String(i+1));
+  if(ans===null||ans==='')return;
+  moveStudentToIndex(id, ans);
+}
+/* —— درگ برای جابه‌جایی دانش‌آموز (موبایل + دسکتاپ) —— */
+window._stuDrag={id:null,startY:0,el:null,ghost:null,order:[]};
+function onStuDragStart(ev, id){
+  if(!canManage())return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  var touch=ev.touches&&ev.touches[0];
+  var clientY=touch?touch.clientY:(ev.clientY||0);
+  var row=ev.currentTarget&&ev.currentTarget.closest?ev.currentTarget.closest('.stu-row'):null;
+  if(!row)row=document.querySelector('.stu-row[data-sid="'+id+'"]');
+  window._stuDrag={id:id,startY:clientY,el:row,ghost:null,order:_studentsOfCurrentClass().map(function(s){return s.id})};
+  if(row){
+    row.style.opacity='0.55';
+    row.style.boxShadow='0 8px 24px rgba(14,165,233,.35)';
+    row.style.zIndex='5';
+  }
+  document.addEventListener('touchmove',onStuDragMove,{passive:false});
+  document.addEventListener('mousemove',onStuDragMove,{passive:false});
+  document.addEventListener('touchend',onStuDragEnd);
+  document.addEventListener('mouseup',onStuDragEnd);
+}
+function onStuDragMove(ev){
+  var d=window._stuDrag;
+  if(!d||!d.id)return;
+  if(ev.cancelable)ev.preventDefault();
+  var touch=ev.touches&&ev.touches[0];
+  var clientY=touch?touch.clientY:(ev.clientY||0);
+  var listEl=document.getElementById('students-list');
+  if(!listEl)return;
+  var rows=[].slice.call(listEl.querySelectorAll('.stu-row'));
+  var target=null,targetIdx=-1;
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i].getBoundingClientRect();
+    var mid=r.top+r.height/2;
+    if(clientY<mid){target=rows[i];targetIdx=i;break}
+  }
+  if(targetIdx<0&&rows.length){targetIdx=rows.length-1;target=rows[targetIdx]}
+  rows.forEach(function(r){r.style.borderTop='';});
+  if(target)target.style.borderTop='3px solid var(--blue,#38bdf8)';
+  d._hoverIdx=targetIdx;
+}
+function onStuDragEnd(ev){
+  document.removeEventListener('touchmove',onStuDragMove);
+  document.removeEventListener('mousemove',onStuDragMove);
+  document.removeEventListener('touchend',onStuDragEnd);
+  document.removeEventListener('mouseup',onStuDragEnd);
+  var d=window._stuDrag;
+  if(!d||!d.id){window._stuDrag={};return}
+  var list=_studentsOfCurrentClass();
+  var from=list.findIndex(function(s){return String(s.id)===String(d.id)});
+  var to=(typeof d._hoverIdx==='number')?d._hoverIdx:from;
+  // پاکسازی استایل
+  var listEl=document.getElementById('students-list');
+  if(listEl){
+    [].forEach.call(listEl.querySelectorAll('.stu-row'),function(r){
+      r.style.opacity='';r.style.boxShadow='';r.style.zIndex='';r.style.borderTop='';
+    });
+  }
+  window._stuDrag={};
+  if(from<0||to<0||from===to){renderStudents();return}
+  var item=list.splice(from,1)[0];
+  // اگر از بالا به پایین می‌کشیم، بعد از حذف ایندکس هدف یک واحد کم می‌شود
+  if(from<to)to=Math.max(0,to-0);
+  to=Math.max(0,Math.min(list.length,to));
+  list.splice(to,0,item);
+  _applyStudentOrder(list);
+  toast('جابه‌جا شد → ردیف '+(to+1));
 }
 
 function moveClass(id,dir){
@@ -4536,7 +4725,18 @@ function openSubmission(id){
     const el=document.getElementById('sub-msg-late');
     const ee=document.getElementById('sub-msg-escape');
     if(ea&&tA)ea.value=tA.text;
-    if(el&&tL)el.value=tL.text;
+    // تأخیر معلم = ورود به کلاس همان زنگ؛ تأخیر مدیر/معاون = ورود به مدرسه
+    if(el){
+      var isTeacherSub=!s.fromManager&&!!s.teacherId;
+      var periodLabel=s.periodName||'زنگ';
+      if(isTeacherSub){
+        el.value='ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد کلاس '+periodLabel+' شد.';
+      }else if(tL){
+        el.value=tL.text;
+      }else{
+        el.value=(typeof TPL!=='undefined'&&TPL.late)?TPL.late:'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.';
+      }
+    }
     if(ee&&tE)ee.value=tE.text;
     else if(ee&&typeof TPL!=='undefined'&&TPL.escape)ee.value=TPL.escape;
   }catch(e){}
@@ -4581,7 +4781,22 @@ function prepareSmsFromSubmission(kind){
   if(!useIds.length)return toast(kind==='late'?'تأخیری نیست':(kind==='escape'?'مورد فراری نیست':(skipped.length?'برای همه این غایب‌ها قبلاً پیامک رفته است':'غایبی نیست')));
   let tplText='';
   try{const elId=kind==='late'?'sub-msg-late':(kind==='escape'?'sub-msg-escape':'sub-msg-absent');const el=document.getElementById(elId);if(el&&el.value.trim())tplText=el.value.trim()}catch(e){}
-  if(!tplText){const tid=kind==='late'?'late':(kind==='escape'?'escape':'absent');const tpl=getSmsTemplates().find(t=>t.id===tid);tplText=(tpl&&tpl.text)||(kind==='late'?TPL.late:(kind==='escape'?(TPL.escape||''):TPL.absent))}
+  var isTeacherSub=!s.fromManager&&!!s.teacherId;
+  var periodLabel=s.periodName||'زنگ';
+  var dateFa=typeof formatDateFa==='function'?formatDateFa(dateStr):(dateStr||'');
+  if(!tplText){
+    if(kind==='late'&&isTeacherSub){
+      tplText='ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد کلاس '+periodLabel+' شد.';
+    }else{
+      const tid=kind==='late'?'late':(kind==='escape'?'escape':'absent');
+      const tpl=getSmsTemplates().find(t=>t.id===tid);
+      tplText=(tpl&&tpl.text)||(kind==='late'?TPL.late:(kind==='escape'?(TPL.escape||''):TPL.absent));
+    }
+  }
+  // اگر قالب کلی «مدرسه» است ولی ارسال از معلم است، متن کلاس‌محور جایگزین شود
+  if(kind==='late'&&isTeacherSub&&/وارد مدرسه/.test(tplText)){
+    tplText='ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد کلاس '+periodLabel+' شد.';
+  }
   const tpl={text:tplText};
   const both=document.getElementById('sub-both')?document.getElementById('sub-both').checked:true;
   let html='',allPhones=[],jobs=[];
@@ -4589,7 +4804,7 @@ function prepareSmsFromSubmission(kind){
     const stu=schoolData.students.find(x=>x.id===id);if(!stu)return;
     const phones=(stu.phones||[]).filter(Boolean);
     const use=both?phones:(phones[0]?[phones[0]]:[]);
-    const finalText=applyVars(tpl.text||'',stu.name);
+    const finalText=applyVars(tpl.text||'',stu.name,{period:periodLabel,dateFa:dateFa});
     use.forEach(ph=>{allPhones.push(ph);jobs.push({phone:ph,text:finalText,name:stu.name})});
     html+='<div class="card"><div class="name">'+stu.name+'</div>';
     use.forEach((ph,i)=>{
@@ -4599,7 +4814,7 @@ function prepareSmsFromSubmission(kind){
     html+='<div class="preview-box">'+finalText+'</div></div>';
   });
   const uniq=[...new Set(allPhones)];
-  const g=applyVars(tpl.text||'','فرزند شما');
+  const g=applyVars(tpl.text||'','فرزند شما',{period:periodLabel,dateFa:dateFa});
   const title=kind==='late'?'تأخیرها':(kind==='escape'?'فرار':'غایب‌ها');
   let top='';
   const cfg=getSmsCfg();
@@ -4877,6 +5092,7 @@ function loadMgrAttStudents(){
   var cid=sel.value;
   if(!cid){list.innerHTML='<p class="hint">کلاس را انتخاب کنید</p>';return}
   var stus=(schoolData.students||[]).filter(function(s){return s.classId===cid});
+  if(typeof sortStudentsForDisplay==='function')stus=sortStudentsForDisplay(stus);
   if(!stus.length){list.innerHTML='<p class="hint">دانش‌آموزی نیست</p>';return}
   list.innerHTML=stus.map(function(s){
     return '<div class="list-item"><div class="who">'+avatarHtml(s.photo,s.name)+'<div class="name">'+s.name+(s.group?(' · گروه '+s.group):'')+'</div></div><select class="form-control mgr-att-st" data-sid="'+s.id+'" style="width:auto;min-width:120px"><option value="present">حاضر</option><option value="absent">غایب</option><option value="late">تأخیر</option><option value="escape">فرار</option></select></div>';
@@ -5192,18 +5408,51 @@ function renderStudents(){
   if(!st.length){list.innerHTML='<p class="hint">خالی</p>';return}
   if(canManage())ensureStudentSortOrders(currentClassId);
   st=sortStudentsForDisplay(st);
-  list.innerHTML=st.map(function(s){
+  var manage=canManage();
+  var head='';
+  if(manage){
+    head='<p class="hint" style="margin-bottom:10px">ترتیب آسان: دستگیره <b>⋮⋮</b> را بکشید · یا روی <b>#شماره</b> بزنید و ردیف بگویید · یا ⇈ اول / ⇊ آخر</p>';
+  }
+  list.innerHTML=head+st.map(function(s,idx){
+    var rowNum=idx+1;
+    var sid=String(s.id).replace(/'/g,'');
     var btns='';
-    if(canManage()){
-      btns='<button class="btn btn-outline btn-sm" title="بالا" onclick="moveStudent(\''+s.id+'\',-1)">↑</button>'+
-        '<button class="btn btn-outline btn-sm" title="پایین" onclick="moveStudent(\''+s.id+'\',1)">↓</button>'+
-        '<button class="btn btn-outline btn-sm" onclick="openStudentModal(\''+s.id+'\')">ویرایش</button>'+
-        '<button class="btn btn-danger btn-sm" onclick="delStudent(\''+s.id+'\')">حذف</button>';
+    if(manage){
+      btns=
+        '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+
+          '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end">'+
+            '<button type="button" class="btn btn-outline btn-sm" title="اول لیست" onclick="event.stopPropagation();moveStudentToEdge(\''+sid+'\',\'start\')">⇈</button>'+
+            '<button type="button" class="btn btn-outline btn-sm" title="یک ردیف بالا" onclick="event.stopPropagation();moveStudent(\''+sid+'\',-1)">↑</button>'+
+            '<button type="button" class="btn btn-outline btn-sm" title="یک ردیف پایین" onclick="event.stopPropagation();moveStudent(\''+sid+'\',1)">↓</button>'+
+            '<button type="button" class="btn btn-outline btn-sm" title="آخر لیست" onclick="event.stopPropagation();moveStudentToEdge(\''+sid+'\',\'end\')">⇊</button>'+
+          '</div>'+
+          '<div style="display:flex;gap:4px;align-items:center">'+
+            '<button type="button" class="btn btn-outline btn-sm" title="رفتن به ردیف دلخواه" onclick="event.stopPropagation();promptMoveStudent(\''+sid+'\')">#'+rowNum+'</button>'+
+            '<button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation();openStudentModal(\''+sid+'\')">ویرایش</button>'+
+            '<button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation();delStudent(\''+sid+'\')">حذف</button>'+
+          '</div>'+
+        '</div>';
     }
-    return '<div class="list-item"><div class="who clickable" onclick="'+(canManage()?'openPerformance(\''+s.id+'\')':'')+'">'+
-      avatarHtml(s.photo,s.name)+'<div><div class="name">'+s.name+'</div><div class="meta">'+(s.phones||[]).join(' | ')+(s.note?' — '+s.note:'')+'</div></div></div>'+btns+'</div>';
+    var handle=manage
+      ?('<div class="stu-drag-handle" title="بکشید برای جابه‌جایی" '
+        +'style="cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;'
+        +'padding:10px 8px;margin-left:4px;border-radius:10px;background:rgba(56,189,248,.12);'
+        +'color:var(--blue,#38bdf8);font-weight:800;font-size:1rem;line-height:1;flex-shrink:0"'
+        +' onmousedown="onStuDragStart(event,\''+sid+'\')" '
+        +' ontouchstart="onStuDragStart(event,\''+sid+'\')">⋮⋮</div>')
+      :'';
+    var numBadge='<span style="display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;'
+      +'border-radius:8px;background:rgba(56,189,248,.15);color:var(--blue,#38bdf8);font-weight:800;font-size:.8rem;margin-left:6px;flex-shrink:0">'
+      +rowNum+'</span>';
+    return '<div class="list-item stu-row" data-sid="'+sid+'" data-idx="'+idx+'" style="align-items:flex-start">'
+      +handle+numBadge
+      +'<div class="who clickable" style="flex:1;min-width:0" onclick="'+(manage?('openPerformance(\''+sid+'\')'):'')+'">'
+      +avatarHtml(s.photo,s.name)
+      +'<div><div class="name">'+s.name+'</div><div class="meta">'+(s.phones||[]).join(' | ')+(s.note?' — '+s.note:'')+'</div></div></div>'
+      +btns+'</div>';
   }).join('');
 }
+
 function openStudentModal(id){if(!canManage())return;const s=id?schoolData.students.find(x=>x.id===id):null;document.getElementById('modal-title').textContent=s?'ویرایش':'دانش‌آموز جدید';window._pendingPhoto=(s&&s.photo)||'';document.getElementById('modal-body').innerHTML='<div class="photo-pick"><div id="s-photo-prev">'+avatarHtml(s&&s.photo,s&&s.name,'avatar-lg')+'</div>'+photoButtons('s-photo','s-photo-prev')+'</div><p class="hint">عکس همگام با سرور می‌شود</p><div class="form-group"><label>نام</label><input class="form-control" id="s-name" value="'+(s?.name||'')+'" /></div><div class="form-group"><label>شماره پدر</label><input class="form-control" id="s-p1" value="'+((s?.phones||[])[0]||'')+'" /></div><div class="form-group"><label>شماره مادر</label><input class="form-control" id="s-p2" value="'+((s?.phones||[])[1]||'')+'" /></div><div class="form-group"><label>گروه (برای دروس دو قسمتی)</label><select class="form-control" id="s-group">'+
 '<option value=""'+((!s||!s.group)?' selected':'')+'>— بدون گروه —</option>'+
 '<option value="الف"'+(s&&s.group==='الف'?' selected':'')+'>گروه الف</option>'+
@@ -6100,6 +6349,30 @@ function renderAssignments(){
     filt.innerHTML=opts;
     if(cur)filt.value=cur;
   }
+  // پر کردن فیلتر کلاس
+  var classFilt=document.getElementById('assign-class-filter');
+  if(classFilt){
+    var curC=classFilt.value||'all';
+    var cOpts='<option value="all">همه کلاس‌ها</option>';
+    (typeof sortClassesList==='function'?sortClassesList(schoolData.classes||[]):(schoolData.classes||[])).forEach(function(c){
+      if(!c||!c.id)return;
+      cOpts+='<option value="'+c.id+'">'+(typeof classTitle==='function'?classTitle(c):(c.name||c.id))+'</option>';
+    });
+    classFilt.innerHTML=cOpts;
+    if(curC&&[].some.call(classFilt.options,function(o){return o.value===curC}))classFilt.value=curC;
+  }
+  // پر کردن فیلتر روز هفته
+  var dayFilt=document.getElementById('assign-day-filter');
+  var dayNamesSched=(typeof DAYS!=='undefined'&&DAYS&&DAYS.length)?DAYS:['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
+  if(dayFilt){
+    var curD=dayFilt.value||'all';
+    var dOpts='<option value="all">همه روزها</option>';
+    for(var di=0;di<dayNamesSched.length;di++){
+      dOpts+='<option value="'+di+'">'+dayNamesSched[di]+'</option>';
+    }
+    dayFilt.innerHTML=dOpts;
+    if(curD!=='all'&&curD!=='')dayFilt.value=String(curD);
+  }
   // شیفت دوگانه
   var shifts=1;
   try{shifts=parseInt((session&&session.shifts)||(schoolData.shifts)||1,10)||1}catch(e){}
@@ -6117,18 +6390,62 @@ function renderAssignments(){
       return sh===String(shiftVal);
     });
   }
+  // فیلتر کلاس
+  var classVal=classFilt?classFilt.value:'all';
+  if(classVal&&classVal!=='all'){
+    arr=arr.filter(function(a){return String(a.classId||'')===String(classVal)});
+  }
+  // فیلتر روز هفته
+  var dayVal=dayFilt?dayFilt.value:'all';
+  if(dayVal!=='all'&&dayVal!==''&&dayVal!=null){
+    arr=arr.filter(function(a){return String(a.dayOfWeek)!=null&&String(a.dayOfWeek)===String(dayVal)});
+  }
   try{renderTeacherScheduleStats()}catch(e){}
   var totalAll=(schoolData.assignments||[]).length;
-  if(!arr.length){list.innerHTML='<p class="hint">هنوز کلاسی به معلمی اختصاص داده نشده. (کل ذخیره‌شده: '+totalAll+')</p>';return}
+  if(!arr.length){list.innerHTML='<p class="hint">برنامه‌ای با این فیلترها یافت نشد. (کل ذخیره‌شده: '+totalAll+')</p>';return}
+  function assignClassKey(x){
+    var c=(schoolData.classes||[]).find(function(z){return z.id===x.classId});
+    var n=(c&&c.name)||x.className||'';
+    var num=parseInt(String(n).replace(/[^0-9]/g,''),10);
+    var nameKey=String(n);
+    return {num:isNaN(num)?9999:num,name:nameKey};
+  }
+  function assignTeacherName(x){
+    var t=(schoolData.staff||[]).find(function(z){return z.id===x.teacherId});
+    return String((t&&t.name)||x.teacherName||'');
+  }
+  function assignShiftKey(x){
+    var c=(schoolData.classes||[]).find(function(z){return z.id===x.classId});
+    return c&&c.shift!=null?parseInt(c.shift,10)||1:1;
+  }
+  var sortBy=(document.getElementById('assign-sort-by')||{}).value||'class-day';
   arr=arr.slice().sort(function(a,b){
-    function classKey(x){
-      var c=(schoolData.classes||[]).find(function(z){return z.id===x.classId});
-      var n=(c&&c.name)||x.className||'';
-      var num=parseInt(String(n).replace(/[^0-9]/g,''),10);
-      return isNaN(num)?9999:num;
+    if(sortBy==='day-time'){
+      var d=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d)return d;
+      var t=String(a.startTime||'').localeCompare(String(b.startTime||''));if(t)return t;
+      var ka=assignClassKey(a),kb=assignClassKey(b);if(ka.num!==kb.num)return ka.num-kb.num;return ka.name.localeCompare(kb.name,'fa');
     }
-    var ca=classKey(a),cb=classKey(b);if(ca!==cb)return ca-cb;
-    var d=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d)return d;
+    if(sortBy==='teacher'){
+      var ta=assignTeacherName(a).localeCompare(assignTeacherName(b),'fa');if(ta)return ta;
+      var d2=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d2)return d2;
+      return String(a.startTime||'').localeCompare(String(b.startTime||''));
+    }
+    if(sortBy==='shift-class'){
+      var sa=assignShiftKey(a),sb=assignShiftKey(b);if(sa!==sb)return sa-sb;
+      var ka2=assignClassKey(a),kb2=assignClassKey(b);if(ka2.num!==kb2.num)return ka2.num-kb2.num;
+      var d3=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d3)return d3;
+      return String(a.startTime||'').localeCompare(String(b.startTime||''));
+    }
+    if(sortBy==='subject'){
+      var sub=String(a.subject||'').localeCompare(String(b.subject||''),'fa');if(sub)return sub;
+      var d4=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d4)return d4;
+      return String(a.startTime||'').localeCompare(String(b.startTime||''));
+    }
+    // پیش‌فرض: کلاس ← روز ← ساعت
+    var ka3=assignClassKey(a),kb3=assignClassKey(b);
+    if(ka3.num!==kb3.num)return ka3.num-kb3.num;
+    var nameCmp=ka3.name.localeCompare(kb3.name,'fa');if(nameCmp)return nameCmp;
+    var d5=(a.dayOfWeek||0)-(b.dayOfWeek||0);if(d5)return d5;
     return String(a.startTime||'').localeCompare(String(b.startTime||''));
   });
   var head='<p class="hint" style="margin-bottom:8px">نمایش '+arr.length+' از '+totalAll+' برنامه</p>';
@@ -6233,12 +6550,16 @@ function studentsForAssignment(a){
   if(!a)return [];
   var list=(schoolData.students||[]).filter(function(s){return s&&s.classId===a.classId});
   var g=String(a.group||'').trim();
-  if(!g||g==='همه'||g==='all'||g==='0')return list;
-  return list.filter(function(s){
-    var sg=String(s.group||s.section||'').trim();
-    if(!sg)return true; // دانش‌آموز بدون گروه در هر دو حالت دیده می‌شود
-    return sg===g||sg==='گروه '+g||sg===('گروه'+g);
-  });
+  if(g&&g!=='همه'&&g!=='all'&&g!=='0'){
+    list=list.filter(function(s){
+      var sg=String(s.group||s.section||'').trim();
+      if(!sg)return true; // دانش‌آموز بدون گروه در هر دو حالت دیده می‌شود
+      return sg===g||sg==='گروه '+g||sg===('گروه'+g);
+    });
+  }
+  /* ترتیب کلاس طبق جابه‌جایی مدیر */
+  if(typeof sortStudentsForDisplay==='function')list=sortStudentsForDisplay(list);
+  return list;
 }
 function isSlotSubmittedToday(assignId){
   if(!assignId||!userSession)return false;
@@ -6380,31 +6701,14 @@ function pickAttNotePhoto(sid, mode){
 function onAttNotePhoto(input,sid){
   var file=input.files&&input.files[0];
   if(!file)return;
-  if(file.size>4*1024*1024)return toast('حجم عکس حداکثر ۴ مگابایت');
-  var reader=new FileReader();
-  reader.onload=function(){
-    var data=reader.result;
-    // فشرده‌سازی ساده اگر خیلی بزرگ
-    if(typeof data==='string'&&data.length>900000){
-      try{
-        var img=new Image();
-        img.onload=function(){
-          var c=document.createElement('canvas');
-          var maxW=1280,w=img.width,h=img.height;
-          if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
-          c.width=w;c.height=h;
-          c.getContext('2d').drawImage(img,0,0,w,h);
-          data=c.toDataURL('image/jpeg',0.72);
-          _storeAttPhoto(sid,data);
-        };
-        img.src=data;
-        return;
-      }catch(e){}
-    }
-    _storeAttPhoto(sid,data);
-  };
-  reader.readAsDataURL(file);
-  input.value='';
+  if(file.size>8*1024*1024)return toast('حجم عکس حداکثر ۸ مگابایت');
+  toast('در حال فشرده‌سازی عکس عملکرد...');
+  /* عکس دفتر/عملکرد: وضوح کافی برای مشاهده بعدی، حجم مناسب سرور */
+  compressPhoto(file, 1100, function(url){
+    if(!url){toast('پردازش عکس ناموفق');return}
+    _storeAttPhoto(sid,url);
+  }, {quality:0.82, maxBytes:420000, minQuality:0.68});
+  try{input.value=''}catch(e){}
 }
 
 function bindAttPhotoCounts(){
@@ -6478,44 +6782,25 @@ function replaceAttNotePhoto(sid, idx){
 }
 function onAttNotePhotoReplace(file, sid, idx){
   if(!file)return;
-  if(file.size>4*1024*1024)return toast('حجم عکس حداکثر ۴ مگابایت');
-  var reader=new FileReader();
-  reader.onload=function(){
-    var data=reader.result;
-    function apply(d){
-      window._attNotePhotos=window._attNotePhotos||{};
-      if(!window._attNotePhotos[sid])window._attNotePhotos[sid]=[];
-      if(idx>=0&&idx<window._attNotePhotos[sid].length){
-        window._attNotePhotos[sid][idx]=d;
-      }else{
-        window._attNotePhotos[sid].push(d);
-      }
-      renderAttPhotoThumbs(sid);
-      document.querySelectorAll('.att-photo-count[data-sid="'+sid+'"]').forEach(function(el){
-        var n=window._attNotePhotos[sid].length;
-        el.textContent=n?(n+' عکس'):'بدون عکس';
-        el.style.color=n?'var(--blue)':'var(--muted)';
-      });
-      toast('عکس جایگزین شد — با ثبت حضور ذخیره می‌شود');
+  if(file.size>8*1024*1024)return toast('حجم عکس حداکثر ۸ مگابایت');
+  toast('در حال فشرده‌سازی عکس...');
+  compressPhoto(file, 1100, function(d){
+    if(!d){toast('پردازش عکس ناموفق');return}
+    window._attNotePhotos=window._attNotePhotos||{};
+    if(!window._attNotePhotos[sid])window._attNotePhotos[sid]=[];
+    if(idx>=0&&idx<window._attNotePhotos[sid].length){
+      window._attNotePhotos[sid][idx]=d;
+    }else{
+      window._attNotePhotos[sid].push(d);
     }
-    if(typeof data==='string'&&data.length>900000){
-      try{
-        var img=new Image();
-        img.onload=function(){
-          var c=document.createElement('canvas');
-          var maxW=1280,w=img.width,h=img.height;
-          if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
-          c.width=w;c.height=h;
-          c.getContext('2d').drawImage(img,0,0,w,h);
-          apply(c.toDataURL('image/jpeg',0.72));
-        };
-        img.src=data;
-        return;
-      }catch(e){}
-    }
-    apply(data);
-  };
-  reader.readAsDataURL(file);
+    renderAttPhotoThumbs(sid);
+    document.querySelectorAll('.att-photo-count[data-sid="'+sid+'"]').forEach(function(el){
+      var n=window._attNotePhotos[sid].length;
+      el.textContent=n?(n+' عکس'):'بدون عکس';
+      el.style.color=n?'var(--blue)':'var(--muted)';
+    });
+    toast('عکس جایگزین شد — با ثبت حضور ذخیره می‌شود');
+  }, {quality:0.82, maxBytes:420000, minQuality:0.68});
 }
 function openStoredMedia(mid){
   window._mediaStore=window._mediaStore||{};
@@ -6656,35 +6941,19 @@ function replaceTeacherNotePhoto(noteId, idx){
     input.onchange=function(){
       var f=input.files&&input.files[0];
       if(!f)return;
-      if(f.size>4*1024*1024)return toast('حجم حداکثر ۴ مگابایت');
-      var reader=new FileReader();
-      reader.onload=function(){
-        var data=reader.result;
-        function apply(d){
-          if(!Array.isArray(n.photos))n.photos=[];
-          if(idx>=0&&idx<n.photos.length)n.photos[idx]=d;else n.photos.push(d);
-          schoolData._cloudUpdatedAtMs=Date.now();
-          saveSchoolData();
-          cloudPushAppData(true).catch(function(){});
-          toast('عکس جایگزین شد');
-          refreshStudentPerfView();
-        }
-        if(typeof data==='string'&&data.length>900000){
-          try{
-            var img=new Image();
-            img.onload=function(){
-              var c=document.createElement('canvas');
-              var maxW=1280,w=img.width,h=img.height;
-              if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
-              c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
-              apply(c.toDataURL('image/jpeg',0.72));
-            };
-            img.src=data;return;
-          }catch(e){}
-        }
-        apply(data);
-      };
-      reader.readAsDataURL(f);
+      if(f.size>8*1024*1024)return toast('حجم حداکثر ۸ مگابایت');
+      toast('در حال فشرده‌سازی عکس...');
+      compressPhoto(f, 1100, function(d){
+        if(!d){toast('پردازش عکس ناموفق');return}
+        if(!Array.isArray(n.photos))n.photos=[];
+        if(idx>=0&&idx<n.photos.length)n.photos[idx]=d;else n.photos.push(d);
+        schoolData._cloudUpdatedAtMs=Date.now();
+        saveSchoolData();
+        cloudPushAppData(true).catch(function(){});
+        toast('عکس جایگزین شد');
+        refreshStudentPerfView();
+      }, {quality:0.82, maxBytes:420000, minQuality:0.68});
+      return;
     };
     input.click();
   }catch(e){toast('انتخاب عکس ممکن نشد')}
@@ -7185,10 +7454,9 @@ function saveSampleQuestion(){
     }
     if(/^data:image\//i.test(String(dataUrl||'')) && typeof compressPhoto==='function'){
       try{
-        // ساخت File از data برای compressPhoto اگر لازم؛ وگرنه مستقیم
         compressPhoto(file, 1200, function(url){
           finish(url||dataUrl, 'image/jpeg');
-        });
+        }, {quality:0.82, maxBytes:500000, minQuality:0.68});
         return;
       }catch(e){}
     }
@@ -7410,7 +7678,19 @@ function delSmsTpl(id){
   toast('حذف شد');
 }
 
-function applyVars(t,n){return t.replace(/\{نام\}/g,n).replace(/\{تاریخ\}/g,persianToday())}
+function applyVars(t,n,extra){
+  extra=extra||{};
+  var period=extra.period!=null?String(extra.period):'';
+  var dateFa=extra.dateFa!=null?String(extra.dateFa):(typeof persianToday==='function'?persianToday():'');
+  return String(t||'')
+    .replace(/\{نام\}/g,n||'')
+    .replace(/\{تاریخ\}/g,dateFa)
+    .replace(/\{date\}/gi,dateFa)
+    .replace(/\{زنگ\}/g,period)
+    .replace(/\{period\}/gi,period)
+    .replace(/\{زنگ\s*ایکس\}/g,period)
+    .replace(/زنگ ایکس/g,period||'زنگ');
+}
 function prepareSms(){
   const msg=document.getElementById('send-msg').value.trim();
   const ids=[...document.querySelectorAll('.sc:checked')].map(c=>c.value);
@@ -7619,14 +7899,11 @@ function computeAbsenceStatsForClasses(classes,from,to){
     totalStu+=stus.length;
     var abs=0,late=0,other=0;
     stus.forEach(function(s){
+      /* غیبت: یک‌بار در روز برای مدیر */
       abs+=countAbsentDays(s.id,from,to);
       var att=filterAttByRange((schoolData.attendance||[]).filter(function(a){return a.studentId===s.id}),from,to);
-      var lateDays={};
-      att.filter(function(a){return a.type==='late'}).forEach(function(a){
-        var day=normalizeDateToIso(a.date)||String(a.date||'');
-        if(day)lateDays[day]=true;
-      });
-      late+=Object.keys(lateDays).length;
+      /* تأخیر: هر زنگ/هر ساعت جدا (بدون سقف) */
+      late+=att.filter(function(a){return a.type==='late'}).length;
       other+=att.filter(function(a){return a.type!=='absent'&&a.type!=='late'}).length;
     });
     totalAbs+=abs;totalLate+=late;totalOther+=other;
@@ -7950,7 +8227,8 @@ function buildStudentReportHtml(sid,opts){
   var att=isTeacher()?teacherOwnAttendance(sid,null,null):(schoolData.attendance||[]).filter(function(a){
     return a.studentId===sid;
   });
-  var absN=att.filter(function(a){return a.type==='absent'}).length;
+  /* مدیر: غیبت روزی یکی؛ معلم: روزهای غیبت خودش؛ تأخیر هر زنگ جدا */
+  var absN=isTeacher()?teacherCountAbsentDays(sid,null,null):countAbsentDays(sid,null,null);
   var lateN=att.filter(function(a){return a.type==='late'}).length;
   var otherN=hideDisc?0:att.filter(function(a){return a.type!=='absent'&&a.type!=='late'}).length;
   var examAvg=null,sum=0,cnt=0;
@@ -8006,16 +8284,41 @@ function buildStudentReportHtml(sid,opts){
   html+='<h2>'+(hideDisc?'حضور و غیاب':'موارد حضور و انضباط')+'</h2>';
   if(!att.length){
     html+='<p>موردی ثبت نشده است.</p>';
-  }else{
-    html+='<table><thead><tr><th>نوع</th><th>تاریخ</th><th>شرح</th>'+(hideDisc?'':'<th>کسر</th>')+'</tr></thead><tbody>';
+  }else if(hideDisc){
+    /* معلم: همه رکوردهای خودش (هر زنگ جدا) */
+    html+='<table><thead><tr><th>نوع</th><th>تاریخ</th><th>شرح</th></tr></thead><tbody>';
     att.slice().sort(function(a,b){
       return String(normalizeDateToIso(b.date)||'').localeCompare(String(normalizeDateToIso(a.date)||''));
     }).forEach(function(a){
-      html+='<tr><td>'+typeName(a.type)+'</td><td>'+formatDateFa(a.date)+'</td><td>'+(a.note||'—')+'</td>'+(hideDisc?'':'<td>'+(a.scoreDeduct||0)+'</td>')+'</tr>';
+      html+='<tr><td>'+typeName(a.type)+'</td><td>'+formatDateFa(a.date)+'</td><td>'+(a.note||'—')+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    html+='<p style="font-size:11px;color:#555">گزارش معلم — بدون نمره انضباط</p>';
+  }else{
+    /* مدیر: غیبت یک‌بار در روز؛ تأخیر و سایر هر مورد جدا */
+    html+='<table><thead><tr><th>نوع</th><th>تاریخ</th><th>شرح</th><th>کسر</th></tr></thead><tbody>';
+    var days=typeof absentDaysSummary==='function'?absentDaysSummary(sid,null,null):[];
+    days.forEach(function(d){
+      var maxD=0;
+      (d.items||[]).forEach(function(it){
+        var raw=parseFloat(it.scoreDeduct);
+        if(!isNaN(raw)&&raw>maxD)maxD=raw;
+      });
+      if(d.excused)maxD=0;
+      html+='<tr><td>'+(d.excused?'غیبت موجه':'غیبت')+'</td><td>'+formatDateFa(d.date)+'</td><td>یک روز (از همه زنگ‌ها)</td><td>'+maxD+'</td></tr>';
+    });
+    att.filter(function(a){return a.type==='late'}).slice().sort(function(a,b){
+      return String(normalizeDateToIso(b.date)||'').localeCompare(String(normalizeDateToIso(a.date)||''));
+    }).forEach(function(a){
+      html+='<tr><td>تأخیر</td><td>'+formatDateFa(a.date)+'</td><td>'+(a.note||'—')+'</td><td>'+(a.scoreDeduct||0)+'</td></tr>';
+    });
+    att.filter(function(a){return a.type!=='absent'&&a.type!=='late'}).slice().sort(function(a,b){
+      return String(normalizeDateToIso(b.date)||'').localeCompare(String(normalizeDateToIso(a.date)||''));
+    }).forEach(function(a){
+      html+='<tr><td>'+typeName(a.type)+'</td><td>'+formatDateFa(a.date)+'</td><td>'+(a.note||'—')+'</td><td>'+(a.scoreDeduct||0)+'</td></tr>';
     });
     html+='</tbody></table>';
   }
-  if(hideDisc)html+='<p style="font-size:11px;color:#555">گزارش معلم — بدون نمره انضباط</p>';
   return html;
 }
 function exportCurrentStudentPdf(){
@@ -8032,6 +8335,7 @@ function exportClassReportPdf(){
   if(!cid)return toast('اول کلاس را انتخاب کنید');
   var c=(schoolData.classes||[]).find(function(x){return x.id===cid});
   var stus=(schoolData.students||[]).filter(function(s){return s.classId===cid});
+  if(typeof sortStudentsForDisplay==='function')stus=sortStudentsForDisplay(stus);
   var {from,to}=repDateRange();
   var html='';
   html+='<div class="sum"><span>کلاس: <b>'+(c?classTitle(c):'—')+'</b></span><span>تعداد: <b>'+stus.length+'</b></span>';
@@ -8040,7 +8344,7 @@ function exportClassReportPdf(){
   html+='<table><thead><tr><th>نام</th><th>انضباط</th><th>غیبت</th><th>تأخیر</th><th>تعداد آزمون</th></tr></thead><tbody>';
   stus.forEach(function(s){
     var att=filterAttByRange((schoolData.attendance||[]).filter(function(a){return a.studentId===s.id}),from,to);
-    var abs=att.filter(function(a){return a.type==='absent'}).length;
+    var abs=countAbsentDays(s.id,from,to);
     var late=att.filter(function(a){return a.type==='late'}).length;
     var disc=calcScore(s.id,from,to);
     var exN=studentExamList(s.id).length;
