@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>سامانه نیکان | پنل مدرسه (اندروید پاک)</title>
+<title>سامانه نیکان | پنل مدرسه</title>
 <style>
 /* سامانه نیکان — قالب داشبورد حرفه‌ای (نزدیک نمونه ۳) */
 /* بدون فونت خارجی — برای کروم و اینترنت ایران سریع‌تر باز می‌شود */
@@ -1541,12 +1541,7 @@ async function apiFetch(path,options){
         let data=null;
         try{data=await res.json()}catch(e){data=null}
         if(!res.ok){
-          if(res.status===503){
-            // کوتاه‌تر تا کل اپ قفل نشود؛ ولی درخواست‌های موازی کم شوند
-            try{window._server503Until=Date.now()+12000}catch(e){}
-            // روی 503 همین base را دوباره امتحان نکن — سریع fail
-            throw new Error((data&&data.error)||('HTTP 503'));
-          }
+          if(res.status===503){try{window._server503Until=Date.now()+60000}catch(e){}}
           throw new Error((data&&data.error)||('HTTP '+res.status));
         }
         try{window._server503Until=0}catch(e){}
@@ -1554,14 +1549,11 @@ async function apiFetch(path,options){
         return data;
       }catch(e){
         lastErr=e;
-        var _em=String(e&&e.message||e||'');
         try{
           var st=localStorage.getItem('school_sync_api')||'';
           if(st&&String(base).indexOf(st)>=0)localStorage.removeItem('school_sync_api');
         }catch(e2){}
-        // روی 503 تلاش اضافه روی همان base نکن
-        if(/503|Unavailable/i.test(_em)) break;
-        if(i<maxTry)await new Promise(r=>setTimeout(r,400*i));
+        if(i<maxTry)await new Promise(r=>setTimeout(r,300*i));
       }
     }
   }
@@ -1590,7 +1582,7 @@ async function pullFromServer(){
     if(!ok&&i<2)await new Promise(function(r){setTimeout(r,900*(i+1));});
   }
   try{
-    if(ok&&session&&session.schoolId)await cloudPullSubmissions(session.schoolId);
+    if(ok&&canManage()&&session.schoolId)await cloudPullSubmissions(session.schoolId);
   }catch(e){}
   try{
     if(isTeacher()){
@@ -1634,7 +1626,6 @@ async function manualSyncAll(){
     toast('در حال دریافت...');
     try{
       var okT=await cloudPullAppData(true);
-      try{if(session&&session.schoolId)await cloudPullSubmissions(session.schoolId)}catch(e){}
       try{renderHome();renderTeacherDay();renderTeacherClassList();renderTeacherJournal()}catch(e){}
       toast(okT?('به‌روز شد ✓ · برنامه '+((schoolData.assignments||[]).length)):'دریافت نشد');
     }catch(e){toast('دریافت نشد')}
@@ -1780,37 +1771,27 @@ async function cloudPushSubmission(schoolId,sub){
 async function cloudPullSubmissions(schoolId){
   if(!SYNC_API||!schoolId)return;
   try{
-    const data=await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/submissions',{retries:1,timeoutMs:15000});
+    const data=await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/submissions');
     const list=(data&&data.submissions)||[];
     schoolData.submissions=schoolData.submissions||[];
     if(!Array.isArray(schoolData.deletedSubmissionIds))schoolData.deletedSubmissionIds=[];
     const deleted={};
-    schoolData.deletedSubmissionIds.forEach(function(id){if(id)deleted[String(id)]=true});
-    const serverIds={};
-    list.forEach(function(s){if(s&&s.id)serverIds[String(s.id)]=true});
+    schoolData.deletedSubmissionIds.forEach(function(id){if(id)deleted[id]=true});
     const map={};
-    // سرور اولویت
+    schoolData.submissions.forEach(function(s){if(s&&s.id&&!deleted[s.id])map[s.id]=s});
     list.forEach(function(s){
       if(!s||!s.id||deleted[String(s.id)])return;
       if(s.status==='voided'||s.voided||s.cancelled)return;
-      map[String(s.id)]=Object.assign({},s);
-    });
-    // محلی: نگه دار مگر در deletedSubmissionIds باشد (ابطال مدیر از soft-meta)
-    (schoolData.submissions||[]).forEach(function(s){
-      if(!s||!s.id)return;
-      var sid=String(s.id);
-      if(deleted[sid]||s.status==='voided'||s.voided||s.cancelled)return;
-      if(map[sid])return;
-      map[sid]=s;
+      map[String(s.id)]=Object.assign({},map[String(s.id)]||{},s);
     });
     Object.keys(deleted).forEach(function(id){delete map[String(id)]});
+    // باطل‌شده‌های محلی هم نمانند
+    Object.keys(map).forEach(function(k){
+      var s=map[k];
+      if(s&&(s.status==='voided'||s.voided||s.cancelled||deleted[String(k)]))delete map[k];
+    });
     schoolData.submissions=Object.keys(map).map(function(k){return map[k]});
-    if(Object.keys(deleted).length){
-      schoolData.attendance=(schoolData.attendance||[]).filter(function(a){
-        return !a||!a.submissionId||!deleted[String(a.submissionId)];
-      });
-    }
-    try{if(typeof ensureAllSubmissionsInAttendance==='function')ensureAllSubmissionsInAttendance()}catch(e){}
+    ensureAllSubmissionsInAttendance();
     try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
   }catch(e){console.warn(e)}
 }
@@ -1832,8 +1813,8 @@ async function cloudDeleteSubmission(schoolId,subId){
         managerAuthority:!!(typeof isManager==='function'&&isManager()),
         deputyAuthority:!!(typeof isDeputy==='function'&&isDeputy())
       },
-      retries:2,
-      timeoutMs:15000
+      retries:3,
+      timeoutMs:45000
     });
     return true;
   }catch(e){
@@ -2012,71 +1993,40 @@ function slimAttendanceForPush(arr, maxKeep){
 }
 
 /** ارسال فقط رکوردهای حضور/انضباط مشخص — قبلی‌ها پاک نمی‌شوند */
-// صف نرم حضور — جلوگیری از چند PUT همزمان (علت 503)
-window._softAttQueue=window._softAttQueue||Promise.resolve();
 async function pushSoftAttendanceRecords(records, opts){
   opts = opts || {};
   if(!session||!session.schoolId||!schoolData)return false;
   var list = Array.isArray(records) ? records.filter(function(a){return a&&a.id}) : [];
-  // عکس‌های بزرگ را در soft نفرست مگر لازم
-  list = list.map(function(a){
-    var o=Object.assign({},a);
-    if(Array.isArray(o.photos)&&o.photos.length>2)o.photos=o.photos.slice(0,2);
-    return o;
-  });
   var delIds = Array.isArray(opts.deletedAttendanceIds) ? opts.deletedAttendanceIds.map(String).filter(Boolean) : [];
   if(!list.length && !delIds.length)return true;
-  var n = opts.retries!=null ? opts.retries : 2;
-  var run=async function(){
-    // اگر سرور 503 اخیر بوده کمی صبر کن
+  var n = opts.retries!=null ? opts.retries : 3;
+  var lastErr=null;
+  for(var attempt=1;attempt<=n;attempt++){
     try{
-      if(window._server503Until&&Date.now()<window._server503Until){
-        await new Promise(function(r){setTimeout(r, Math.min(4000, window._server503Until-Date.now()+200))});
-      }
-    }catch(e){}
-    var lastErr=null;
-    window._softAttPushing=true;
-    try{clearTimeout(_pushTimer)}catch(e){}
-    for(var attempt=1;attempt<=n;attempt++){
-      try{
-        await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-          method:'PUT',
-          body:{
-            attendance:list,
-            deletedAttendanceIds:delIds,
-            updatedAtMs:Date.now(),
-            _softOnly:true,
-            _softAttendanceOnly:true,
-            _compatNoAuth:true,
-            managerAuthority:!!(typeof isManager==='function'&&isManager()),
-            deputyAuthority:!!(typeof isDeputy==='function'&&isDeputy())
-          },
-          retries:1,
-          timeoutMs:opts.timeoutMs||20000
-        });
-        try{window._serverPullOk=true;window._server503Until=0}catch(e){}
-        try{if(schoolData)schoolData._localDirtyAt=0}catch(e){}
-        window._softAttPushing=false;
-        return true;
-      }catch(e){
-        lastErr=e;
-        var msg=String(e&&e.message||e||'');
-        if(/503|Unavailable/i.test(msg)){
-          try{window._server503Until=Date.now()+8000}catch(e2){}
-          if(attempt<n)await new Promise(function(r){setTimeout(r,1200*attempt)});
-        }else if(attempt<n){
-          await new Promise(function(r){setTimeout(r,400*attempt)});
-        }
-      }
+      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
+        method:'PUT',
+        body:{
+          attendance:list,
+          deletedAttendanceIds:delIds,
+          updatedAtMs:Date.now(),
+          _softOnly:true,
+          _softAttendanceOnly:true,
+          _compatNoAuth:true,
+          managerAuthority:!!(typeof isManager==='function'&&isManager()),
+          deputyAuthority:!!(typeof isDeputy==='function'&&isDeputy())
+        },
+        retries:1,
+        timeoutMs:opts.timeoutMs||40000
+      });
+      try{window._serverPullOk=true}catch(e){}
+      return true;
+    }catch(e){
+      lastErr=e;
+      if(attempt<n)await new Promise(function(r){setTimeout(r,600*attempt)});
     }
-    window._softAttPushing=false;
-    try{window._lastPushError=String(lastErr&&lastErr.message||lastErr||'push_failed')}catch(e2){}
-    return false;
-  };
-  // سریال‌سازی
-  var done;
-  window._softAttQueue=window._softAttQueue.then(function(){done=run();return done}, function(){done=run();return done});
-  return done;
+  }
+  try{window._lastPushError=String(lastErr&&lastErr.message||lastErr||'push_failed')}catch(e2){}
+  return false;
 }
 
 function mergeDisciplineTypes(local, remote){
@@ -2192,10 +2142,6 @@ async function pushAttendanceToServer(retries, onlySubId){
 }
 
 async function cloudPushAppData(force){
-  // وقتی soft حضور در حال ارسال است، full push نزن (علت 503)
-  try{if(window._softAttPushing)return false;}catch(e){}
-  try{if(window._server503Until&&Date.now()<window._server503Until&&!force)return false;}catch(e){}
-
   if(!session||!session.schoolId||!schoolData){try{window._lastPushError='نشست/داده نیست'}catch(e){}return false;}
   try{
     window._lastPushError='';
@@ -3013,14 +2959,12 @@ let _pushTimer=null,_pullTimer=null;
 function scheduleCloudPush(){
   if(!SYNC_API||!session||!session.schoolId)return;
   if(window._loginPulling)return;
-  if(window._softAttPushing)return;
   if(window._syncBusy||window._pushBusy)return;
   if(window._server503Until&&Date.now()<window._server503Until)return;
   if(!window._serverPullOk)return;
   clearTimeout(_pushTimer);
   _pushTimer=setTimeout(function(){
     if(window._pushBusy)return;
-    if(window._softAttPushing)return;
     if(window._server503Until&&Date.now()<window._server503Until)return;
     window._pushBusy=true;
     var done=function(){window._pushBusy=false};
@@ -3047,8 +2991,7 @@ function startAutoSync(){
     document.removeEventListener('visibilitychange',_onVisSync);
   }catch(e){}
   window._onVisSync=function(){
-    if(!document.hidden&&session&&session.schoolId)cloudPullAppData(true).then(async function(ok){
-      try{if(ok&&session.schoolId)await cloudPullSubmissions(session.schoolId)}catch(e){}
+    if(!document.hidden&&session&&session.schoolId)cloudPullAppData(true).then(function(ok){
       if(ok){try{if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList()}else renderHome()}catch(e){}}
     }).catch(function(){});
   };
@@ -3096,13 +3039,11 @@ async function autoPullAll(checkSchool){
       }
     }
     const ok=await cloudPullAppData(false);
-    if(session&&session.schoolId){
-      // معلم هم submissions را بکشد تا ابطال مدیر را ببیند (سبک، فقط جدول)
-      try{await cloudPullSubmissions(session.schoolId)}catch(e){}
-    }
     if(canManage()&&session.schoolId){
+      try{await cloudPullSubmissions(session.schoolId)}catch(e){}
       try{ensureAllSubmissionsInAttendance()}catch(e){}
       try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+      // فقط اگر سرور خالی/ضعیف بود cloudPull خودش push می‌کند — اینجا فشار اضافه نه
       try{renderHome()}catch(e){}
     }else if(isTeacher()){
       try{renderHome();renderTeacherDay();renderTeacherJournal();renderTeacherClassList()}catch(e){}
@@ -3115,8 +3056,7 @@ function defaultData(){return{classes:[],students:[],attendance:[],staff:[],coll
 function loadSchoolData(){try{const raw=localStorage.getItem(dataKey());schoolData=raw?{...defaultData(),...JSON.parse(raw)}:defaultData()}catch(e){schoolData=defaultData()}if(!Array.isArray(schoolData.staff))schoolData.staff=[];if(!Array.isArray(schoolData.students))schoolData.students=[];if(!Array.isArray(schoolData.classes))schoolData.classes=[];if(!Array.isArray(schoolData.deletedClassIds))schoolData.deletedClassIds=[];if(!Array.isArray(schoolData.deletedStudentIds))schoolData.deletedStudentIds=[];if(!Array.isArray(schoolData.deletedStaffIds))schoolData.deletedStaffIds=[];if(!Array.isArray(schoolData.colleagues))schoolData.colleagues=[];if(!schoolData.disciplineTypes)schoolData.disciplineTypes=defaultData().disciplineTypes;if(!schoolData.assignments)schoolData.assignments=[];if(!schoolData.deletedAssignmentIds)schoolData.deletedAssignmentIds=[];if(!schoolData.absentSmsSent)schoolData.absentSmsSent={};if(!schoolData.exams)schoolData.exams=[];if(!schoolData.submissions)schoolData.submissions=[];if(!schoolData.messages)schoolData.messages=[];if(!Array.isArray(schoolData.teacherNotes))schoolData.teacherNotes=[];if(!Array.isArray(schoolData.sampleQuestions))schoolData.sampleQuestions=[];if(!Array.isArray(schoolData.disciplinePhotos))schoolData.disciplinePhotos=[];if(!schoolData.smsTemplates||!schoolData.smsTemplates.length)schoolData.smsTemplates=defaultData().smsTemplates;
 try{if(!(schoolData.smsTemplates||[]).some(function(t){return t&&t.id==='escape'})){schoolData.smsTemplates.push({id:'escape',name:'فرار',text:(typeof TPL!=='undefined'&&TPL.escape)?TPL.escape:'ولی محترم {نام} در تاریخ {تاریخ} بدون اجازه از مدرسه خارج شده (فرار) است.'});}}catch(e){}
 try{if(schoolData.rules&&schoolData.rules.escape==null)schoolData.rules.escape=1;}catch(e){}applyTheme()}
-function saveSchoolData(opts){
-  opts=opts||{};
+function saveSchoolData(){
   try{
     if(schoolData&&typeof schoolData==='object'){
       // در فاز ورود/دریافت اولیه از سرور، dirty نکن تا داده قدیمی push نشود
@@ -3128,8 +3068,7 @@ function saveSchoolData(opts){
   }catch(e){}
   try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
   // فقط بعد از اتمام ورود و فقط اگر واقعاً تغییر کاربر بوده
-  // softOnly: فقط حضور/انضباط با pushSoft می‌رود — cloudPushAppData کامل زمان‌بندی نشود
-  if(!window._loginPulling && !opts.softOnly && !window._softAttPushing) scheduleCloudPush();
+  if(!window._loginPulling) scheduleCloudPush();
 }
 function isExpired(exp){return exp&&exp<todayStr()}
 function toEnDigits(s){s=String(s||'');const fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩';let o='';for(const ch of s){let i=fa.indexOf(ch);if(i>=0){o+=i;continue}i=ar.indexOf(ch);if(i>=0){o+=i;continue}o+=ch}return o}
@@ -3603,19 +3542,13 @@ function _studentsOfCurrentClass(){
 function _applyStudentOrder(list, silent){
   list.forEach(function(s,idx){s.sortOrder=idx+1});
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
+  if(canManage()){schoolData.replaceStructure=true;schoolData._structureWriteToken=true;}
+  saveSchoolData();
   renderStudents();
   if(!silent){
     clearTimeout(window._stuOrderPushT);
     window._stuOrderPushT=setTimeout(function(){
-      if(!canManage())return;
-      // فقط دانش‌آموزان همین کلاس با sortOrder — نه کل appData
-      var slim=(list||[]).map(function(s){
-        return {id:String(s.id),classId:s.classId||'',name:s.name||'',sortOrder:s.sortOrder};
-      });
-      if(typeof pushPartialDelta==='function'){
-        pushPartialDelta({students:slim},{timeoutMs:20000}).catch(function(){});
-      }
+      if(canManage())cloudPushAppData(true).catch(function(){});
     },600);
   }
 }
@@ -3749,18 +3682,9 @@ function moveClass(id,dir){
   list.forEach(function(c,idx){c.sortOrder=idx+1});
   schoolData.classes=list;
   schoolData._cloudUpdatedAtMs=Date.now();
-  try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  saveSchoolData();
+  if(canManage())cloudPushAppData(true).catch(function(){});
   renderClasses();
-  // فقط دو کلاسی که جایشان عوض شد
-  if(canManage()){
-    var a=list[i], b=list[j];
-    var only=[];
-    if(a&&a.id){var oa={id:String(a.id),name:a.name||'',sortOrder:a.sortOrder};if(a.shift!=null&&a.shift!=='')oa.shift=a.shift;only.push(oa)}
-    if(b&&b.id){var ob={id:String(b.id),name:b.name||'',sortOrder:b.sortOrder};if(b.shift!=null&&b.shift!=='')ob.shift=b.shift;only.push(ob)}
-    if(only.length&&typeof pushPartialDelta==='function'){
-      pushPartialDelta({classes:only},{timeoutMs:15000,retries:1}).catch(function(){});
-    }
-  }
 }
 function classesForRole(){
   let list=(schoolData.classes||[]).slice();
@@ -5131,7 +5055,7 @@ function openSubmission(id){
   if(!canManage())return;
   const s=(schoolData.submissions||[]).find(x=>x.id===id);
   if(!s)return toast('یافت نشد');
-  applySubmissionAttendance(s);saveSchoolData({softOnly:true});
+  applySubmissionAttendance(s);saveSchoolData();
   currentSubmissionId=id;
   const t=(schoolData.staff||[]).find(x=>x.id===s.teacherId);
   const c=(schoolData.classes||[]).find(x=>x.id===s.classId);
@@ -5194,12 +5118,8 @@ function markAbsentSmsSent(studentIds,dateStr){
   (studentIds||[]).forEach(function(id){
     if(id)schoolData.absentSmsSent[_absentSmsKey(id,dateStr)]=Date.now();
   });
-  saveSchoolData({softOnly:true});
-  try{
-    if(typeof pushPartialDelta==='function'){
-      pushPartialDelta({absentSmsSent:schoolData.absentSmsSent},{timeoutMs:12000,retries:1}).catch(function(){});
-    }
-  }catch(e){}
+  saveSchoolData();
+  try{cloudPushAppData(true).catch(function(){})}catch(e){}
 }
 function prepareSmsFromSubmission(kind){
   const s=window._openSub||(schoolData.submissions||[]).find(x=>x.id===currentSubmissionId);if(!s||!s.rows)return toast('ابتدا حضور و غیاب را باز کنید');
@@ -5297,17 +5217,9 @@ function markSubmissionDone(){
     applySubmissionAttendance(s);
   }
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  // فقط همین ارسال + حضورهایش — نه کل appData
-  if(s&&session&&session.schoolId){
-    cloudPushSubmission(session.schoolId,s).catch(function(){});
-    try{
-      var just=(schoolData.attendance||[]).filter(function(a){return a&&a.submissionId&&String(a.submissionId)===String(s.id)});
-      if(just.length&&typeof pushSoftAttendanceRecords==='function'){
-        pushSoftAttendanceRecords(just,{retries:1,timeoutMs:20000}).catch(function(){});
-      }
-    }catch(e){}
-  }
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
+  if(s&&session&&session.schoolId)cloudPushSubmission(session.schoolId,s).catch(function(){});
   toast('بررسی شد — رفت به شیت پایین صفحه');
   currentSubmissionId=null;
   window._openSub=null;
@@ -5329,12 +5241,6 @@ async function voidCurrentSubmission(){
   if(!confirm('این حضور و غیاب باطل شود؟ برای معلم بعد از همگام دیگر «ثبت‌شده» نشان داده نمی‌شود.'))return;
   id=String(id);
   rememberDeletedSubmission(id);
-  var attDel=[];
-  try{
-    (schoolData.attendance||[]).forEach(function(a){
-      if(a&&a.id&&String(a.submissionId||'')===id) attDel.push(String(a.id));
-    });
-  }catch(e){}
   try{
     (schoolData.submissions||[]).forEach(function(x){
       if(x&&String(x.id)===id){x.status='voided';x.voided=true;x.cancelled=true;}
@@ -5344,21 +5250,25 @@ async function voidCurrentSubmission(){
   schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return !a||String(a.submissionId||'')!==id});
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   try{renderHome();renderReviewedSheet();renderAttLog()}catch(e){}
-  toast('باطل شد — ارسال سبک به سرور…');
-  var ok=false;
+  toast('باطل شد — ارسال به سرور...');
   try{
     if(session&&session.schoolId){
-      // فقط یک درخواست حذف جدول + meta (نه کل appData)
-      ok=!!(await cloudDeleteSubmission(session.schoolId,id));
-      // اگر حضور وابسته هم بود، soft حذف شناسه‌ها
-      if(attDel.length && typeof pushSoftAttendanceRecords==='function'){
-        try{await pushSoftAttendanceRecords([],{deletedAttendanceIds:attDel,retries:1,timeoutMs:15000})}catch(eA){}
-      }
+      try{await cloudDeleteSubmission(session.schoolId,id)}catch(e){}
+      var ok=false;
+      try{
+        if(typeof pushPartialDelta==='function'){
+          ok=!!(await pushPartialDelta({
+            deletedSubmissionIds:schoolData.deletedSubmissionIds||[id],
+            _softOnly:true
+          },{timeoutMs:30000,retries:2}));
+        }
+      }catch(e){}
+      if(!ok){try{await cloudPushAppData(true)}catch(e2){}}
     }
   }catch(e){}
-  toast(ok?'باطل شد ✓ · معاون/معلم «دریافت از سرور» بزنند':'⚠ محلی باطل شد — بعداً همگام کنید');
+  toast('باطل شد ✓ · معلم «دریافت از سرور» بزند تا ثبت‌شده برداشته شود');
   currentSubmissionId=null;
   window._openSub=null;
   showAppPage('home');
@@ -5452,20 +5362,15 @@ function renderReviewedSheet(){
 }
 async function archiveSubmission(id){
   if(!canManage())return toast('دسترسی ندارید');
-  id=String(id||'');
-  var s=(schoolData.submissions||[]).find(function(x){return x&&String(x.id)===id});
-  if(!s)return toast('یافت نشد');
-  s.archived=true;s.archivedAt=Date.now();
+  var s=(schoolData.submissions||[]).find(function(x){return x&&x.id===id});
+  if(!s)return;
+  s.archived=true;
+  s.archivedAt=Date.now();
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
+  try{await cloudPushAppData(true)}catch(e){}
   toast('بایگانی شد — حضور دانش‌آموزان سر جایش است');
   try{renderHome();renderReviewedSheet()}catch(e){}
-  // فقط همین submission روی جدول
-  try{
-    if(session&&session.schoolId&&typeof cloudPushSubmission==='function'){
-      await cloudPushSubmission(session.schoolId,s);
-    }
-  }catch(e){}
 }
 async function archiveAllReviewedFiltered(){
   if(!canManage())return toast('دسترسی ندارید');
@@ -5475,7 +5380,6 @@ async function archiveAllReviewedFiltered(){
   var dayIso=raw?normalizeDateToIso(raw):null;
   var todayIso=todayStr();
   var n=0;
-  var ids=[];
   (schoolData.submissions||[]).forEach(function(s){
     if(!s||!s.status||s.status==='pending')return;
     if(!canAccessClass(s.classId))return;
@@ -5483,20 +5387,12 @@ async function archiveAllReviewedFiltered(){
     if(mode==='today'){if(d!==todayIso)return;}
     else if(dayIso){if(d!==dayIso)return;}
     else{if(d===todayIso)return;}
-    if(!s.archived){s.archived=true;s.archivedAt=Date.now();n++;if(s.id)ids.push(String(s.id));}
+    if(!s.archived){s.archived=true;s.archivedAt=Date.now();n++;}
   });
   if(!n)return toast('موردی برای بایگانی نیست');
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  try{
-    if(session&&session.schoolId){
-      var sent=0;
-      for(var i=0;i<ids.length&&sent<30;i++){
-        var ss=(schoolData.submissions||[]).find(function(x){return x&&String(x.id)===String(ids[i])});
-        if(ss){try{await cloudPushSubmission(session.schoolId,ss);sent++}catch(e){}}
-      }
-    }
-  }catch(e){}
+  saveSchoolData();
+  try{await cloudPushAppData(true)}catch(e){}
   toast(n+' مورد بایگانی شد — حضورها حفظ شدند');
   try{renderHome();renderReviewedSheet()}catch(e){}
 }
@@ -5512,15 +5408,24 @@ async function deleteSubmission(id){
   schoolData.submissions=(schoolData.submissions||[]).filter(function(x){return x&&String(x.id)!==id});
   schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return !a||String(a.submissionId)!==id});
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  toast('حذف شد — ارسال سبک…');
+  saveSchoolData();
+  toast('حذف شد — فقط همین ارسال به سرور...');
   try{
     var ok=false;
     if(session&&session.schoolId){
+      // ۱) حذف از جدول submissions سرور
       ok=!!(await cloudDeleteSubmission(session.schoolId,id));
-      if(attDel.length && typeof pushSoftAttendanceRecords==='function'){
-        try{await pushSoftAttendanceRecords([],{deletedAttendanceIds:attDel.slice(),retries:1,timeoutMs:15000})}catch(e2){}
-      }
+      // ۲) فقط شناسه حذف — نه کل لیست حضور/ارسال
+      var ok2=false;
+      try{
+        ok2=!!(await pushPartialDelta({
+          deletedSubmissionIds:[String(id)],
+          deletedAttendanceIds:attDel.slice(),
+          _softOnly:true,
+          _softAttendanceOnly:true
+        },{timeoutMs:25000}));
+      }catch(e2){}
+      ok=ok||ok2;
     }
     toast(ok?'✓ همین حضور از سرور حذف شد':'⚠ محلی حذف شد؛ همگام‌سازی را بزنید');
   }catch(e){toast('محلی حذف شد؛ همگام‌سازی ناموفق')}
@@ -5555,16 +5460,18 @@ async function deleteAllReviewedFiltered(){
   schoolData.submissions=(schoolData.submissions||[]).filter(function(s){return !s||!idset[String(s.id)]});
   schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return !a||!a.submissionId||!idset[String(a.submissionId)]});
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   toast('در حال حذف از سرور...');
   try{
     if(session&&session.schoolId){
-      // حذف تک‌تک از جدول (سبک) — حداکثر ۳۰ مورد پشت‌سرهم
-      var lim=Math.min(ids.length,40);
-      for(var k=0;k<lim;k++){try{await cloudDeleteSubmission(session.schoolId,ids[k])}catch(e){}}
-      if(attDel.length&&typeof pushSoftAttendanceRecords==='function'){
-        try{await pushSoftAttendanceRecords([],{deletedAttendanceIds:attDel.slice(0,200),retries:1,timeoutMs:20000})}catch(e2){}
-      }
+      for(var k=0;k<ids.length;k++){try{await cloudDeleteSubmission(session.schoolId,ids[k])}catch(e){}}
+      // فقط شناسه‌های حذف‌شده — نه کل لیست
+      await pushPartialDelta({
+        deletedSubmissionIds:ids.map(String),
+        deletedAttendanceIds:attDel,
+        _softOnly:true,
+        _softAttendanceOnly:true
+      },{timeoutMs:45000});
     }
     toast(n+' مورد از سرور حذف شد ✓');
   }catch(e){toast(n+' مورد محلی حذف شد')}
@@ -5686,15 +5593,11 @@ async function submitManagerClassAtt(){
     });
   });
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  toast('ثبت شد — ارسال سبک…');
+  saveSchoolData();
+  toast('ثبت شد — در حال ارسال...');
   try{
     if(session&&session.schoolId){
       try{await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/submissions',{method:'POST',body:sub,retries:1,timeoutMs:12000})}catch(e){}
-      var justAtt=(schoolData.attendance||[]).filter(function(a){return a&&a.submissionId&&String(a.submissionId)===String(sub.id)});
-      if(justAtt.length&&typeof pushSoftAttendanceRecords==='function'){
-        try{await pushSoftAttendanceRecords(justAtt,{retries:1,timeoutMs:20000})}catch(e2){}
-      }
     }
     toast('حضور کلاس ثبت شد ✓');
   }catch(e){toast('محلی ذخیره شد؛ ارسال سرور ناموفق')}
@@ -5753,12 +5656,12 @@ async function saveManagerLate(){
     teacherId:null
   });
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  var lateRec=(schoolData.attendance||[]).slice(-1)[0];
+  saveSchoolData();
   // پیامک والدین
   var tpl=(getSmsTemplates().find(function(t){return t.id==='late'})||{}).text||'ولی محترم {نام} در تاریخ {تاریخ} با تأخیر وارد مدرسه شد.';
   var finalText=applyVars(tpl,s.name);
   try{
+    // تاریخ در قالب
     finalText=finalText.replace(/\{تاریخ\}/g,formatDateFa(day)).replace(/\{date\}/gi,formatDateFa(day));
   }catch(e){}
   var phones=(s.phones||[]).filter(Boolean);
@@ -5779,12 +5682,8 @@ async function saveManagerLate(){
     }
   }
   if(out)out.innerHTML=html;
-  toast('تأخیر ثبت شد — فقط همین مورد به سرور…');
-  try{
-    if(lateRec&&typeof pushSoftAttendanceRecords==='function'){
-      await pushSoftAttendanceRecords([lateRec],{retries:2,timeoutMs:20000});
-    }
-  }catch(e){}
+  toast('تأخیر ثبت شد — پیامک آماده است');
+  try{await cloudPushAppData(true)}catch(e){}
   _latePickId=null;
   try{document.getElementById('late-search').value='';document.getElementById('late-note').value='';filterLateStudentPick()}catch(e){}
 }
@@ -5904,26 +5803,16 @@ async function saveClass(id){
     // شیفت فقط از لایسنس مادر می‌آید — ذخیره کلاس نباید دو شیفت را روشن کند
     schoolData.shifts=dualShift()?2:1;
     schoolData._cloudUpdatedAtMs=Date.now();
-    // بدون scheduleCloudPush کامل
-    try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+    if(canManage()){markIntentionalSave('structure');}saveSchoolData();
     closeModal();
     try{renderClasses();renderHome();}catch(e){}
-    toast('ذخیره شد — فقط همین کلاس…');
+    toast('ذخیره محلی شد — در حال ارسال به سرور...');
     if(canManage()){
       try{
-        var _cid=id;
-        if(!_cid){
-          // کلاس تازه‌اضافه‌شده: آخرین ردیف
-          var last=(schoolData.classes||[]);
-          _cid=last.length?last[last.length-1].id:null;
-        }
-        var _cl=(schoolData.classes||[]).find(function(x){return x&&String(x.id)===String(_cid)});
-        if(!_cl){toast('محلی ذخیره شد');return;}
-        // فقط همین یک آبجکت کلاس — نه schoolData.classes
-        var ok=await pushOneClass(_cl);
-        toast(ok?'✓ فقط همین کلاس روی سرور':'⚠ محلی ماند — همگام‌سازی را بزنید');
+        await cloudPushAppData(true);
+        toast('کلاس روی سرور همگام شد ✓');
       }catch(e){
-        toast('محلی ذخیره شد؛ ارسال سرور ناموفق');
+        toast('محلی ذخیره شد؛ ارسال سرور ناموفق — اینترنت را چک کنید و همگام‌سازی بزنید');
       }
     }
   }catch(err){console.error(err);toast('خطا در ذخیره کلاس')}
@@ -5939,46 +5828,13 @@ function delClass(id){
   schoolData.assignments=(schoolData.assignments||[]).filter(function(a){return a&&String(a.classId)!==id});
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  if(canManage()){markIntentionalSave('structure');}
+  saveSchoolData();
   try{renderClasses();renderHome()}catch(e){}
-  (async function(){
-    try{
-      var ok=false;
-      if(session&&session.schoolId){
-        var body={
-          _classOnly:true,
-          classes:[],
-          deletedClassIds:[String(id)],
-          managerAuthority:true,
-          _compatNoAuth:true,
-          updatedAtMs:Date.now(),
-          auth:{
-            user:(schoolData&&(schoolData.managerUser||schoolData.managerUsername))||(userSession&&userSession.username)||'',
-            pass:(schoolData&&schoolData.managerPass)||(userSession&&userSession.pass)||'',
-            role:'manager'
-          }
-        };
-        try{
-          await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-            method:'PUT',body:body,retries:1,timeoutMs:18000
-          });
-          ok=true;
-        }catch(e1){
-          try{
-            await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
-              method:'POST',body:Object.assign({},body,{_teacherPartial:true}),retries:1,timeoutMs:18000
-            });
-            ok=true;
-          }catch(e2){
-            if(typeof pushPartialDelta==='function'){
-              ok=!!(await pushPartialDelta({deletedClassIds:[String(id)]},{timeoutMs:15000}));
-            }
-          }
-        }
-      }
-      toast(ok?'✓ کلاس از سرور حذف شد':'محلی حذف شد — همگام‌سازی را بزنید');
-    }catch(e){toast('محلی حذف شد — همگام‌سازی را بزنید')}
-  })();
+  cloudPushAppData(true).then(function(){
+    try{schoolData.replaceStructure=false;saveSchoolData()}catch(e){}
+    toast('کلاس حذف و به سرور ارسال شد');
+  }).catch(function(){toast('محلی حذف شد — همگام‌سازی را بزنید')});
 }
 function openClassStudents(id){if(!canAccessClass(id))return toast('به این کلاس دسترسی ندارید');currentClassId=id;const c=schoolData.classes.find(x=>x.id===id);document.getElementById('students-title').textContent='دانش‌آموزان '+classTitle(c);document.getElementById('btn-add-stu').style.display=canManage()?'':'none';showAppPage('students');renderStudents()}
 function renderStudents(){
@@ -6025,52 +5881,6 @@ function renderStudents(){
 }
 
 
-async function pushOneClass(cl){
-  if(!SYNC_API||!session||!session.schoolId||!cl||!cl.id)return false;
-  if(!canManage())return false;
-  // فقط همین یک کلاس — هرگز کل لیست
-  var one={id:String(cl.id),name:cl.name||''};
-  if(cl.shift!=null&&cl.shift!=='')one.shift=parseInt(cl.shift,10)||cl.shift;
-  if(cl.sortOrder!=null&&cl.sortOrder!=='')one.sortOrder=cl.sortOrder;
-  var auth={
-    user:(schoolData&&(schoolData.managerUser||schoolData.managerUsername))||(userSession&&userSession.username)||'',
-    pass:(schoolData&&schoolData.managerPass)||(userSession&&userSession.pass)||'',
-    role:'manager'
-  };
-  var body={
-    _classOnly:true,
-    classes:[one],
-    managerAuthority:true,
-    _compatNoAuth:true,
-    updatedAtMs:Date.now(),
-    auth:auth
-  };
-  // 1) مسیر اصلی appData
-  try{
-    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-      method:'PUT',body:body,retries:1,timeoutMs:18000
-    });
-    try{schoolData._localDirtyAt=0}catch(e0){}
-    return true;
-  }catch(e1){console.warn('pushOneClass appData',e1)}
-  // 2) مسیر teacher (سازگاری)
-  try{
-    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
-      method:'POST',body:Object.assign({},body,{_teacherPartial:true}),retries:1,timeoutMs:18000
-    });
-    try{schoolData._localDirtyAt=0}catch(e0){}
-    return true;
-  }catch(e2){console.warn('pushOneClass teacher',e2)}
-  // 3) partial فقط با همین یک کلاس
-  try{
-    if(typeof pushPartialDelta==='function'){
-      var ok=!!(await pushPartialDelta({classes:[one]},{timeoutMs:18000,retries:1}));
-      if(ok){try{schoolData._localDirtyAt=0}catch(e0){}}
-      return ok;
-    }
-  }catch(e3){}
-  return false;
-}
 async function pushOneStudent(st){
   if(!SYNC_API||!session||!session.schoolId||!st||!st.id)return false;
   if(!canManage())return false;
@@ -6116,6 +5926,7 @@ async function pushOneStudent(st){
           _studentOnly:true,
           students:[one],
           managerAuthority:true,
+          _softOnly:true,
           _compatNoAuth:true,
           updatedAtMs:Date.now()
         },
@@ -6161,10 +5972,11 @@ function saveStudent(id){
       schoolData.students.push({id:uid(),classId:currentClassId,name:name,phones:phones,note:note,group:group,photo:photo||'',sortOrder:((schoolData.students||[]).filter(function(x){return x&&x.classId===currentClassId}).length)+1});
     }
     schoolData._cloudUpdatedAtMs=Date.now();
-    saveSchoolData({softOnly:true});
+    if(canManage()){markIntentionalSave('structure');}
+    saveSchoolData();
     closeModal();
     try{renderStudents();renderHome();}catch(e){}
-    toast('ذخیره شد — فقط همین دانش‌آموز به سرور…');
+    toast('ذخیره شد — فقط همین دانش‌آموز به سرور...');
     if(canManage()){
       (async function(){
         try{
@@ -6177,7 +5989,7 @@ function saveStudent(id){
           var ok=_st&&typeof pushOneStudent==='function'?await pushOneStudent(_st):false;
           toast(ok?'✓ فقط همین دانش‌آموز روی سرور ذخیره شد':'⚠ محلی ماند — همگام‌سازی را بزنید');
         }catch(e){toast('محلی ذخیره شد')}
-        try{schoolData.replaceStructure=false;schoolData._structureWriteToken=false;localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+        try{schoolData.replaceStructure=false;schoolData._structureWriteToken=false;saveSchoolData()}catch(e){}
       })();
     }
   }catch(err){
@@ -6195,7 +6007,8 @@ function delStudent(id){
   schoolData.attendance=(schoolData.attendance||[]).filter(function(a){return a&&String(a.studentId)!==id});
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  if(canManage()){markIntentionalSave('structure');}
+  saveSchoolData();
   try{renderStudents();renderHome()}catch(e){}
   (async function(){
     try{
@@ -6208,14 +6021,16 @@ function delStudent(id){
             students:[],
             deletedStudentIds:[String(id)],
             managerAuthority:true,
+            _softOnly:true,
             _compatNoAuth:true,
             updatedAtMs:Date.now()
           },
           retries:1,
-          timeoutMs:20000
+          timeoutMs:25000
         });
         ok=true;
       }catch(e1){}
+      try{schoolData.replaceStructure=false;schoolData._structureWriteToken=false;saveSchoolData()}catch(e){}
       toast(ok?'✓ حذف دانش‌آموز روی سرور':'محلی حذف شد — همگام‌سازی را بزنید');
     }catch(e){toast('محلی حذف شد — همگام‌سازی را بزنید')}
   })();
@@ -6391,29 +6206,33 @@ async function pushOneStaffMember(member){
     }
   };
   try{
-    // مسیر اصلی: فقط همین یک نفر (+عکس فشرده) — نه کل تیم
-    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-      method:'PUT',
-      body:{
-        _staffOnly:true,
-        staff:[one],
-        managerAuthority:true,
-        _compatNoAuth:true,
-        updatedAtMs:Date.now()
-      },
-      retries:1,
-      timeoutMs:25000
+    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
+      method:'POST',body:body,retries:1,timeoutMs:25000
     });
+    if(one.photo){
+      try{await pushStaffSelfUpdate({id:String(one.id),photo:one.photo})}catch(e2){}
+    }
     return true;
   }catch(e){
-    console.warn('pushOneStaffMember appData',e);
+    console.warn('pushOneStaffMember teacher',e);
+    // مسیر جایگزین: appData اصلی فقط با همین یک نفر
     try{
-      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData/teacher',{
-        method:'POST',body:body,retries:1,timeoutMs:25000
+      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
+        method:'PUT',
+        body:{
+          _staffOnly:true,
+          staff:[one],
+          managerAuthority:true,
+          _softOnly:true,
+          _compatNoAuth:true,
+          updatedAtMs:Date.now()
+        },
+        retries:1,
+        timeoutMs:25000
       });
       return true;
     }catch(e2){
-      console.warn('pushOneStaffMember teacher',e2);
+      console.warn('pushOneStaffMember appData',e2);
       if(one.photo){
         try{return !!(await pushStaffSelfUpdate({id:String(one.id),photo:one.photo}))}catch(e3){return false}
       }
@@ -6422,8 +6241,93 @@ async function pushOneStaffMember(member){
   }
 }
 
-// saveStaff: نسخه یکتا پایین‌تر
-
+function saveStaff(id){
+  if(!isManager())return toast('فقط مدیر');
+  try{
+    const nameEl=document.getElementById('st-name');
+    const roleEl=document.getElementById('st-role');
+    const userEl=document.getElementById('st-user');
+    const passEl=document.getElementById('st-pass');
+    const phoneEl=document.getElementById('st-phone');
+    if(!nameEl||!roleEl||!userEl||!passEl){
+      return toast('فرم کاربر آماده نیست — صفحه را رفرش کنید');
+    }
+    const name=nameEl.value.trim();
+    const role=roleEl.value||'teacher';
+    const username=normLoginUser(userEl.value.trim());
+    const pass=String(passEl.value||'');
+    const phone=fixPhone(phoneEl?phoneEl.value:'');
+    const shiftRaw=document.getElementById('st-shift')?document.getElementById('st-shift').value:'';
+    const shift=shiftRaw===''?null:parseInt(shiftRaw,10);
+    if(!name||!username||!pass)return toast('نام، کاربری و رمز لازم است');
+    if(pass.length<4)return toast('رمز حداقل ۴ کاراکتر باشد');
+    if(!schoolData)loadSchoolData();
+    if(!Array.isArray(schoolData.staff))schoolData.staff=[];
+    // جلوگیری از نام کاربری تکراری
+    const dup=schoolData.staff.find(function(x){return x && String(x.username||'')===String(username) && (!id || x.id!==id);});
+    if(dup)return toast('این نام کاربری قبلاً برای «'+(dup.name||'')+'» ثبت شده');
+    // شیفت کاربر فقط وقتی لایسنس دو شیفت دارد معنا دارد
+    if(!dualShift()){/* ignore local force */}
+    else schoolData.shifts=2;
+    var photo=(typeof window._pendingPhoto!=='undefined' && window._pendingPhoto!==null)?window._pendingPhoto:'';
+    // فشرده سریع عکس تیم قبل از ذخیره (۱۶۰px)
+    if(photo&&String(photo).indexOf('data:image')===0&&String(photo).length>25000){
+      try{
+        // تقریبی: اگر خیلی بزرگ است در لحظه نمی‌کشیم؛ در push جداگانه کوچک می‌شود
+      }catch(e){}
+    }
+    if(id){
+      const u=schoolData.staff.find(x=>x.id===id);
+      if(u){
+        u.name=name;u.role=role;u.username=username;u.pass=pass;u.phone=phone;u.shift=shift;u.active=true;
+        if(photo!==''||photo==='')u.photo=photo||'';
+        if(userSession&&userSession.staffId===u.id){userSession.photo=u.photo||'';userSession.name=u.name;saveUserSession(userSession)}
+      }else{
+        return toast('کاربر برای ویرایش یافت نشد');
+      }
+    }else{
+      schoolData.staff.push({id:uid(),name:name,role:role,username:username,pass:pass,phone:phone,shift:shift,photo:photo||'',active:true});
+    }
+    schoolData._cloudUpdatedAtMs=Date.now();
+    schoolData._localDirtyAt=Date.now();
+    if(canManage()){
+      markIntentionalSave('structure');
+    }
+    saveSchoolData();
+    closeModal();
+    try{renderTeam();}catch(e){}
+    toast('ذخیره شد — فقط همین کاربر به سرور می‌رود...');
+    if(session&&session.schoolId&&isManager()){
+      (async function(){
+        try{
+          var _sid=id||'';
+          if(!_sid){
+            try{_sid=((schoolData.staff||[])[(schoolData.staff||[]).length-1]||{}).id||''}catch(e){}
+          }
+          var _st=(schoolData.staff||[]).find(function(x){return x&&String(x.id)===String(_sid)});
+          if(!_st){
+            toast('کاربر محلی ذخیره شد');
+            return;
+          }
+          // فقط همین یک نفر — نه کل تیم، نه کل appData
+          var ok=await pushOneStaffMember(_st);
+          toast(ok?'✓ همین کاربر روی سرور ذخیره شد':'⚠ محلی ماند؛ اینترنت را چک کنید و دوباره ذخیره کنید',ok?3000:5000);
+        }catch(e){
+          console.warn('saveStaff push',e);
+          toast('محلی ذخیره شد؛ ارسال سرور ناموفق',5000);
+        }
+        try{
+          schoolData.replaceStructure=false;
+          schoolData._structureWriteToken=false;
+          saveSchoolData();
+        }catch(e){}
+      })();
+    }
+  }catch(err){
+    console.error('saveStaff',err);
+    toast('خطا در ذخیره کاربر: '+(err&&err.message?err.message:err));
+  }
+}
 function openStaffModal(id){
   if(!isManager())return toast('فقط مدیر می‌تواند تیم را مدیریت کند');
   const u=id?schoolData.staff.find(x=>x.id===id):null;
@@ -6498,10 +6402,13 @@ function saveStaff(id){
     }
     schoolData._cloudUpdatedAtMs=Date.now();
     schoolData._localDirtyAt=Date.now();
-    saveSchoolData({softOnly:true});
+    if(canManage()){
+      markIntentionalSave('structure');
+    }
+    saveSchoolData();
     closeModal();
     try{renderTeam();}catch(e){}
-    toast('ذخیره شد — فقط همین کاربر به سرور می‌رود…');
+    toast('ذخیره شد — فقط همین کاربر به سرور می‌رود...');
     if(session&&session.schoolId&&isManager()){
       (async function(){
         try{
@@ -6512,17 +6419,18 @@ function saveStaff(id){
           var _st=(schoolData.staff||[]).find(function(x){return x&&String(x.id)===String(_sid)});
           if(!_st){toast('کاربر محلی ذخیره شد');return;}
           var ok=false;
+          // فقط همین یک نفر — هرگز کل تیم
           if(typeof pushOneStaffMember==='function'){
             ok=!!(await pushOneStaffMember(_st));
           }
           if(!ok&&typeof pushPartialDelta==='function'){
-            ok=!!(await pushPartialDelta({staff:[Object.assign({},_st)]},{timeoutMs:25000}));
+            ok=!!(await pushPartialDelta({staff:[Object.assign({},_st)]},{timeoutMs:30000}));
           }
           toast(ok?'✓ فقط همین کاربر به سرور رفت':'⚠ محلی ماند؛ اینترنت را چک کنید و دوباره ذخیره کنید',ok?3000:5000);
         }catch(e){
           toast('ذخیره محلی شد؛ ارسال سرور ناموفق — دوباره «ارسال به سرور» بزنید',5000);
         }
-        try{schoolData.replaceStructure=false;schoolData._structureWriteToken=false;try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){};}catch(e){}
+        try{schoolData.replaceStructure=false;schoolData._structureWriteToken=false;saveSchoolData();}catch(e){}
       })();
     }
   }catch(err){
@@ -6537,37 +6445,26 @@ async function delStaff(id){
   if(!Array.isArray(schoolData.deletedStaffIds))schoolData.deletedStaffIds=[];
   if(id&&schoolData.deletedStaffIds.indexOf(id)<0)schoolData.deletedStaffIds.push(id);
   schoolData.staff=(schoolData.staff||[]).filter(function(x){return x&&String(x.id)!==id});
-  schoolData.assignments=(schoolData.assignments||[]).filter(function(a){return a&&String(a.teacherId)!==id&&String(a.teacherId2||'')!==id});
+  schoolData.assignments=(schoolData.assignments||[]).filter(function(a){return a&&String(a.teacherId)!==id});
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
+  if(canManage()){markIntentionalSave('structure');}
+  saveSchoolData();
   renderTeam();
-  toast('حذف محلی — فقط همین نفر به سرور…');
+  toast('حذف محلی شد — در حال ارسال به سرور...');
   if(session&&session.schoolId){
     try{
-      var ok=false;
-      try{
-        await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-          method:'PUT',
-          body:{
-            _staffOnly:true,
-            staff:[],
-            deletedStaffIds:[String(id)],
-            managerAuthority:true,
-            _compatNoAuth:true,
-            updatedAtMs:Date.now()
-          },
-          retries:1,
-          timeoutMs:20000
-        });
-        ok=true;
-      }catch(e1){
-        if(typeof pushPartialDelta==='function'){
-          ok=!!(await pushPartialDelta({deletedStaffIds:[String(id)]},{timeoutMs:20000}));
-        }
+      await cloudPushStaff(session.schoolId,schoolData.staff);
+      var ok=true;
+      if(typeof pushPartialDelta==='function'){
+        ok=!!(await pushPartialDelta({
+          staff:(schoolData.staff||[]).slice(),
+          deletedStaffIds:(schoolData.deletedStaffIds||[]).slice()
+        },{timeoutMs:45000}));
       }
-      toast(ok?'از سرور هم حذف شد ✓':'محلی حذف شد؛ دوباره همگام کنید');
+      if(ok) toast('از سرور هم حذف شد ✓');
+      else toast('محلی حذف شد؛ ارسال سرور ناموفق — دوباره همگام کنید');
     }catch(e){
-      toast('محلی حذف شد؛ ارسال سرور ناموفق');
+      toast('محلی حذف شد؛ ارسال سرور ناموفق — دوباره همگام کنید');
     }
   }
 }
@@ -6699,12 +6596,13 @@ function saveColleague(id){
       const x=schoolData.colleagues.find(z=>z.id===id);
       if(x){x.name=name;x.role=role;x.phone=phone}
     }else schoolData.colleagues.push({id:uid(),name:name,role:role,phone:phone});
-    saveSchoolData({softOnly:true});
+    markIntentionalSave('soft');
+    saveSchoolData();
     closeModal();renderTeam();
-    toast('ذخیره شد — فقط لیست همکاران…');
-    if(canManage()&&typeof pushPartialDelta==='function'){
-      pushPartialDelta({colleagues:(schoolData.colleagues||[]).slice()},{timeoutMs:15000}).then(function(ok){
-        toast(ok?'همکار روی سرور ذخیره شد':'محلی ماند — همگام را بزنید');
+    toast('ذخیره شد — ارسال به سرور...');
+    if(canManage()){
+      Promise.resolve(cloudPushAppData(true)).then(function(ok){
+        toast(ok===false?'محلی ماند — همگام‌سازی را بزنید':'همکار روی سرور ذخیره شد');
       }).catch(function(){toast('محلی ذخیره شد')});
     }
   }catch(err){console.error(err);toast('خطا در ذخیره همکار')}
@@ -6712,11 +6610,12 @@ function saveColleague(id){
 function delColleague(id){
   if(!confirm('حذف این همکار؟'))return;
   schoolData.colleagues=(schoolData.colleagues||[]).filter(function(x){return x.id!==id});
-  saveSchoolData({softOnly:true});
+  markIntentionalSave('soft');
+  saveSchoolData();
   renderTeam();
-  if(canManage()&&typeof pushPartialDelta==='function'){
-    pushPartialDelta({colleagues:(schoolData.colleagues||[]).slice()},{timeoutMs:15000}).then(function(ok){
-      toast(ok?'حذف روی سرور اعمال شد':'محلی حذف شد');
+  if(canManage()){
+    Promise.resolve(cloudPushAppData(true)).then(function(ok){
+      toast(ok===false?'محلی حذف شد':'حذف و روی سرور اعمال شد');
     }).catch(function(){toast('محلی حذف شد')});
   }else toast('حذف شد');
 }
@@ -6810,41 +6709,6 @@ function filterAssignTeacherSelect(){
   sel.innerHTML=opts.map(function(t){return '<option value="'+t.id+'">'+(t.name||t.username||t.id)+'</option>'}).join('');
   if(cur){try{sel.value=cur}catch(e){}}
 }
-async function pushOneAssign(one, deletedIds){
-  if(!SYNC_API||!session||!session.schoolId)return false;
-  if(!canManage())return false;
-  var body={
-    _assignOnly:true,
-    assignments: one ? [one] : [],
-    deletedAssignmentIds: Array.isArray(deletedIds)?deletedIds:[],
-    managerAuthority:true,
-    _compatNoAuth:true,
-    updatedAtMs:Date.now(),
-    auth:{
-      user:(schoolData&&(schoolData.managerUser||schoolData.managerUsername))||(userSession&&userSession.username)||'',
-      pass:(schoolData&&schoolData.managerPass)||(userSession&&userSession.pass)||'',
-      role:'manager'
-    }
-  };
-  try{
-    await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-      method:'PUT',body:body,retries:1,timeoutMs:20000
-    });
-    try{schoolData._localDirtyAt=0}catch(e){}
-    return true;
-  }catch(e1){
-    console.warn('pushOneAssign',e1);
-    try{
-      if(typeof pushPartialDelta==='function'){
-        var patch={};
-        if(one)patch.assignments=[one];
-        if(deletedIds&&deletedIds.length)patch.deletedAssignmentIds=deletedIds;
-        return !!(await pushPartialDelta(patch,{timeoutMs:20000,retries:1}));
-      }
-    }catch(e2){}
-    return false;
-  }
-}
 function saveAssign(id){
   if(id==='null'||id==='undefined')id='';
   var teacherId=document.getElementById('as-teacher').value;
@@ -6881,48 +6745,37 @@ function saveAssign(id){
     subject:subject
   };
   if(id){
-    var a=schoolData.assignments.find(function(x){return x&&String(x.id)===String(id)});
+    var a=schoolData.assignments.find(function(x){return x.id===id});
     if(a)Object.assign(a,fields);
-    else schoolData.assignments.push(Object.assign({id:String(id)},fields));
+    else schoolData.assignments.push(Object.assign({id:id},fields));
   }else{
     schoolData.assignments.push(Object.assign({id:uid()},fields));
   }
   if(id&&Array.isArray(schoolData.deletedAssignmentIds)){
-    schoolData.deletedAssignmentIds=schoolData.deletedAssignmentIds.filter(function(x){return String(x)!==String(id)});
+    schoolData.deletedAssignmentIds=schoolData.deletedAssignmentIds.filter(function(x){return x!==id});
   }
   schoolData._cloudUpdatedAtMs=Date.now();
-  try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  schoolData._localDirtyAt=Date.now();
+  saveSchoolData();
   try{closeModal()}catch(e){}
   renderAssignments();
   try{renderTeacherScheduleStats()}catch(e){}
-  toast('ذخیره شد — فقط همین زنگ به سرور…');
+  toast('ذخیره شد — در حال ارسال به سرور...');
   (async function(){
     try{
       var one=null;
       if(id) one=(schoolData.assignments||[]).find(function(x){return x&&String(x.id)===String(id)});
       if(!one) one=(schoolData.assignments||[]).slice(-1)[0];
-      if(!one||!one.id){toast('محلی ذخیره شد');return;}
-      // کپی سبک بدون فیلدهای اضافی
-      var slim={
-        id:String(one.id),
-        teacherId:one.teacherId||'',
-        teacherId2:one.teacherId2||null,
-        teacherName:one.teacherName||'',
-        teacherUsername:one.teacherUsername||'',
-        teacherName2:one.teacherName2||'',
-        teacherUsername2:one.teacherUsername2||'',
-        classId:one.classId||'',
-        group:one.group||'',
-        dayOfWeek:one.dayOfWeek,
-        periodName:one.periodName||'',
-        startTime:one.startTime||'',
-        endTime:one.endTime||'',
-        subject:one.subject||''
-      };
-      var ok=await pushOneAssign(slim);
-      toast(ok?'✓ فقط همین زنگ روی سرور ثبت شد':'⚠ سرور جواب نداد — اینترنت را چک کنید و دوباره ذخیره کنید');
+      // فقط همان یک زنگ — نه کل برنامه و نه کلاس/دانش‌آموز
+      var ok=await pushPartialDelta({assignments: one ? [one] : []});
+      if(ok===false) ok=await pushPartialDelta({assignments: one ? [one] : []});
+      if(ok===false){
+        toast('ارسال نشد — دکمه ارسال به سرور را بزنید');
+        return;
+      }
+      toast('✓ فقط همین زنگ به سرور رفت');
     }catch(e){
-      toast('خطای سرور: '+(e&&e.message?String(e.message).slice(0,80):e));
+      toast('خطای سرور: '+(e&&e.message?e.message:e));
     }
   })();
 }
@@ -6936,15 +6789,12 @@ function delAssign(id){
   if(schoolData.deletedAssignmentIds.indexOf(id)<0)schoolData.deletedAssignmentIds.push(id);
   if(schoolData.deletedAssignmentIds.length>500)schoolData.deletedAssignmentIds=schoolData.deletedAssignmentIds.slice(-500);
   schoolData._cloudUpdatedAtMs=Date.now();
-  try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
+  saveSchoolData();
+  // فقط شناسهٔ حذف‌شده
+  pushPartialDelta({deletedAssignmentIds:[id]}).catch(function(){});
   renderAssignments();
   try{renderTeacherScheduleStats()}catch(e){}
-  toast('حذف محلی — ارسال به سرور…');
-  (async function(){
-    var ok=false;
-    try{ok=!!(await pushOneAssign(null,[id]))}catch(e){}
-    toast(ok?'✓ از سرور حذف شد':'⚠ محلی حذف شد — همگام‌سازی را بزنید');
-  })();
+  toast('حذف شد');
 }
 
 
@@ -7806,10 +7656,8 @@ function removeTeacherNotePhoto(noteId, idx){
   if(!confirm('این عکس از دفتر کلاسی حذف شود؟'))return;
   n.photos.splice(idx,1);
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  if(typeof pushPartialDelta==='function'){
-    pushPartialDelta({teacherNotes:[Object.assign({},n)],_softOnly:true},{timeoutMs:25000}).catch(function(){});
-  }
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
   toast('عکس حذف شد');
   refreshStudentPerfView();
 }
@@ -7834,10 +7682,8 @@ function replaceTeacherNotePhoto(noteId, idx){
         if(!Array.isArray(n.photos))n.photos=[];
         if(idx>=0&&idx<n.photos.length)n.photos[idx]=d;else n.photos.push(d);
         schoolData._cloudUpdatedAtMs=Date.now();
-        saveSchoolData({softOnly:true});
-        if(typeof pushPartialDelta==='function'){
-          pushPartialDelta({teacherNotes:[Object.assign({},n)],_softOnly:true},{timeoutMs:30000}).catch(function(){});
-        }
+        saveSchoolData();
+        cloudPushAppData(true).catch(function(){});
         toast('عکس جایگزین شد');
         refreshStudentPerfView();
       }, {quality:0.82, maxBytes:420000, minQuality:0.68});
@@ -7858,10 +7704,8 @@ function editTeacherNoteText(noteId){
   if(t===null)return;
   n.text=String(t).trim();
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  if(typeof pushPartialDelta==='function'){
-    pushPartialDelta({teacherNotes:[Object.assign({},n)],_softOnly:true},{timeoutMs:15000}).catch(function(){});
-  }
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
   toast('متن ذخیره شد');
   refreshStudentPerfView();
 }
@@ -8576,11 +8420,9 @@ function saveSmsTpl(id){
   }
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   closeModal();renderSettings();fillSendTemplates();
-  if(canManage()&&typeof pushPartialDelta==='function'){
-    pushPartialDelta({smsTemplates:getSmsTemplates().slice()},{timeoutMs:15000}).catch(function(){});
-  }
+  if(canManage())cloudPushAppData(true).catch(function(){});
   toast('قالب ذخیره شد');
 }
 function delSmsTpl(id){
@@ -8588,11 +8430,9 @@ function delSmsTpl(id){
   schoolData.smsTemplates=getSmsTemplates().filter(x=>x.id!==id);
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   renderSettings();fillSendTemplates();
-  if(canManage()&&typeof pushPartialDelta==='function'){
-    pushPartialDelta({smsTemplates:getSmsTemplates().slice()},{timeoutMs:15000}).catch(function(){});
-  }
+  if(canManage())cloudPushAppData(true).catch(function(){});
   toast('حذف شد');
 }
 
@@ -10203,14 +10043,14 @@ async function submitBulkDiscipline(){
   if(!n)return toast('دانش‌آموزی ثبت نشد');
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   toast('ثبت محلی '+n+' نفر · '+typeLabel+' · کسر '+deduct+' — ارسال به سرور…');
   try{
     var just=(schoolData.attendance||[]).filter(function(a){return a&&a.fromDiscipline&&a.bulkGroup&&a.createdAtMs&&(Date.now()-a.createdAtMs)<60000}).slice(-n);
     if(just.length<n){
       just=(schoolData.attendance||[]).filter(function(a){return a&&a.fromDiscipline}).slice(-n);
     }
-    var ok=await pushSoftAttendanceRecords(just,{retries:2,timeoutMs:40000});
+    var ok=await pushSoftAttendanceRecords(just,{retries:3,timeoutMs:60000});
     if(ok)toast('ثبت گروهی روی سرور: '+n+' نفر · '+typeLabel+' · کسر '+deduct,4000);
     else toast('محلی ذخیره شد — ارسال به سرور را بزنید',4000);
   }catch(e){
@@ -10479,11 +10319,11 @@ function addDisciplineCustom(){
   schoolData.attendance.push(rec);
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   toast('ثبت محلی: '+typeLabel+' · کسر '+deduct+' — در حال ارسال به سرور…');
   openPerformance(currentStudentId);
-  // فقط همین مورد انضباطی — یک درخواست سبک
-  pushSoftAttendanceRecords([rec],{retries:2,timeoutMs:25000}).then(function(ok){
+  // فقط همین مورد انضباطی — بدون سقف و بدون حذف قبلی‌ها
+  pushSoftAttendanceRecords([rec],{retries:3,timeoutMs:90000}).then(function(ok){
     if(!ok){
       toast('⚠ روی این دستگاه ثبت شد ولی به سرور نرسید — همگام‌سازی را بزنید');
     }else{
@@ -10557,11 +10397,11 @@ function saveEditAtt(id){
   }catch(e){}
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   closeModal();
   openPerformance(currentStudentId);
-  // فقط همین یک مورد — بدون cloudPushAppData کامل
-  pushSoftAttendanceRecords([a],{retries:2,timeoutMs:25000}).then(function(ok){
+  // انضباط بدون submissionId است — باید soft attendance برود نه pushAttendanceToServer
+  pushSoftAttendanceRecords([a],{retries:3}).then(function(ok){
     toast(ok?('✓ ویرایش روی سرور · کسر '+a.scoreDeduct):('⚠ محلی ذخیره شد · کسر '+a.scoreDeduct+' — همگام را بزنید'));
   });
 }
@@ -10574,28 +10414,17 @@ function justifyAtt(id){
   if((a.note||'').indexOf('موجه')<0)a.note=(a.note?a.note+' · ':'')+'موجه';
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   openPerformance(currentStudentId);
-  pushSoftAttendanceRecords([a],{retries:2,timeoutMs:25000}).then(function(ok){toast(ok?'✓ موجه روی سرور ذخیره شد':'⚠ موجه محلی — همگام را بزنید');});
+  pushSoftAttendanceRecords([a],{retries:3}).then(function(ok){toast(ok?'✓ موجه روی سرور ذخیره شد':'⚠ موجه محلی — همگام را بزنید');});
 }
 function justifyDayForStudent(studentId,dateStr){
   if(!canManage())return toast('فقط مدیر و معاون');
   if(!confirm('غیبت این روز موجه شود؟ کسر انضباط برداشته می‌شود و برای همه معلمان «غیبت موجه» دیده می‌شود.'))return;
   var n=clearAbsencesForDay(studentId,dateStr);
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  // فقط رکوردهای موجه‌شده همان روز — نه کل appData
-  try{
-    var day=typeof normalizeDateToIso==='function'?(normalizeDateToIso(dateStr)||dateStr):dateStr;
-    var changed=(schoolData.attendance||[]).filter(function(a){
-      if(!a||!a.id)return false;
-      if(String(a.studentId)!==String(studentId))return false;
-      if((a.type||'')!=='absent')return false;
-      var xd=typeof normalizeDateToIso==='function'?(normalizeDateToIso(a.date)||a.date):a.date;
-      return String(xd)===String(day)&&(a.excused||a.justified);
-    });
-    if(changed.length)pushSoftAttendanceRecords(changed,{retries:2,timeoutMs:25000}).catch(function(){});
-  }catch(e){}
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
   toast(n?('غیبت '+n+' مورد در این روز موجه شد'):'موردی نبود');
   openPerformance(studentId);
 }
@@ -10641,11 +10470,11 @@ function delAtt(id){
   schoolData.attendance=(schoolData.attendance||[]).filter(function(x){return !x||!x.id||!delSet[String(x.id)]});
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   if(currentStudentId)openPerformance(currentStudentId);
   toast('حذف محلی — ارسال به سرور…');
-  // فقط شناسه‌های حذف — یک درخواست سبک
-  pushSoftAttendanceRecords([],{deletedAttendanceIds:delIds.slice(),retries:2,timeoutMs:25000}).then(function(ok){
+  // فقط شناسه‌های حذف — نه کل لیست
+  pushSoftAttendanceRecords([],{deletedAttendanceIds:delIds.slice(),retries:3,timeoutMs:45000}).then(function(ok){
     toast(ok?'✓ حذف روی سرور ثبت شد':'⚠ محلی حذف شد؛ همگام را بزنید');
   }).catch(function(){toast('⚠ محلی حذف شد؛ همگام را بزنید')});
 }
@@ -10668,9 +10497,9 @@ function deleteAbsentDay(studentId, dateStr){
   schoolData.attendance=(schoolData.attendance||[]).filter(function(x){return !x||!x.id||!delSet[String(x.id)]});
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   if(currentStudentId)openPerformance(currentStudentId);
-  pushSoftAttendanceRecords([],{deletedAttendanceIds:delIds,retries:2,timeoutMs:20000}).then(function(ok){
+  pushSoftAttendanceRecords([],{deletedAttendanceIds:delIds,retries:3}).then(function(ok){
     toast(ok?'✓ غیبت این روز از سرور حذف شد':'⚠ محلی حذف شد');
   });
 }
@@ -10686,11 +10515,9 @@ function saveDiscType(id){
   }else schoolData.disciplineTypes.push({id:uid(),name,scoreDeduct:score});
   schoolData._cloudUpdatedAtMs=Date.now();
   schoolData._localDirtyAt=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   closeModal();renderSettings();
-  if(typeof pushPartialDelta==='function'){
-    pushPartialDelta({disciplineTypes:(schoolData.disciplineTypes||[]).slice()},{timeoutMs:15000}).catch(function(){});
-  }
+  cloudPushAppData(true).catch(function(){});
   toast('ذخیره شد');
 }
 function delDiscType(id){
@@ -10713,9 +10540,7 @@ function delDiscType(id){
   saveSchoolData();
   renderSettings();
   try{fillDiscTypeSelect()}catch(e){}
-  if(typeof pushPartialDelta==='function'){
-    pushPartialDelta({disciplineTypes:(schoolData.disciplineTypes||[]).slice()},{timeoutMs:15000}).catch(function(){});
-  }
+  cloudPushAppData(true).catch(function(){});
   toast('از لیست حذف شد — سوابق دانش‌آموزان حفظ شد');
 }
 function saveRules(){
@@ -10730,13 +10555,11 @@ function saveRules(){
   if(ab)ab.scoreDeduct=schoolData.rules.absent;
   if(la)la.scoreDeduct=schoolData.rules.late;
   if(ot)ot.scoreDeduct=schoolData.rules.other;
-  saveSchoolData({softOnly:true});
-  if(canManage()&&typeof pushPartialDelta==='function'){
-    pushPartialDelta({
-      rules:schoolData.rules,
-      disciplineTypes:(schoolData.disciplineTypes||[]).slice()
-    },{timeoutMs:15000}).then(function(ok){
-      toast(ok?'قوانین انضباط روی سرور ذخیره شد':'قوانین محلی ماند');
+  markIntentionalSave('soft');
+  saveSchoolData();
+  if(canManage()){
+    Promise.resolve(cloudPushAppData(true)).then(function(ok){
+      toast(ok===false?'قوانین محلی ماند':'قوانین انضباط روی سرور ذخیره شد');
     }).catch(function(){toast('محلی ذخیره شد')});
   }else toast('ذخیره شد');
 }
@@ -10745,13 +10568,9 @@ function saveManagerPhoto(){
   const photo=(typeof window._pendingPhoto!=='undefined')?window._pendingPhoto:'';
   schoolData.managerPhoto=photo||'';
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  toast('در حال ذخیره عکس…');
-  if(typeof pushPartialDelta==='function'){
-    pushPartialDelta({managerPhoto:schoolData.managerPhoto||''},{timeoutMs:30000}).then(function(ok){
-      toast(ok?'عکس مدیر روی سرور آمد':'محلی ذخیره شد؛ ارسال سرور ناموفق');
-    }).catch(function(){toast('محلی ذخیره شد؛ ارسال سرور ناموفق')});
-  }
+  saveSchoolData();
+  toast('در حال ذخیره عکس...');
+  cloudPushAppData(true).then(function(){toast('عکس مدیر ذخیره و روی سرور آمد')}).catch(function(){toast('محلی ذخیره شد؛ ارسال سرور ناموفق')});
   try{renderHome()}catch(e){}
 }
 /** عکس شخصی معاون/معلم — در staff ذخیره و همگام می‌شود تا همه ببینند */
@@ -10801,14 +10620,11 @@ async function pushStaffSelfUpdate(fields){
     return true;
   }catch(e){
     console.warn('pushStaffSelfUpdate',e);
-    // fallback سبک: فقط همین نفر
+    // fallback: appData عمومی
     try{
-      if(typeof pushPartialDelta==='function'&&userSession.staffId){
-        var me=(schoolData.staff||[]).find(function(x){return x&&String(x.id)===String(userSession.staffId)});
-        if(me)return !!(await pushPartialDelta({staff:[Object.assign({},me)]},{timeoutMs:25000}));
-      }
-    }catch(e2){}
-    return false;
+      await cloudPushAppData(true);
+      return true;
+    }catch(e2){return false}
   }
 }
 async function changeMyStaffPassword(){
@@ -10956,15 +10772,12 @@ async function saveSmsPanelCfg(){
   }
   schoolData.smsConfig={mode,provider,username,password,sender,apiUrl,updatedAtMs:Date.now()};
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  toast('در حال ارسال تنظیمات پیامک…');
+  saveSchoolData();
+  toast('در حال ارسال تنظیمات پیامک به سرور...');
   try{
-    var ok=false;
-    if(typeof pushPartialDelta==='function'){
-      ok=!!(await pushPartialDelta({smsConfig:schoolData.smsConfig},{timeoutMs:20000}));
-    }
+    await cloudPushAppData(true);
     const label=mode==='sim'?'فقط سیم‌کارت':(mode==='panel'?'فقط پنل':'سیم‌کارت + پنل');
-    toast(ok?('ذخیره شد: '+label):'محلی ذخیره شد؛ «ارسال به سرور» را بزنید');
+    toast('ذخیره شد: '+label+' — روی بقیه دستگاه‌ها با همگام‌سازی می‌آید');
     try{fillSmsPanelForm()}catch(e){}
   }catch(e){
     toast('محلی ذخیره شد؛ «ارسال به سرور» را بزنید');
@@ -11154,11 +10967,8 @@ function saveExam(){
     createdAt:Date.now()
   });
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  var one=(schoolData.exams||[]).slice(-1)[0];
-  if(typeof pushPartialDelta==='function'&&one){
-    pushPartialDelta({exams:[one]},{timeoutMs:20000}).catch(function(){});
-  }
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
   closeModal();renderExams();toast('امتحان «'+subject+'» ثبت شد');
 }
 function delExam(id){
@@ -11170,10 +10980,8 @@ function delExam(id){
   if(id&&schoolData.deletedExamIds.indexOf(id)<0)schoolData.deletedExamIds.push(id);
   schoolData.exams=(schoolData.exams||[]).filter(function(e){return e&&String(e.id)!==id});
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
-  if(typeof pushPartialDelta==='function'){
-    pushPartialDelta({deletedExamIds:[id]},{timeoutMs:15000}).catch(function(){});
-  }
+  saveSchoolData();
+  cloudPushAppData(true).catch(function(){});
   renderExams();
   toast('حذف شد');
 }
@@ -11209,15 +11017,12 @@ async function saveExamScores(){
     else ex.scores[inp.getAttribute('data-sid')]=parseFloat(v);
   });
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData({softOnly:true});
+  saveSchoolData();
   renderExams();
-  toast('نمرات ذخیره شد — فقط همین امتحان…');
+  toast('نمرات ذخیره شد — در حال ارسال به سرور...');
   try{
-    var ok=false;
-    if(typeof pushPartialDelta==='function'){
-      ok=!!(await pushPartialDelta({exams:[Object.assign({},ex)]},{timeoutMs:20000}));
-    }
-    toast(ok?'نمرات روی سرور همگام شد ✓':'محلی ذخیره شد؛ بعداً همگام کنید');
+    await cloudPushAppData(true);
+    toast('نمرات روی سرور همگام شد ✓');
   }catch(e){
     toast('محلی ذخیره شد؛ ارسال سرور ناموفق — بعداً همگام کنید');
   }
@@ -12102,6 +11907,12 @@ async function tryAutoEnterFromMother(){
 }
 
 (async function(){
+  try{
+    var st=localStorage.getItem('school_sync_api')||'';
+    if(!st || st.indexOf('school-sync')>=0 || st.indexOf('api.nikan-school')>=0){
+      localStorage.setItem('school_sync_api','https://panel.nikan-school.top');
+    }
+  }catch(e){}
   try{ fetchAndApplyBranding(); }catch(e){ console.warn('branding', e); }
   if(await tryAutoEnterFromMother())return;
   session=loadSession();userSession=loadUserSession();
