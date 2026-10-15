@@ -244,8 +244,17 @@ class MainActivity : Activity() {
             }
         }
 
-        val asset = if (BuildConfig.FLAVOR == "mother") "mother-2.html" else "school-app-33.html"
-        webView.loadUrl("file:///android_asset/$asset")
+        // از سرور زنده لود شود تا با وب یکی باشد
+        val liveUrl = if (BuildConfig.FLAVOR == "mother") {
+            "https://admin.nikan-school.top/mother"
+        } else {
+            "https://panel.nikan-school.top/school"
+        }
+        try {
+            webView.clearCache(true)
+            webView.settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+        } catch (_: Exception) {}
+        webView.loadUrl(liveUrl)
     }
 
     private fun askRuntimePermissions() {
