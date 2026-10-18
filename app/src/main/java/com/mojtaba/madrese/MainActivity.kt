@@ -244,17 +244,18 @@ class MainActivity : Activity() {
             }
         }
 
-        // از سرور زنده لود شود تا با وب یکی باشد
-        val liveUrl = if (BuildConfig.FLAVOR == "mother") {
-            "https://admin.nikan-school.top/mother"
-        } else {
-            "https://panel.nikan-school.top/school"
-        }
+        // لود از فایل داخل اپ (آفلاین) — دیگر وابسته به دامنه وب نیست
+        // اگر دامنه قطع باشد اپ سفید نمی‌ماند
         try {
-            webView.clearCache(true)
-            webView.settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+            // کش عادی — هر بار کل صفحه را دوباره دانلود نکن
+            webView.settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
         } catch (_: Exception) {}
-        webView.loadUrl(liveUrl)
+        val assetUrl = if (BuildConfig.FLAVOR == "mother") {
+            "file:///android_asset/mother-2.html"
+        } else {
+            "file:///android_asset/school-app-33.html"
+        }
+        webView.loadUrl(assetUrl)
     }
 
     private fun askRuntimePermissions() {
