@@ -1460,9 +1460,18 @@ function loadMother(){try{return JSON.parse(localStorage.getItem(MOTHER_KEY)||'n
 function saveMother(d){localStorage.setItem(MOTHER_KEY,JSON.stringify(d))}
 function importMotherBackup(ev){const file=ev.target.files&&ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(){try{const data=JSON.parse(reader.result);if(!data.schools)throw 0;saveMother(data);toast('پشتیبان مادر بارگذاری شد')}catch(e){toast('فایل نامعتبر')}};reader.readAsText(file);ev.target.value=''}
 
-/* سرور Cloudflare — بدون Firebase/گوگل · android-clean v27 · PDF بدون خروج · api فقط panel */
-const DEFAULT_SYNC_API='https://panel.nikan-school.top';
+/* سرور Abrha پایدار — android-fix-offline v34 · لود از assets · api اول Abrha */
+const DEFAULT_SYNC_API='https://app-nodejs-znotf.apps.teh11.abrhapaas.com';
 const FALLBACK_SYNC_API='https://panel.nikan-school.top';
+// اگر قبلاً دامنه قطع‌شده در حافظه مانده، خودکار به سرور جدید مهاجرت کن
+(function(){
+  try{
+    var st=localStorage.getItem('school_sync_api')||'';
+    if(!st || st.indexOf('panel.nikan-school.top')>=0 || st.indexOf('admin.nikan-school.top')>=0 || st.indexOf('school-sync')>=0 || st.indexOf('workers.dev')>=0){
+      localStorage.setItem('school_sync_api', DEFAULT_SYNC_API);
+    }
+  }catch(e){}
+})();
 const SYNC_API=(function(u){u=String(u||'');while(u.length&&u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u})(localStorage.getItem('school_sync_api')||DEFAULT_SYNC_API);
 function setSyncApi(url){url=String(url||'').trim();while(url.length&&url.charAt(url.length-1)==='/')url=url.slice(0,-1);localStorage.setItem('school_sync_api',url);toast(url?'آدرس سرور ذخیره شد':'سرور پاک شد')}
 function getWriteAuth(){
@@ -1492,18 +1501,18 @@ async function apiFetch(path,options){
   };
   var isApi=String(path||'').indexOf('/api')===0;
   if(isApi){
-    // فقط سرور اصلی — Worker قدیمی CORS می‌شکند
-    try{if(typeof location!=='undefined'&&location.origin&&(location.hostname||'').indexOf('nikan-school')>=0)addBase(location.origin)}catch(e){}
-    addBase('https://panel.nikan-school.top');
+    // اول سرور Abrha — بعد sticky کاربر — در آخر fallback قدیمی
+    addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
+    addBase(DEFAULT_SYNC_API);
     try{
       var sticky=localStorage.getItem('school_sync_api')||'';
-      if(sticky && sticky.indexOf('school-sync')<0 && sticky.indexOf('api.nikan-school')<0) addBase(sticky);
+      if(sticky && sticky.indexOf('school-sync')<0 && sticky.indexOf('workers.dev')<0) addBase(sticky);
     }catch(e){}
-    addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
+    addBase(FALLBACK_SYNC_API);
   }else{
-    try{if(typeof location!=='undefined'&&location.origin)addBase(location.origin)}catch(e){}
-    addBase('https://panel.nikan-school.top');
     addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
+    addBase(DEFAULT_SYNC_API);
+    addBase(FALLBACK_SYNC_API);
   }
   if(!bases.length)throw new Error('آدرس سرور تنظیم نشده');
   var _meth=String((opts.method||'GET')).toUpperCase();
@@ -1756,17 +1765,18 @@ async function cloudPushSchool(rec){
   }
 }
 async function cloudPushSubmission(schoolId,sub){
-  if(!SYNC_API||!schoolId||!sub)return;
-  try{
-    if(sub&&sub.id&&Array.isArray(schoolData&&schoolData.deletedSubmissionIds)&&schoolData.deletedSubmissionIds.indexOf(sub.id)>=0)return;
-    await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/submissions',{method:'POST',body:sub,timeoutMs:20000});
-  }catch(e){
-    if(e&&/submission_deleted|410/.test(String(e.message||e))){
-      try{if(typeof rememberDeletedSubmission==='function')rememberDeletedSubmission(sub.id)}catch(e2){}
-      return;
-    }
-    console.warn(e);
+  if(!SYNC_API||!schoolId||!sub)throw new Error('no_session');
+  if(sub&&sub.id&&Array.isArray(schoolData&&schoolData.deletedSubmissionIds)&&schoolData.deletedSubmissionIds.indexOf(sub.id)>=0){
+    throw new Error('submission_deleted');
   }
+  var slim=Object.assign({},sub,{
+    id:sub.id,status:sub.status||'pending',reviewedAt:sub.reviewedAt||null,reviewedBy:sub.reviewedBy||null,
+    teacherId:sub.teacherId,classId:sub.classId,assignId:sub.assignId,date:sub.date,
+    periodName:sub.periodName,subject:sub.subject,rows:sub.rows,createdAt:sub.createdAt,createdAtMs:sub.createdAtMs,
+    fromManager:sub.fromManager,archived:sub.archived,_compatNoAuth:true
+  });
+  await apiFetch('/api/schools/'+encodeURIComponent(schoolId)+'/submissions',{method:'POST',body:slim,retries:2,timeoutMs:20000});
+  return true;
 }
 async function cloudPullSubmissions(schoolId){
   if(!SYNC_API||!schoolId)return;
@@ -1778,19 +1788,66 @@ async function cloudPullSubmissions(schoolId){
     const deleted={};
     schoolData.deletedSubmissionIds.forEach(function(id){if(id)deleted[id]=true});
     const map={};
-    schoolData.submissions.forEach(function(s){if(s&&s.id&&!deleted[s.id])map[s.id]=s});
+    schoolData.submissions.forEach(function(s){if(s&&s.id&&!deleted[s.id])map[String(s.id)]=s});
     list.forEach(function(s){
       if(!s||!s.id||deleted[String(s.id)])return;
       if(s.status==='voided'||s.voided||s.cancelled)return;
-      map[String(s.id)]=Object.assign({},map[String(s.id)]||{},s);
+      var id=String(s.id);
+      var prev=map[id];
+      if(!prev){ map[id]=s; return; }
+      var merged=Object.assign({},prev,s);
+      var prevDone=prev.status&&prev.status!=='pending'&&prev.status!=='voided';
+      var sDone=s.status&&s.status!=='pending'&&s.status!=='voided';
+      if(prevDone||sDone){
+        if(prevDone&&!sDone){
+          merged.status=prev.status||'done';
+          if(prev.reviewedAt)merged.reviewedAt=prev.reviewedAt;
+          if(prev.reviewedBy)merged.reviewedBy=prev.reviewedBy;
+        }else if(sDone&&!prevDone){
+          merged.status=s.status||'done';
+          if(s.reviewedAt)merged.reviewedAt=s.reviewedAt;
+          if(s.reviewedBy)merged.reviewedBy=s.reviewedBy;
+        }else{
+          var pt=Number(prev.reviewedAt)||0, xt=Number(s.reviewedAt)||0;
+          if(pt>=xt){
+            merged.status=prev.status||'done';
+            merged.reviewedAt=prev.reviewedAt||s.reviewedAt;
+            merged.reviewedBy=prev.reviewedBy||s.reviewedBy;
+          }else{
+            merged.status=s.status||'done';
+            merged.reviewedAt=s.reviewedAt||prev.reviewedAt;
+            merged.reviewedBy=s.reviewedBy||prev.reviewedBy;
+          }
+        }
+        if(prev.archived||s.archived){
+          merged.archived=true;
+          merged.archivedAt=Math.max(Number(prev.archivedAt)||0,Number(s.archivedAt)||0)||prev.archivedAt||s.archivedAt;
+        }
+      }
+      map[id]=merged;
     });
     Object.keys(deleted).forEach(function(id){delete map[String(id)]});
-    // باطل‌شده‌های محلی هم نمانند
     Object.keys(map).forEach(function(k){
       var s=map[k];
       if(s&&(s.status==='voided'||s.voided||s.cancelled||deleted[String(k)]))delete map[k];
     });
     schoolData.submissions=Object.keys(map).map(function(k){return map[k]});
+    try{
+      var rk='nikan_reviewed_'+(session&&session.schoolId?session.schoolId:'');
+      var rev=[];
+      try{rev=JSON.parse(localStorage.getItem(rk)||'[]')}catch(e){rev=[]}
+      if(Array.isArray(rev)&&rev.length){
+        var rset={};rev.forEach(function(id){if(id)rset[String(id)]=true});
+        (schoolData.submissions||[]).forEach(function(s){
+          if(!s||!s.id||!rset[String(s.id)])return;
+          if(!s.status||s.status==='pending'){
+            s.status='done';
+            if(!s.reviewedAt)s.reviewedAt=Date.now();
+            if(!s.reviewedBy)s.reviewedBy='مدیر';
+          }
+        });
+      }
+    }catch(e){}
     ensureAllSubmissionsInAttendance();
     try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
   }catch(e){console.warn(e)}
@@ -2521,6 +2578,41 @@ function _mergeById(local,remote,preferRemote){
       (x.readBy||[]).forEach(function(k){if(k)s[String(k)]=true});
       merged.readBy=Object.keys(s);
     }
+    // ارسال حضور: «بررسی شد» هرگز به pending برنگردد
+    (function(){
+      var prevDone=prev.status&&prev.status!=='pending'&&prev.status!=='voided';
+      var xDone=x.status&&x.status!=='pending'&&x.status!=='voided';
+      var prevVoid=!!(prev.voided||prev.cancelled||prev.status==='voided');
+      var xVoid=!!(x.voided||x.cancelled||x.status==='voided');
+      if(prevVoid||xVoid){
+        merged.status='voided'; merged.voided=true; merged.cancelled=true;
+      }else if(prevDone||xDone){
+        if(prevDone&&!xDone){
+          merged.status=prev.status||'done';
+          if(prev.reviewedAt)merged.reviewedAt=prev.reviewedAt;
+          if(prev.reviewedBy)merged.reviewedBy=prev.reviewedBy;
+        }else if(xDone&&!prevDone){
+          merged.status=x.status||'done';
+          if(x.reviewedAt)merged.reviewedAt=x.reviewedAt;
+          if(x.reviewedBy)merged.reviewedBy=x.reviewedBy;
+        }else{
+          var pt=Number(prev.reviewedAt)||0, xt=Number(x.reviewedAt)||0;
+          if(pt>=xt){
+            merged.status=prev.status||'done';
+            merged.reviewedAt=prev.reviewedAt||x.reviewedAt;
+            merged.reviewedBy=prev.reviewedBy||x.reviewedBy;
+          }else{
+            merged.status=x.status||'done';
+            merged.reviewedAt=x.reviewedAt||prev.reviewedAt;
+            merged.reviewedBy=x.reviewedBy||prev.reviewedBy;
+          }
+        }
+        if(prev.archived||x.archived){
+          merged.archived=true;
+          merged.archivedAt=Math.max(Number(prev.archivedAt)||0,Number(x.archivedAt)||0)||prev.archivedAt||x.archivedAt;
+        }
+      }
+    })();
     map[id]=merged;
   });
   return Object.keys(map).map(function(k){return map[k]});
@@ -2844,9 +2936,9 @@ async function cloudPullAppData(force){
       applyRemoteAppData(d,remoteTs||Date.now(),false);
       // فقط عملکرد را خالی کن؛ ساختار را اگر سرور خالی فرستاد نگه دار
       if(Array.isArray(d.attendance)&&d.attendance.length)schoolData.attendance=_mergeById(schoolData.attendance||[],d.attendance,false);
-      if(Array.isArray(d.submissions))schoolData.submissions=d.submissions.slice();
-      if(Array.isArray(d.exams))schoolData.exams=d.exams.slice();
-      if(Array.isArray(d.messages))schoolData.messages=d.messages.slice();
+      if(Array.isArray(d.submissions))schoolData.submissions=_mergeById(schoolData.submissions||[],d.submissions,true);
+      if(Array.isArray(d.exams))schoolData.exams=_mergeById(schoolData.exams||[],d.exams,true);
+      if(Array.isArray(d.messages))schoolData.messages=_mergeById(schoolData.messages||[],d.messages,false);
       schoolData.absentSmsSent=(d.absentSmsSent&&typeof d.absentSmsSent==='object')?d.absentSmsSent:{};
       try{schoolData._localDirtyAt=0;schoolData._cloudUpdatedAtMs=remoteTs||Date.now()}catch(e){}
       try{localStorage.setItem(dataKey(),JSON.stringify(schoolData))}catch(e){}
@@ -2935,9 +3027,9 @@ async function cloudPullAppData(force){
         if(Array.isArray(d.assignments)&&d.assignments.length)schoolData.assignments=d.assignments.slice();
         if(Array.isArray(d.colleagues)&&d.colleagues.length)schoolData.colleagues=d.colleagues.slice();
         if(Array.isArray(d.attendance)&&d.attendance.length)schoolData.attendance=_mergeById(schoolData.attendance||[],d.attendance,false);
-        if(Array.isArray(d.submissions)&&d.submissions.length)schoolData.submissions=d.submissions.slice();
-        if(Array.isArray(d.exams)&&d.exams.length)schoolData.exams=d.exams.slice();
-        if(Array.isArray(d.messages)&&d.messages.length)schoolData.messages=d.messages.slice();
+        if(Array.isArray(d.submissions)&&d.submissions.length)schoolData.submissions=_mergeById(schoolData.submissions||[],d.submissions,true);
+        if(Array.isArray(d.exams)&&d.exams.length)schoolData.exams=_mergeById(schoolData.exams||[],d.exams,true);
+        if(Array.isArray(d.messages)&&d.messages.length)schoolData.messages=_mergeById(schoolData.messages||[],d.messages,false);
         schoolData._localDirtyAt=0;
         schoolData.replaceStructure=false;
         schoolData._blockStructurePushUntil=0;
@@ -2991,7 +3083,8 @@ function startAutoSync(){
     document.removeEventListener('visibilitychange',_onVisSync);
   }catch(e){}
   window._onVisSync=function(){
-    if(!document.hidden&&session&&session.schoolId)cloudPullAppData(true).then(function(ok){
+    // pull سبک (نه force کامل) تا برگشت به اپ قفل نشود
+    if(!document.hidden&&session&&session.schoolId)cloudPullAppData(false).then(function(ok){
       if(ok){try{if(isTeacher()){renderHome();renderTeacherDay();renderTeacherClassList()}else renderHome()}catch(e){}}
     }).catch(function(){});
   };
@@ -5209,21 +5302,21 @@ function prepareSmsFromSubmission(kind){
 
 function markSubmissionDone(){
   if(!currentSubmissionId)return;
-  const s=(schoolData.submissions||[]).find(x=>x.id===currentSubmissionId);
+  var sid=currentSubmissionId;
+  const s=(schoolData.submissions||[]).find(x=>x.id===sid);
   if(s){
     s.status='done';
     s.reviewedAt=Date.now();
     s.reviewedBy=(userSession&&(userSession.name||userSession.username))||'مدیر';
-    applySubmissionAttendance(s);
+    try{applySubmissionAttendance(s)}catch(e){console.warn(e)}
   }
   schoolData._cloudUpdatedAtMs=Date.now();
-  saveSchoolData();
-  cloudPushAppData(true).catch(function(){});
-  if(s&&session&&session.schoolId)cloudPushSubmission(session.schoolId,s).catch(function(){});
-  toast('بررسی شد — رفت به شیت پایین صفحه');
+  schoolData._localDirtyAt=Date.now();
+  try{saveSchoolData()}catch(e){}
   currentSubmissionId=null;
   window._openSub=null;
   showAppPage('home');
+  toast('بررسی شد — در حال ارسال به سرور…');
   setTimeout(function(){
     try{
       var sh=document.getElementById('reviewed-sheet');
@@ -5232,7 +5325,63 @@ function markSubmissionDone(){
       if(lb)lb.textContent='▲ بررسی‌شده‌ها';
       renderReviewedSheet();
     }catch(e){}
-  },200);
+  },50);
+  setTimeout(function(){
+    (async function(){
+      var sub=s||(schoolData.submissions||[]).find(function(x){return x&&String(x.id)===String(sid)});
+      if(!sub||!session||!session.schoolId){
+        toast('⚠ بررسی محلی شد ولی نشست سرور نیست',5000);
+        return;
+      }
+      try{window._serverPullOk=true;window._loginPulling=false;window._server503Until=0}catch(e){}
+      try{
+        var key='nikan_reviewed_'+(session.schoolId||'');
+        var arr=[];
+        try{arr=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){arr=[]}
+        if(!Array.isArray(arr))arr=[];
+        if(arr.indexOf(String(sid))<0)arr.push(String(sid));
+        if(arr.length>300)arr=arr.slice(-300);
+        localStorage.setItem(key,JSON.stringify(arr));
+      }catch(e){}
+      var okSub=false, okAtt=false, errMsg='';
+      try{
+        await cloudPushSubmission(session.schoolId, Object.assign({},sub,{status:'done'}));
+        okSub=true;
+      }catch(e){
+        errMsg=String(e&&e.message||e||'submission_fail');
+        console.warn('markDone sub',e);
+      }
+      try{
+        var attOnly=(schoolData.attendance||[]).filter(function(a){
+          return a&&a.id&&String(a.submissionId||'')===String(sid);
+        });
+        if(attOnly.length&&typeof pushSoftAttendanceRecords==='function'){
+          window._skipPullAfterSoft=true;
+          okAtt=!!(await pushSoftAttendanceRecords(attOnly,{retries:2,timeoutMs:25000,noPullAfter:true}));
+          window._skipPullAfterSoft=false;
+        }else okAtt=true;
+      }catch(e){
+        window._skipPullAfterSoft=false;
+        errMsg=errMsg||String(e&&e.message||e||'att_fail');
+      }
+      if(okSub){
+        try{
+          await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
+            method:'PUT',
+            body:{
+              _softOnly:true,_partialDelta:true,_compatNoAuth:true,managerAuthority:true,
+              updatedAtMs:Date.now(),
+              submissions:[Object.assign({},sub,{status:'done',reviewedAt:sub.reviewedAt,reviewedBy:sub.reviewedBy})]
+            },
+            retries:1,timeoutMs:20000
+          });
+        }catch(e){}
+      }
+      if(okSub||okAtt) toast('✓ بررسی شد · عملکرد ثبت شد · به سرور رسید (بدون پیامک)',4000);
+      else toast('⚠ محلی ثبت شد ولی سرور نرسید: '+(errMsg||'شبکه'),7000);
+      try{renderReviewedSheet();renderHome()}catch(e){}
+    })().catch(function(e){console.warn(e);toast('⚠ خطا در ارسال بررسی',5000)});
+  },30);
 }
 async function voidCurrentSubmission(){
   if(!canManage())return toast('دسترسی ندارید');
@@ -11909,8 +12058,8 @@ async function tryAutoEnterFromMother(){
 (async function(){
   try{
     var st=localStorage.getItem('school_sync_api')||'';
-    if(!st || st.indexOf('school-sync')>=0 || st.indexOf('api.nikan-school')>=0){
-      localStorage.setItem('school_sync_api','https://panel.nikan-school.top');
+    if(!st || st.indexOf('school-sync')>=0 || st.indexOf('api.nikan-school')>=0 || st.indexOf('panel.nikan-school.top')>=0 || st.indexOf('workers.dev')>=0){
+      localStorage.setItem('school_sync_api', DEFAULT_SYNC_API);
     }
   }catch(e){}
   try{ fetchAndApplyBranding(); }catch(e){ console.warn('branding', e); }
