@@ -869,10 +869,17 @@ function save() {
   }));
 }
 
-/* —— سرور همگام‌سازی (Cloudflare Worker) — بدون گوگل/Firebase —— */
-// بعد از ساخت Worker، آدرس را اینجا بگذار — مثال: https://school-sync.xxx.workers.dev
-const DEFAULT_SYNC_API = 'https://panel.nikan-school.top';
-const FALLBACK_SYNC_API = 'https://school-sync.abcd-mojtaba.workers.dev';
+/* —— سرور Abrha پایدار —— */
+const DEFAULT_SYNC_API = 'https://app-nodejs-znotf.apps.teh11.abrhapaas.com';
+const FALLBACK_SYNC_API = 'https://panel.nikan-school.top';
+(function(){
+  try{
+    var st=localStorage.getItem('school_sync_api')||'';
+    if(!st || st.indexOf('panel.nikan-school.top')>=0 || st.indexOf('workers.dev')>=0 || st.indexOf('api.nikan-school')>=0){
+      localStorage.setItem('school_sync_api', DEFAULT_SYNC_API);
+    }
+  }catch(e){}
+})();
 const SYNC_API = (localStorage.getItem('school_sync_api') || DEFAULT_SYNC_API).replace(/\/$/, '');
 
 function setSyncApi(url) {
@@ -888,8 +895,8 @@ async function apiFetch(path, options) {
   const bases = [];
   const primary = (typeof SYNC_API !== 'undefined' && SYNC_API) ? SYNC_API : '';
   if (primary) bases.push(primary);
-  if (typeof FALLBACK_SYNC_API !== 'undefined' && FALLBACK_SYNC_API && FALLBACK_SYNC_API !== primary) bases.push(FALLBACK_SYNC_API);
-  try { var _extraApi = 'https://api.nikan-school.top'; if (_extraApi !== primary && bases.indexOf(_extraApi) < 0) bases.push(_extraApi); } catch (e) {}
+  if (typeof DEFAULT_SYNC_API !== 'undefined' && DEFAULT_SYNC_API && bases.indexOf(DEFAULT_SYNC_API) < 0) bases.push(DEFAULT_SYNC_API);
+  if (typeof FALLBACK_SYNC_API !== 'undefined' && FALLBACK_SYNC_API && FALLBACK_SYNC_API !== primary && bases.indexOf(FALLBACK_SYNC_API) < 0) bases.push(FALLBACK_SYNC_API);
   if (!bases.length) throw new Error('آدرس سرور تنظیم نشده');
   for (const base of bases) {
     for (let i = 1; i <= maxTry; i++) {
@@ -1399,10 +1406,10 @@ function toggleSchool(id) {
 
 function getSchoolPanelBase(){
   try{
-    if(location.hostname==='admin.nikan-school.top')return 'https://panel.nikan-school.top';
-    if(location.hostname.indexOf('nikan-school')>=0)return location.origin.replace('admin.','panel.');
+    var st=localStorage.getItem('school_sync_api')||'';
+    if(st) return st.replace(/\/$/,'');
   }catch(e){}
-  return 'https://panel.nikan-school.top';
+  return DEFAULT_SYNC_API;
 }
 function enterSchoolAsManager(id){
   const s = (state.schools || []).find(function(x){ return x.id === id; });
