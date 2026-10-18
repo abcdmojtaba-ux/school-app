@@ -1501,22 +1501,20 @@ async function apiFetch(path,options){
   };
   var isApi=String(path||'').indexOf('/api')===0;
   if(isApi){
-    // اول سرور Abrha — بعد sticky کاربر — در آخر fallback قدیمی
+    // فقط سرور Abrha — fallback قدیمی را نزن تا اپ ۳۰–۹۰ ثانیه هنگ نکند
     addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
     addBase(DEFAULT_SYNC_API);
     try{
       var sticky=localStorage.getItem('school_sync_api')||'';
-      if(sticky && sticky.indexOf('school-sync')<0 && sticky.indexOf('workers.dev')<0) addBase(sticky);
+      if(sticky && sticky.indexOf('panel.nikan')<0 && sticky.indexOf('workers.dev')<0 && sticky.indexOf('school-sync')<0) addBase(sticky);
     }catch(e){}
-    addBase(FALLBACK_SYNC_API);
   }else{
     addBase(typeof SYNC_API!=='undefined'?SYNC_API:'');
     addBase(DEFAULT_SYNC_API);
-    addBase(FALLBACK_SYNC_API);
   }
   if(!bases.length)throw new Error('آدرس سرور تنظیم نشده');
   var _meth=String((opts.method||'GET')).toUpperCase();
-  const tOut=opts.timeoutMs!=null?opts.timeoutMs:((_meth==='PUT'||_meth==='POST'||_meth==='DELETE')?45000:15000);
+  const tOut=opts.timeoutMs!=null?opts.timeoutMs:((_meth==='PUT'||_meth==='POST'||_meth==='DELETE')?18000:10000);
   for(const base of bases){
     for(let i=1;i<=maxTry;i++){
       try{
@@ -2510,7 +2508,7 @@ async function cloudPushAppData(force){
       }
     }
     await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-      method:'PUT',body:payload,retries:2,timeoutMs:90000
+      method:'PUT',body:payload,retries:1,timeoutMs:25000
     });
     schoolData._localDirtyAt=0;
     schoolData.replaceStructure=false;
@@ -2864,8 +2862,8 @@ async function cloudPullAppData(force){
     }
     var qstr=qs.length?('?'+qs.join('&')):'';
     var data=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData'+qstr,{
-      retries:needFull?3:2,
-      timeoutMs:needFull?45000:20000,
+      retries:1,
+      timeoutMs:needFull?15000:10000,
       headers:(!isMgr&&(isTeach||isDep))?{
         'X-Auth-Role':isDep?'deputy':'teacher',
         'X-Staff-Id':(userSession&&userSession.staffId)?String(userSession.staffId):'',
@@ -4238,11 +4236,13 @@ function syncLicenseFromMother(){
 async function syncLicenseFromServer(){
   if(!session||!session.schoolId||!SYNC_API){syncLicenseFromMother();return}
   try{
-    const chk=await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId),{retries:1});
+    const chk=await Promise.race([
+      apiFetch('/api/schools/'+encodeURIComponent(session.schoolId),{retries:1,timeoutMs:8000}),
+      new Promise(function(_,rej){setTimeout(function(){rej(new Error('license_timeout'))},9000)})
+    ]);
     const s=chk&&chk.school;
     if(s){
       applyLicenseFields(s);
-      // در مادر محلی هم به‌روز کن تا یکدست باشد
       try{
         const mother=loadMother();
         if(!mother.schools)mother.schools=[];
@@ -4253,7 +4253,7 @@ async function syncLicenseFromServer(){
       }catch(e){}
       return;
     }
-  }catch(e){if(e&&(e.name==='AbortError'||/abort/i.test(String(e.message||e))))return;if(!(e&&(e.name==='AbortError'||/aborted/i.test(String(e.message||e)))))console.warn('syncLicense',e)}
+  }catch(e){if(!(e&&(e.name==='AbortError'||/abort|timeout/i.test(String(e.message||e)))))console.warn('syncLicense',e)}
   syncLicenseFromMother();
 }
 async function recheckLicense(){
@@ -4297,17 +4297,18 @@ async function enterApp(){
   }catch(e){}
   // موقتاً push را قفل کن
   try{if(schoolData)schoolData._localDirtyAt=0}catch(e){}
+  // فقط ۱ بار با timeout کوتاه — داده محلی را نشان بده تا اپ هنگ نکند
   var pullOk=false;
-  for(var _pi=0;_pi<3&&!pullOk;_pi++){
-    try{
-      pullOk=await cloudPullAppData(true);
-    }catch(e){
-      console.warn('enter pull',e);
-      pullOk=false;
-      if(/503|Service Unavailable|abort/i.test(String(e&&e.message||e))){
-        await new Promise(function(r){setTimeout(r,1500*(_pi+1))});
-      }
-    }
+  try{
+    // force با timeout کوتاه‌تر از طریق یک بار تلاش
+    var _oldFetch=null;
+    pullOk=await Promise.race([
+      cloudPullAppData(true),
+      new Promise(function(resolve){setTimeout(function(){resolve(false)},12000)})
+    ]);
+  }catch(e){
+    console.warn('enter pull',e);
+    pullOk=false;
   }
   try{if(schoolData){schoolData._localDirtyAt=0;schoolData.replaceStructure=false;schoolData._structureWriteToken=false;schoolData.replaceAssignments=false;}}catch(e){}
   if(pullOk){
@@ -4317,10 +4318,24 @@ async function enterApp(){
     var _st=((schoolData.students||[]).length);
     if(_sc||_st)toast('داده از سرور بارگذاری شد ✓ ('+_sc+' کلاس · '+_st+' دانش‌آموز)',4000);
   }else{
-    window._serverPullOk=false;
-    console.warn('login pull FAILED — push locked, will not empty server');
-    toast('⚠ دریافت از سرور ناموفق بود — ارسال قفل است تا دریافت موفق شود',6000);
+    // اگر داده محلی هست، اپ را باز کن — قفل کامل نکن
+    var _locN=((schoolData&&schoolData.classes)||[]).length+((schoolData&&schoolData.students)||[]).length;
+    if(_locN>0){
+      window._serverPullOk=true;
+      toast('⚠ سرور پاسخ نداد — با داده روی گوشی ادامه می‌دهید',5000);
+    }else{
+      window._serverPullOk=false;
+      toast('⚠ سرور در دسترس نیست — بعداً همگام کنید',5000);
+    }
   }
+  // همگام پس‌زمینه (بدون قفل UI)
+  setTimeout(function(){
+    try{
+      if(session&&session.schoolId)cloudPullAppData(false).then(function(ok){
+        if(ok){try{window._serverPullOk=true;renderHome()}catch(e){}}
+      }).catch(function(){});
+    }catch(e){}
+  },2000);
   // تا ۲۰ ثانیه بعد از ورود ساختار قفل است — مگر ترمیم خودکار
   window._blockStructUntil=Date.now()+5000; // فقط push اتفاقی؛ ذخیره عمدی معلم/برنامه باز است
   try{
