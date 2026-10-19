@@ -5148,11 +5148,20 @@ function dedupeAttendanceRecords(){
   return removed;
 }
 function ensureAllSubmissionsInAttendance(){
+  try{
+    var now=Date.now();
+    if(window._lastEnsureSubAtt&&(now-window._lastEnsureSubAtt)<30000)return;
+    window._lastEnsureSubAtt=now;
+  }catch(e){}
   var deleted={};
   (schoolData.deletedSubmissionIds||[]).forEach(function(id){if(id)deleted[id]=true});
+  var today=typeof todayStr==='function'?todayStr():'';
   (schoolData.submissions||[]).forEach(function(s){
     if(s&&s.id&&deleted[s.id])return;
     if(s&&(s.status==='voided'||s.voided||s.cancelled))return;
+    var d=typeof normalizeDateToIso==='function'?(normalizeDateToIso(s.date)||s.date):s.date;
+    var ts=Number(s.createdAtMs||s.createdAt||0)||0;
+    if(s.status!=='pending'&&today&&d!==today&&!(ts&&(Date.now()-ts)<7*24*3600*1000))return;
     applySubmissionAttendance(s);
   });
   try{dedupeAttendanceRecords()}catch(e){}
@@ -9210,11 +9219,24 @@ function calcScore(sid,from,to){
       // در یک روز: بزرگ‌ترین کسر (دستی قفل‌شده معمولاً بزرگ‌تر است)
       if(absentDeductByDay[day]==null||d>absentDeductByDay[day])absentDeductByDay[day]=d;
     }else{
+      var isPos=!!(a.isPositive||a.positive||a.scoreBonus);
+      if(!isPos){
+        var dt=(schoolData.disciplineTypes||[]).find(function(x){return x&&String(x.id)===String(a.type||'')});
+        if(dt&&(dt.isPositive||dt.positive))isPos=true;
+        if(!isPos&&/مثبت|تشویق|پاداش|آفرین/i.test(String((dt&&dt.name)||a.typeName||a.note||'')))isPos=true;
+      }
       var d2=itemDeduct(a);
-      if(d2>0)score-=d2;
+      if(isPos){
+        var add=Math.abs(d2||0);
+        if(add<=0){var r=parseFloat(a.scoreDeduct);if(!isNaN(r)&&r!==0)add=Math.abs(r);else add=1;}
+        score+=add;
+      }else if(d2>0){
+        score-=d2;
+      }
     }
   });
   Object.keys(absentDeductByDay).forEach(function(day){score-=absentDeductByDay[day]});
+  if(score>25)score=25;
   return Math.max(0,Math.round(score*100)/100);
 }
 /** همه غیبت‌های یک دانش‌آموز در یک روز را یکجا بردار (بی‌اثر کردن روز) */
@@ -10923,7 +10945,7 @@ function getSmsCfg(){
     apiUrl:String(c.apiUrl||'').trim()
   };
 }
-async function saveSmsPanelCfg(){
+async async function saveSmsPanelCfg(){
   if(isTeacher())return toast('دسترسی ندارید');
   const mode=document.getElementById('sms-mode').value;
   const provider=document.getElementById('sms-provider').value;
@@ -10934,14 +10956,29 @@ async function saveSmsPanelCfg(){
   if((mode==='panel'||mode==='both')&&!username){
     return toast('برای پنل پیامک، نام کاربری الزامی است');
   }
-  schoolData.smsConfig={mode,provider,username,password,sender,apiUrl,updatedAtMs:Date.now()};
+  schoolData.smsConfig={mode,provider,username,password,sender,apiUrl,updatedAtMs:Date.now(),_allShifts:true};
   schoolData._cloudUpdatedAtMs=Date.now();
+  schoolData._localDirtyAt=Date.now();
   saveSchoolData();
-  toast('در حال ارسال تنظیمات پیامک به سرور...');
+  toast('در حال ارسال تنظیمات پیامک به سرور (هر دو شیفت)...');
   try{
-    await cloudPushAppData(true);
+    if(session&&session.schoolId){
+      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
+        method:'PUT',
+        body:{
+          _softOnly:true,_settingsOnly:true,_compatNoAuth:true,managerAuthority:true,
+          updatedAtMs:Date.now(),
+          smsConfig:schoolData.smsConfig,
+          smsTemplates:schoolData.smsTemplates||[],
+          rules:schoolData.rules||null
+        },
+        retries:2,timeoutMs:25000
+      });
+    }else{
+      await cloudPushAppData(true);
+    }
     const label=mode==='sim'?'فقط سیم‌کارت':(mode==='panel'?'فقط پنل':'سیم‌کارت + پنل');
-    toast('ذخیره شد: '+label+' — روی بقیه دستگاه‌ها با همگام‌سازی می‌آید');
+    toast('ذخیره شد: '+label+' — برای صبح و عصر یکسان است');
     try{fillSmsPanelForm()}catch(e){}
   }catch(e){
     toast('محلی ذخیره شد؛ «ارسال به سرور» را بزنید');
