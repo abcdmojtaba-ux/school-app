@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>سامانه نیکان | پنل مادر</title>
+<title>پنل مدیریتی سامانه نیکان</title>
+<meta name="application-name" content="پنل مدیریتی سامانه نیکان" />
+<meta name="apple-mobile-web-app-title" content="پنل مدیریت" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0f1c4d" />
+<link rel="manifest" href="/manifest-mother.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/favicon.svg" />
 <style>
 :root {
   --primary: #1a237e;
@@ -356,42 +364,77 @@ body {
 }
 
 
-/* تم تیره/روشن */
-body.theme-dark{background:#0b1220!important;color:#e8eef7!important}
+/* —— تم تیره / روشن پنل مادر —— */
+body.theme-dark{
+  background:#0b1220!important;color:#e8eef7!important;font-family:Tahoma,sans-serif;
+}
 body.theme-dark .topbar{background:rgba(7,11,20,.92)!important;border-bottom:1px solid rgba(56,189,248,.14)!important;color:#e8eef7!important}
 body.theme-dark .topbar h1{color:#e8eef7!important}
-body.theme-dark .card,body.theme-dark .stat,body.theme-dark .login-box,body.theme-dark .modal{background:#111a2e!important;border:1px solid rgba(56,189,248,.22)!important;color:#e8eef7!important}
-body.theme-dark .form-control,body.theme-dark input.form-control,body.theme-dark select.form-control,body.theme-dark textarea.form-control{background:#0a1220!important;color:#f1f5f9!important;border:1px solid rgba(148,163,184,.45)!important}
-body.theme-dark .sidebar{background:#0d1526!important}
+body.theme-dark .card,body.theme-dark .stat,body.theme-dark .login-box,body.theme-dark .modal{
+  background:#111a2e!important;border:1px solid rgba(56,189,248,.22)!important;color:#e8eef7!important;
+}
+body.theme-dark .form-control,body.theme-dark input.form-control,body.theme-dark select.form-control,body.theme-dark textarea.form-control{
+  background:#0a1220!important;color:#f1f5f9!important;border:1px solid rgba(148,163,184,.45)!important;
+}
+body.theme-dark .sidebar{background:#0d1526!important;border-color:rgba(56,189,248,.12)!important}
 body.theme-dark .sidebar button{color:#e2e8f0!important}
 body.theme-dark .sidebar button.active,body.theme-dark .sidebar button:hover{background:rgba(56,189,248,.12)!important;color:#38bdf8!important}
 body.theme-dark #login-screen{background:radial-gradient(600px 300px at 50% 0%,rgba(56,189,248,.2),transparent 60%),#070b14!important}
 body.theme-dark .btn-primary{background:linear-gradient(135deg,#38bdf8,#0ea5e9)!important;color:#041018!important}
 body.theme-dark .btn-outline{color:#7dd3fc!important;border-color:#38bdf8!important;background:transparent!important}
 body.theme-dark .card-title,body.theme-dark .stat .n{color:#38bdf8!important}
-body.theme-dark label,body.theme-dark .hint,body.theme-dark th{color:#cbd5e1!important}
-body.theme-dark th{background:#152038!important}
-body.theme-dark td{color:#e2e8f0!important;border-color:rgba(56,189,248,.1)!important}
-body.theme-dark .mobile-nav{background:rgba(7,11,20,.95)!important}
-body.theme-dark .login-title{color:#38bdf8!important}
-body.theme-light{background:#e8eef5!important;color:#0f172a!important}
-body.theme-light .topbar{background:#fff!important;border-bottom:1px solid #cbd5e1!important;color:#0f172a!important}
+body.theme-dark label,body.theme-dark .hint,body.theme-dark .meta,body.theme-dark th{color:#cbd5e1!important}
+body.theme-dark th{background:#152038!important;color:#8b9cb3!important}
+body.theme-dark td{border-color:rgba(56,189,248,.1)!important;color:#e2e8f0!important}
+body.theme-dark table{color:#e2e8f0!important}
+body.theme-dark .mobile-nav{background:rgba(7,11,20,.95)!important;border-color:rgba(56,189,248,.12)!important}
+body.theme-dark .mobile-nav button{color:#8b9cb3!important}
+body.theme-dark .mobile-nav button.active{color:#38bdf8!important}
+body.theme-dark #modal-body,body.theme-dark #modal-title{color:#e8eef7!important}
+body.theme-dark .vpn-hint{background:#3d3418;color:#fde68a;border-bottom-color:#a16207}
+body.theme-dark .code-box{background:#152038;border-color:#38bdf8;color:#e8eef7}
+body.theme-dark .toast{background:#0f172a;color:#fff;border:1px solid rgba(56,189,248,.25)}
+
+body.theme-light{
+  background:#e8eef5!important;color:#0f172a!important;font-family:Tahoma,sans-serif;
+}
+body.theme-light .topbar{background:#ffffff!important;border-bottom:1px solid #cbd5e1!important;color:#0f172a!important;box-shadow:0 2px 12px rgba(15,23,42,.06)!important}
 body.theme-light .topbar h1{color:#0f172a!important}
-body.theme-light .card,body.theme-light .stat,body.theme-light .login-box,body.theme-light .modal{background:#fff!important;border:1px solid #cbd5e1!important;color:#0f172a!important}
-body.theme-light .form-control,body.theme-light input.form-control,body.theme-light select.form-control,body.theme-light textarea.form-control{background:#fff!important;color:#0f172a!important;border:1px solid #94a3b8!important}
-body.theme-light .sidebar{background:#fff!important}
+body.theme-light .card,body.theme-light .stat,body.theme-light .login-box,body.theme-light .modal{
+  background:#fff!important;border:1px solid #cbd5e1!important;color:#0f172a!important;box-shadow:0 2px 12px rgba(15,23,42,.06)!important;
+}
+body.theme-light .form-control,body.theme-light input.form-control,body.theme-light select.form-control,body.theme-light textarea.form-control{
+  background:#fff!important;color:#0f172a!important;border:1px solid #94a3b8!important;
+}
+body.theme-light .sidebar{background:#fff!important;border-color:#e2e8f0!important}
 body.theme-light .sidebar button{color:#334155!important}
 body.theme-light .sidebar button.active,body.theme-light .sidebar button:hover{background:#eff6ff!important;color:#1d4ed8!important}
-body.theme-light #login-screen{background:linear-gradient(180deg,#dbeafe 0%,#eef2f7 100%)!important}
+body.theme-light #login-screen{background:linear-gradient(180deg,#dbeafe 0%,#eef2f7 45%,#eef2f7 100%)!important}
 body.theme-light .btn-primary{background:linear-gradient(135deg,#3b82f6,#2563eb)!important;color:#fff!important}
 body.theme-light .btn-outline{color:#1d4ed8!important;border-color:#93c5fd!important;background:#eff6ff!important}
 body.theme-light .card-title,body.theme-light .stat .n{color:#1d4ed8!important}
-body.theme-light label,body.theme-light .hint,body.theme-light th{color:#475569!important}
-body.theme-light th{background:#f1f5f9!important}
-body.theme-light td{color:#0f172a!important}
-body.theme-light .mobile-nav{background:#fff!important}
-body.theme-light .login-title{color:#1e3a8a!important}
+body.theme-light label,body.theme-light .hint,body.theme-light .meta,body.theme-light th{color:#475569!important}
+body.theme-light th{background:#f1f5f9!important;color:#334155!important}
+body.theme-light td{border-color:#e2e8f0!important;color:#0f172a!important}
+body.theme-light table{color:#0f172a!important}
+body.theme-light .mobile-nav{background:#fff!important;border-color:#cbd5e1!important}
+body.theme-light .mobile-nav button{color:#64748b!important}
+body.theme-light .mobile-nav button.active{color:#1d4ed8!important}
+body.theme-light #modal-body,body.theme-light #modal-title{color:#0f172a!important}
+body.theme-light .vpn-hint{background:#fef3c7;color:#92400e;border-bottom-color:#f59e0b}
+body.theme-light .code-box{background:#eff6ff;border-color:#2563eb;color:#0f172a}
+body.theme-light .toast{background:#0f172a;color:#fff}
+body.theme-light .badge-ok{background:#d1fae5;color:#047857}
+body.theme-light .badge-off{background:#fee2e2;color:#b91c1c}
+body.theme-light .badge-warn{background:#fef3c7;color:#b45309}
+body.theme-light .login-box h1{color:#1e3a8a!important}
 body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a!important;border-color:#93c5fd!important}
+body.theme-dark .login-title{color:#38bdf8!important}
+body.theme-light .login-title{color:#1e3a8a!important}
+body.theme-dark .login-box p{color:#94a3b8!important}
+body.theme-light .login-box p{color:#64748b!important}
+
+
 </style>
 </head>
 <body class="theme-dark">
@@ -406,6 +449,7 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
       <button type="button" class="btn btn-sm btn-outline" onclick="setMotherTheme('light')">☀️ روشن</button>
       <button type="button" class="btn btn-sm btn-outline" onclick="setMotherTheme('dark')">🌙 تیره</button>
     </div>
+    <form onsubmit="event.preventDefault();doLogin();return false;" autocomplete="on">
     <div class="form-group">
       <label>نام کاربری</label>
       <input type="text" class="form-control" id="login-user" placeholder="admin" autocomplete="username" />
@@ -415,10 +459,10 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
       <input type="password" class="form-control" id="login-pass" placeholder="رمز" autocomplete="current-password" />
     </div>
     <p class="hint" id="login-hint">اولین ورود: نام کاربری admin و یک رمز حداقل ۶ کاراکتری وارد کنید تا ذخیره شود.</p>
-    <button class="btn btn-primary btn-block" onclick="doLogin()">ورود</button>
+    <button type="submit" class="btn btn-primary btn-block">ورود</button>
     <p id="login-error" style="color:var(--danger);margin-top:10px;font-size:.85rem;display:none;text-align:center"></p>
-
-    <button type="button" class="btn btn-outline btn-block" style="margin-top:10px;border-color:#38bdf8;color:#38bdf8" onclick="openMotherRecovery()">بازیابی نام کاربری / رمز عبور</button>
+    <button type="button" class="btn btn-outline btn-block" style="margin-top:10px" onclick="openMotherRecovery()" style="margin-top:12px;border-color:#38bdf8;color:#38bdf8">بازیابی نام کاربری / رمز عبور</button>
+    </form>
     <div id="recovery-box" style="display:none;margin-top:16px;padding-top:12px;border-top:1px solid rgba(56,189,248,.3);text-align:right">
       <p class="hint" style="margin-bottom:10px">با اطلاعات <b>مدیر یکی از مدارس</b> روی سرور می‌توانید حساب پنل مادر را بازنشانی کنید.</p>
       <div class="form-group"><label>کد یا نام مدرسه (مثلاً SCH-7060)</label><input class="form-control" id="rec-school" placeholder="SCH-7060" /></div>
@@ -429,17 +473,6 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
       <button type="button" class="btn btn-success btn-block" onclick="doMotherRecovery()">بازنشانی حساب مادر</button>
       <button type="button" class="btn btn-outline btn-block" style="margin-top:8px" onclick="closeMotherRecovery()">انصراف</button>
     </div>
-
-      <div class="form-group"><label>نام کاربری جدید</label>
-        <input type="text" class="form-control" id="forgot-user" placeholder="مثلاً admin" autocomplete="off" /></div>
-      <div class="form-group"><label>رمز جدید (حداقل ۶ کاراکتر)</label>
-        <input type="password" class="form-control" id="forgot-pass" autocomplete="new-password" /></div>
-      <div class="form-group"><label>تکرار رمز جدید</label>
-        <input type="password" class="form-control" id="forgot-pass2" autocomplete="new-password" /></div>
-      <button class="btn btn-success btn-block" type="button" onclick="doForgotReset()">بازیابی و ورود</button>
-      <p style="text-align:center;margin-top:8px"><button type="button" class="btn btn-outline btn-sm" onclick="hideForgotPanel()">بازگشت به ورود</button></p>
-      <p class="hint" style="margin-top:8px;text-align:center">اگر کد بازیابی تنظیم نکرده‌اید، فقط از همان دستگاهی که قبلاً وارد شده می‌توانید با پاک کردن دادهٔ مرورگر از صفر شروع کنید (مدارس روی سرور می‌مانند).</p>
-    </div>
   </div>
 </div>
 
@@ -448,7 +481,7 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
   <div class="topbar">
     <h1 id="topbar-title">سامانه نیکان — پنل مادر</h1>
     <div class="actions">
-      <button type="button" class="btn btn-sm btn-outline" id="theme-toggle-btn" onclick="toggleMotherTheme()">🌙 تیره</button>
+      <button type="button" class="btn btn-sm btn-outline" id="theme-toggle-btn" onclick="toggleMotherTheme()" title="تغییر تم">🌙 تیره</button>
       <button class="btn btn-sm btn-outline" onclick="logout()">خروج</button>
     </div>
   </div>
@@ -491,11 +524,13 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
         </div>
       </div>
 
+
       
+      <!-- BRANDING LOGIN -->
       <div id="page-branding" class="page">
         <div class="card" style="border:1px solid rgba(56,189,248,.35)">
           <div class="card-title" style="color:#38bdf8">🎨 ظاهر و برند صفحه ورود مدارس</div>
-          <p class="hint">لوگو، رنگ، فونت، پس‌زمینه، اعلامیه و تبلیغ برای همه مدارس</p>
+          <p class="hint">لوگو، رنگ، فونت، پس‌زمینه، اعلامیه و تبلیغ برای <strong>همه مدارس</strong> (وب و اندروید)</p>
         </div>
 
         <div class="card">
@@ -519,34 +554,32 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
           </div>
         </div>
 
-<div class="card">
-          <div class="card-title">ظاهر صفحه ورود مدارس (همه مدارس)</div>
-          <p class="hint" style="margin-bottom:12px">لوگو، رنگ، فونت، عکس پس‌زمینه، اعلامیه و تبلیغ — روی صفحه اول و ورود همه مدارس (وب و اپ) اعمال می‌شود.</p>
 
-          <div class="card-title" style="font-size:.9rem;margin-top:4px">۱) لوگو</div>
+        <div class="card">
+          <div class="card-title">۱) لوگو</div>
           <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap">
             <div id="brand-logo-preview" style="width:72px;height:72px;border-radius:18px;background:linear-gradient(145deg,#67e8f9,#0ea5e9);display:flex;align-items:center;justify-content:center;color:#041018;font-weight:800;font-size:1.6rem;overflow:hidden;border:1px solid rgba(56,189,248,.3)">ن</div>
             <div style="flex:1;min-width:180px">
               <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('brand-logo-file').click()">انتخاب لوگو</button>
               <button type="button" class="btn btn-outline btn-sm" style="margin-right:6px" onclick="clearBrandLogo()">حذف لوگو</button>
               <input type="file" id="brand-logo-file" accept="image/*,.jpg,.jpeg,.png,.webp,.jfif,.gif" style="display:none" onchange="onBrandLogoPick(event)" />
-              <p class="hint" style="margin-top:6px">مربع · حداکثر حدود ۳۰۰KB</p>
+              <p class="hint" style="margin-top:6px">مربع · JPG/PNG · حداکثر حدود ۳۰۰KB</p>
             </div>
           </div>
 
-          <div class="card-title" style="font-size:.9rem">۲) نوشته‌ها</div>
+          <div class="card-title">۲) نوشته‌ها</div>
           <div class="form-group"><label>عنوان اصلی</label>
             <input class="form-control" id="brand-title" placeholder="سامانه نیکان" /></div>
           <div class="form-group"><label>زیرعنوان</label>
             <input class="form-control" id="brand-subtitle" placeholder="ورود مدارس · مدیر / معاون / معلم" /></div>
-          <div class="form-group"><label>اعلامیه / بنر بالای صفحه (اختیاری)</label>
+          <div class="form-group"><label>اعلامیه / بنر بالای صفحه</label>
             <textarea class="form-control" id="brand-announce" rows="2" placeholder="مثلاً: ثبت‌نام سال جدید آغاز شد"></textarea></div>
-          <div class="form-group"><label>متن تبلیغ / اطلاعیه پایین (اختیاری)</label>
+          <div class="form-group"><label>متن تبلیغ / اطلاعیه پایین</label>
             <textarea class="form-control" id="brand-ad" rows="2" placeholder="مثلاً: پشتیبانی: ۰۹۱۲..."></textarea></div>
           <div class="form-group"><label>لینک تبلیغ (اختیاری)</label>
             <input class="form-control" id="brand-ad-link" placeholder="https://..." dir="ltr" style="text-align:left" /></div>
 
-          <div class="card-title" style="font-size:.9rem">۳) رنگ‌ها</div>
+          <div class="card-title">۳) رنگ‌ها</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="form-group"><label>رنگ پس‌زمینه</label>
               <input type="color" class="form-control" id="brand-bg" value="#070b14" style="height:42px;padding:4px" /></div>
@@ -558,7 +591,6 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
               <input type="color" class="form-control" id="brand-card" value="#111a2e" style="height:42px;padding:4px" /></div>
           </div>
 
-          <div class="card-title" style="font-size:.9rem">۴) فونت و اندازه</div>
           
           <div class="card-title">۴) فونت هر بخش (جداگانه)</div>
           <p class="hint" style="margin-bottom:10px">برای عنوان بالا، زیرعنوان، نوشته‌های فرم ورود و اعلامیه می‌توانید فونت جدا بگذارید.</p>
@@ -667,24 +699,7 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
               </select></div>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group"><label>اندازه عنوان</label>
-              <select class="form-control" id="brand-title-size">
-                <option value="1.4rem">کوچک</option>
-                <option value="1.65rem" selected>متوسط</option>
-                <option value="1.9rem">بزرگ</option>
-                <option value="2.2rem">خیلی بزرگ</option>
-              </select></div>
-            <div class="form-group"><label>اندازه متن عادی</label>
-              <select class="form-control" id="brand-body-size">
-                <option value="13px">کوچک</option>
-                <option value="14.5px" selected>متوسط</option>
-                <option value="16px">بزرگ</option>
-                <option value="18px">خیلی بزرگ</option>
-              </select></div>
-          </div>
-
-          <div class="card-title" style="font-size:.9rem">۵) عکس پس‌زمینه ورود</div>
+          <div class="card-title">۵) عکس پس‌زمینه ورود</div>
           <div class="form-group">
             <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('brand-bg-file').click()">انتخاب عکس پس‌زمینه</button>
             <button type="button" class="btn btn-outline btn-sm" style="margin-right:6px" onclick="clearBrandBg()">حذف پس‌زمینه</button>
@@ -692,19 +707,18 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
             <div id="brand-bg-preview" style="margin-top:8px;min-height:48px;border-radius:10px;border:1px dashed rgba(56,189,248,.3);background-size:cover;background-position:center;padding:8px;font-size:.8rem;color:var(--muted)">بدون عکس پس‌زمینه</div>
           </div>
           <div class="form-group"><label>تیرگی روی عکس پس‌زمینه</label>
-            <input type="range" id="brand-bg-overlay" min="0" max="90" value="55" style="width:100%" oninput="document.getElementById('brand-bg-ov-val').textContent=this.value+'%'" />
+            <input type="range" id="brand-bg-overlay" min="0" max="90" value="55" style="width:100%" oninput="var e=document.getElementById('brand-bg-ov-val');if(e)e.textContent=this.value+'%'" />
             <span class="hint" id="brand-bg-ov-val">۵۵٪</span></div>
 
           <div class="form-group" style="margin-top:8px">
             <label class="checkbox-row"><input type="checkbox" id="brand-enabled" checked /> اعمال ظاهر سفارشی روی مدارس</label>
           </div>
-          <button type="button" class="btn btn-success btn-block" onclick="saveBranding()">ذخیره ظاهر ورود برای همه مدارس</button>
+          <button type="button" class="btn btn-success btn-block" onclick="saveBranding()">💾 ذخیره ظاهر ورود برای همه مدارس</button>
           <p class="hint" id="brand-status" style="margin-top:8px"></p>
         </div>
-
-
       </div>
-<!-- SETTINGS -->
+
+      <!-- SETTINGS -->
       <div id="page-settings" class="page">
         <div class="card">
           <div class="card-title">حساب ورود پنل مادر</div>
@@ -713,10 +727,13 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
             <input class="form-control" id="mother-user-display" value="" readonly /></div>
           <div class="form-group"><label>نام کاربری جدید</label>
             <input class="form-control" id="mother-user-new" placeholder="خالی = بدون تغییر" autocomplete="off" /></div>
-          <div class="form-group"><label>رمز فعلی</label><input type="password" class="form-control" id="cur-pass" /></div>
-          <div class="form-group"><label>رمز جدید (اختیاری)</label><input type="password" class="form-control" id="new-pass" placeholder="خالی = فقط تغییر نام کاربری" /></div>
-          <div class="form-group"><label>تکرار رمز جدید</label><input type="password" class="form-control" id="new-pass2" /></div>
-          <button class="btn btn-primary" onclick="changeMotherAccount()">ذخیره تغییرات حساب</button>
+          <form onsubmit="event.preventDefault();changeMotherAccount();return false;" autocomplete="on">
+          <input type="text" id="mother-user-hidden" name="username" autocomplete="username" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1" aria-hidden="true" />
+          <div class="form-group"><label>رمز فعلی</label><input type="password" class="form-control" id="cur-pass" name="current-password" autocomplete="current-password" /></div>
+          <div class="form-group"><label>رمز جدید (اختیاری)</label><input type="password" class="form-control" id="new-pass" name="new-password" placeholder="خالی = فقط تغییر نام کاربری" autocomplete="new-password" /></div>
+          <div class="form-group"><label>تکرار رمز جدید</label><input type="password" class="form-control" id="new-pass2" name="new-password-confirm" autocomplete="new-password" /></div>
+          <button class="btn btn-primary" type="submit">ذخیره تغییرات حساب</button>
+          </form>
         </div>
         <div class="card">
           <div class="card-title">پشتیبان‌گیری مدارس</div>
@@ -725,29 +742,15 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
           <button class="btn btn-outline btn-block" style="margin-bottom:8px" onclick="exportMotherData()">دانلود فقط لیست مدارس / لایسنس‌ها</button>
           <button class="btn btn-success btn-block" style="margin-bottom:8px" onclick="document.getElementById('import-mother').click()">بازیابی از فایل پشتیبان (لایسنس + داده سرور)</button>
           <input type="file" id="import-mother" accept=".json" style="display:none" onchange="importMotherData(event)" />
-          <p class="hint" style="margin-top:10px">اگر مدرسه پرید: همان فایل پشتیبان کامل یا تک‌مدرسه را اینجا بارگذاری کنید تا لایسنس و داده عملیاتی به سرور برگردد. برای پشتیبان یک مدرسه از لیست مدارس «پشتیبان» را بزنید.</p>
+          <p class="hint" style="margin-top:10px">اگر مدرسه پرید: همان فایل پشتیبان کامل یا تک‌مدرسه را اینجا بارگذاری کنید تا لایسنس و داده عملیاتی به سرور برگردد.</p>
         </div>
-        <div class="card">
-          <div class="card-title">کد بازیابی حساب (فراموشی رمز)</div>
-          <p class="hint" style="margin-bottom:10px">این کد را در جای امن نگه دارید. با آن می‌توانید نام کاربری و رمز پنل مادر را بازیابی کنید.</p>
-          <div class="form-group"><label>کد بازیابی فعلی</label>
-            <input class="form-control" id="recovery-code-display" value="" readonly /></div>
-          <div class="form-group"><label>کد بازیابی جدید</label>
-            <input class="form-control" id="recovery-code-new" placeholder="حداقل ۸ کاراکتر · حروف و عدد" autocomplete="off" /></div>
-          <div class="form-group"><label>رمز فعلی پنل مادر (برای تأیید)</label>
-            <input type="password" class="form-control" id="recovery-cur-pass" /></div>
-          <button class="btn btn-primary" onclick="saveRecoveryCode()">ذخیره کد بازیابی</button>
-          <button class="btn btn-outline" style="margin-right:8px" onclick="genRecoveryCodeHint()">پیشنهاد کد تصادفی</button>
-        </div>
-        
-
         <div class="card">
           <div class="card-title">درباره</div>
           <p style="font-size:.9rem;color:var(--muted)">سامانه نیکان — پنل مادر<br>مدیریت مدارس، لایسنس، ماژول‌ها و پیامک<br>طراحی: سید مجتبی موسوی</p>
         </div>
       </div>
 
-      <p class="footer-note">ذخیره محلی روی این دستگاه · اینترنت برای همگام‌سازی بعدی</p>
+<p class="footer-note">ذخیره محلی روی این دستگاه · اینترنت برای همگام‌سازی بعدی</p>
     </div>
   </div>
   <nav class="mobile-nav">
@@ -772,51 +775,93 @@ body.theme-light .topbar .btn-outline{background:#eff6ff!important;color:#1e3a8a
 
 <script>
 
-/* —— ذخیره فایل روی اندروید (WebView) —— */
-function isAndroidBridge(){
-  try{ return !!(window.NikanAndroid && typeof window.NikanAndroid.saveFile === 'function'); }catch(e){ return false; }
-}
-function saveFileAndroidOrWeb(content, filename, mime){
-  mime = mime || 'application/json;charset=utf-8';
-  filename = filename || ('nikan-' + Date.now() + '.json');
+/* ===== ANDROID PERF LAYER v1 — ضد هنگ ===== */
+(function(){
   try{
-    if(isAndroidBridge()){
-      var payload = content;
-      var isDataUrl = typeof content === 'string' && content.indexOf('data:') === 0;
-      if(!isDataUrl && typeof content === 'string'){
-        try{
-          payload = 'data:' + mime.split(';')[0] + ';base64,' + btoa(unescape(encodeURIComponent(content)));
-        }catch(e1){
-          try{ payload = 'data:application/json;base64,' + btoa(content); }catch(e2){ payload = content; }
+    var ua = String(navigator.userAgent||'');
+    window.__IS_ANDROID = !!(window.NikanAndroid) || /Android/i.test(ua);
+  }catch(e){ window.__IS_ANDROID = false; }
+
+  // debounce helper
+  window.__nikanDebounce = function(fn, ms){
+    var t=null, lastArgs=null, lastThis=null;
+    function run(){ t=null; try{ fn.apply(lastThis, lastArgs); }catch(e){ console.warn(e); } }
+    return function(){
+      lastArgs=arguments; lastThis=this;
+      if(t) clearTimeout(t);
+      t=setTimeout(run, ms);
+    };
+  };
+
+  // localStorage: برای payload خیلی بزرگ روی اندروید از sessionStorage موقت استفاده نکن — فقط debounce
+  window.__NIKAN_SAVE_MS = window.__IS_ANDROID ? 900 : 120;
+  window.__NIKAN_PULL_MS_MGR = window.__IS_ANDROID ? 25000 : 8000;
+  window.__NIKAN_PULL_MS_OTHER = window.__IS_ANDROID ? 45000 : 20000;
+  window.__NIKAN_SUBWATCH_MS = window.__IS_ANDROID ? 12000 : 4000;
+
+  // جلوگیری از چند stringify هم‌زمان
+  window.__nikanStringifyBusy = false;
+  window.__nikanPendingSave = false;
+
+  // نسخه سبک برای localStorage: عکس‌های base64 خیلی بزرگ را در کش جدا نگه دار
+  window.__nikanPhotoCache = window.__nikanPhotoCache || {};
+  window.__nikanStripHeavyForStorage = function(data){
+    if(!data || typeof data !== 'object') return data;
+    try{
+      var out = data; // mutate carefully via shallow copies of arrays
+      function stripList(arr, key){
+        if(!Array.isArray(arr)) return arr;
+        var changed=false, res=new Array(arr.length);
+        for(var i=0;i<arr.length;i++){
+          var o=arr[i];
+          if(!o){ res[i]=o; continue; }
+          var photo = o.photo || o.image || '';
+          if(typeof photo === 'string' && photo.length > 8000 && photo.indexOf('data:')===0){
+            var id = String(o.id|| (key+'-'+i));
+            window.__nikanPhotoCache[id] = photo;
+            var c = Object.assign({}, o);
+            c.photo = '';
+            c._photoOmitted = true;
+            if(c.image) c.image = '';
+            res[i]=c; changed=true;
+          } else {
+            res[i]=o;
+          }
+        }
+        return changed ? res : arr;
+      }
+      var students = stripList(data.students, 'st');
+      var staff = stripList(data.staff, 'sf');
+      if(students !== data.students || staff !== data.staff){
+        out = Object.assign({}, data);
+        out.students = students;
+        out.staff = staff;
+      }
+      return out;
+    }catch(e){ return data; }
+  };
+  window.__nikanRestoreHeavyFromCache = function(data){
+    if(!data || typeof data !== 'object') return data;
+    try{
+      var cache = window.__nikanPhotoCache || {};
+      function restore(arr){
+        if(!Array.isArray(arr)) return;
+        for(var i=0;i<arr.length;i++){
+          var o=arr[i];
+          if(!o||!o.id) continue;
+          var id=String(o.id);
+          if((!o.photo || o._photoOmitted) && cache[id]){
+            o.photo = cache[id];
+            delete o._photoOmitted;
+          }
         }
       }
-      var ok = window.NikanAndroid.saveFile(payload, filename, mime);
-      if(ok){ try{ toast('فایل در پوشه Downloads ذخیره شد: ' + filename); }catch(e){} return true; }
-      try{ toast('ذخیره روی دستگاه ناموفق بود'); }catch(e){}
-      return false;
-    }
-  }catch(e){ console.warn('android save', e); }
-  try{
-    if(typeof content === 'string' && content.indexOf('data:') === 0){
-      var a = document.createElement('a');
-      a.href = content;
-      a.download = filename;
-      a.click();
-      return true;
-    }
-    var blob = new Blob([content], { type: mime });
-    var url = URL.createObjectURL(blob);
-    var a2 = document.createElement('a');
-    a2.href = url;
-    a2.download = filename;
-    a2.click();
-    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 2000);
-    return true;
-  }catch(e3){
-    try{ toast('دانلود پشتیبانی نشد'); }catch(e){}
-    return false;
-  }
-}
+      restore(data.students);
+      restore(data.staff);
+    }catch(e){}
+    return data;
+  };
+})();
 
 
 const STORAGE_KEY = 'mother_panel_v1';
@@ -824,18 +869,17 @@ const STORAGE_KEY = 'mother_panel_v1';
 const DEFAULT_MODULES = [
   { id: 'sms', label: 'پیامک' },
   { id: 'teacher_attendance', label: 'حضور و غیاب دبیر' },
+  { id: 'att_class_note', label: 'یادداشت دفتر کلاسی در حضور و غیاب' },
+  { id: 'att_class_photo', label: 'عکس نمونه کار در حضور و غیاب' },
   { id: 'manager_approve', label: 'تأیید مدیر قبل از پیامک' },
   { id: 'discipline', label: 'موارد انضباطی و نمره' },
   { id: 'advanced_reports', label: 'گزارش پیشرفته' },
-  { id: 'dual_shift', label: 'دو شیفت' },
-  { id: 'sample_questions', label: 'نمونه سوالات امتحانی (PDF/Word/عکس)' },
-  { id: 'teacher_notes', label: 'یادداشت و عکس دفتر کلاسی معلم' }
+  { id: 'dual_shift', label: 'دو شیفت' }
 ];
 
 let state = {
   motherUser: 'admin',
   motherPass: null,
-  motherRecoveryCode: null,
   schools: []
 };
 
@@ -864,60 +908,107 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     motherUser: state.motherUser,
     motherPass: state.motherPass,
-    motherRecoveryCode: state.motherRecoveryCode || null,
     schools: state.schools
   }));
 }
 
-/* —— سرور Abrha پایدار —— */
-const DEFAULT_SYNC_API = 'https://app-nodejs-znotf.apps.teh11.abrhapaas.com';
-const FALLBACK_SYNC_API = 'https://panel.nikan-school.top';
-(function(){
+/* —— سرور همگام‌سازی (Cloudflare Worker) — بدون گوگل/Firebase —— */
+// بعد از ساخت Worker، آدرس را اینجا بگذار — مثال: https://school-sync.xxx.workers.dev
+const DEFAULT_SYNC_API = (typeof location!=='undefined' && location.origin) ? location.origin : '';
+const FALLBACK_SYNC_API = DEFAULT_SYNC_API;
+const SYNC_API = (function(){
   try{
-    var st=localStorage.getItem('school_sync_api')||'';
-    if(!st || st.indexOf('panel.nikan-school.top')>=0 || st.indexOf('workers.dev')>=0 || st.indexOf('api.nikan-school')>=0){
+    var saved=localStorage.getItem('school_sync_api')||'';
+    // Worker قدیمی school-sync را دیگر اولویت نده
+    if(saved && saved.indexOf('school-sync')>=0){
       localStorage.setItem('school_sync_api', DEFAULT_SYNC_API);
+      saved=DEFAULT_SYNC_API;
     }
-  }catch(e){}
+    if(!saved) saved=DEFAULT_SYNC_API;
+    while(saved.length&&saved.charAt(saved.length-1)==='/')saved=saved.slice(0,-1);
+    return saved;
+  }catch(e){return DEFAULT_SYNC_API}
 })();
-const SYNC_API = (localStorage.getItem('school_sync_api') || DEFAULT_SYNC_API).replace(/\/$/, '');
 
-function setSyncApi(url) {
-  url = String(url || '').trim().replace(/\/$/, '');
-  localStorage.setItem('school_sync_api', url);
-  toast(url ? 'آدرس سرور ذخیره شد' : 'سرور پاک شد');
+function setSyncApi(url){
+  url = String(url || '').trim();
+  while (url.length && url.charAt(url.length - 1) === '/') url = url.slice(0, -1);
+  try { localStorage.setItem('school_sync_api', url); } catch (e) {}
+  try { toast(url ? 'آدرس سرور ذخیره شد' : 'سرور پاک شد'); } catch (e) {}
+}
+
+function getWriteAuth(){
+  try {
+    return {
+      user: String((state && state.motherUser) || '').trim(),
+      pass: String((state && state.motherPass) || '').trim(),
+      role: 'mother',
+      schoolId: ''
+    };
+  } catch (e) {
+    return { user: '', pass: '', role: 'mother', schoolId: '' };
+  }
 }
 
 async function apiFetch(path, options) {
   const opts = options || {};
-  const maxTry = opts.retries != null ? opts.retries : 2;
+  const maxTry = opts.retries != null ? opts.retries : 3;
   let lastErr = null;
+  // همیشه اول همین دامنه (admin/panel)، بعد پنل اصلی
   const bases = [];
-  const primary = (typeof SYNC_API !== 'undefined' && SYNC_API) ? SYNC_API : '';
-  if (primary) bases.push(primary);
-  if (typeof DEFAULT_SYNC_API !== 'undefined' && DEFAULT_SYNC_API && bases.indexOf(DEFAULT_SYNC_API) < 0) bases.push(DEFAULT_SYNC_API);
-  if (typeof FALLBACK_SYNC_API !== 'undefined' && FALLBACK_SYNC_API && FALLBACK_SYNC_API !== primary && bases.indexOf(FALLBACK_SYNC_API) < 0) bases.push(FALLBACK_SYNC_API);
-  if (!bases.length) throw new Error('آدرس سرور تنظیم نشده');
-  for (const base of bases) {
-    for (let i = 1; i <= maxTry; i++) {
+  try {
+    if (typeof location !== 'undefined' && location.origin) bases.push(location.origin);
+  } catch (e) {}
+  bases.push('https://admin.nikan-school.top');
+  bases.push('https://panel.nikan-school.top');
+  // یکتا
+  const seen = {};
+  const list = [];
+  bases.forEach(function (b) {
+    b = String(b || '');
+    while (b.length && b.charAt(b.length - 1) === '/') b = b.slice(0, -1);
+    if (b && !seen[b]) { seen[b] = true; list.push(b); }
+  });
+  for (let bi = 0; bi < list.length; bi++) {
+    const base = list[bi];
+    for (let t = 1; t <= maxTry; t++) {
       try {
         const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        const timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 14000) : null;
+        const timeout = opts.timeoutMs != null ? opts.timeoutMs : 20000;
+        const timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, timeout) : null;
+        const headers = Object.assign({
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }, opts.headers || {});
+        let body = opts.body;
+        if (body && typeof body === 'object') {
+          body = Object.assign({}, body, {
+            _compatNoAuth: true,
+            _motherPanel: true,
+            auth: Object.assign({ role: 'mother' }, body.auth || {}, {
+              user: (typeof state !== 'undefined' && state && state.motherUser) || '',
+              pass: (typeof state !== 'undefined' && state && state.motherPass) || '',
+              role: 'mother'
+            })
+          });
+          body = JSON.stringify(body);
+        }
         const res = await fetch(base + path, {
           method: opts.method || 'GET',
-          headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-          body: opts.body ? JSON.stringify(opts.body) : undefined,
-          signal: ctrl ? ctrl.signal : undefined
+          headers: headers,
+          body: body || undefined,
+          signal: ctrl ? ctrl.signal : undefined,
+          cache: 'no-store'
         });
         if (timer) clearTimeout(timer);
         let data = null;
         try { data = await res.json(); } catch (e) { data = null; }
         if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
-        try { if (base !== primary) localStorage.setItem('school_sync_api', base); } catch (e) {}
+        try { localStorage.setItem('school_sync_api', base); } catch (e) {}
         return data;
       } catch (e) {
         lastErr = e;
-        if (i < maxTry) await new Promise(r => setTimeout(r, 300 * i));
+        if (t < maxTry) await new Promise(function (r) { setTimeout(r, 400 * t); });
       }
     }
   }
@@ -929,6 +1020,30 @@ async function cloudPushOneSchool(school) {
   try {
     const payload = cleanSchoolForCloud(school);
     await apiFetch('/api/schools', { method: 'POST', body: payload, retries: 2 });
+    // رمز و کاربری مدیر را داخل appData هم بنویس تا ورود مدرسه و پنل یکی باشند
+    try {
+      var mu = String(school.managerUsername || '').trim();
+      var mp = String(school.managerPassword || '').trim();
+      if (mu || mp) {
+        await apiFetch('/api/schools/' + encodeURIComponent(school.id) + '/appData', {
+          method: 'PUT',
+          body: {
+            managerUser: mu,
+            managerUsername: mu,
+            managerPass: mp,
+            managerPassword: mp,
+            managerAuthority: true,
+            _softOnly: true,
+            _compatNoAuth: true,
+            updatedAtMs: Date.now()
+          },
+          retries: 1,
+          timeoutMs: 30000
+        });
+      }
+    } catch (eApp) {
+      console.warn('manager cred to appData', eApp);
+    }
     school._neverSynced = false;
     school._pushed = true;
     school._synced = true;
@@ -999,23 +1114,23 @@ async function cloudSyncSchools() {
 }
 
 async function cloudPullSchools() {
-  if (!SYNC_API) return false;
   try {
-    const data = await apiFetch('/api/schools', { retries: 1 });
+    const data = await apiFetch('/api/schools', { retries: 3, timeoutMs: 25000 });
     const remote = (data && data.schools) || [];
-    // مدارس فقط-محلی که هنوز به سرور نرفته‌اند
-    const localOnly = (state.schools || []).filter(function (s) {
-      return s && s.id && s._neverSynced === true;
-    });
+    console.log('cloudPullSchools remote', remote.length);
+    if (!remote.length) return true;
     const map = {};
     remote.forEach(function (r) {
       if (!r || !r.id) return;
-      // داده سرور اولویت دارد (کامل)
-      map[r.id] = Object.assign({}, r, { _synced: true, _pushed: true, _neverSynced: false });
+      var prev = (state.schools || []).find(function (x) { return x && x.id === r.id; }) || {};
+      map[r.id] = Object.assign({}, prev, r, { _synced: true, _pushed: true, _neverSynced: false });
     });
-    localOnly.forEach(function (s) { if (!map[s.id]) map[s.id] = s; });
-    state.schools = Object.values(map);
+    (state.schools || []).forEach(function (s) {
+      if (s && s.id && !map[s.id] && s._neverSynced === true) map[s.id] = s;
+    });
+    state.schools = Object.keys(map).map(function (k) { return map[k]; });
     save();
+    try { renderDashboard(); renderSchools(); } catch (e) {}
     return true;
   } catch (e) {
     console.warn('cloudPullSchools', e);
@@ -1063,7 +1178,7 @@ function gregorianToJalali(gy, gm, gd) {
   return [jy, jm, jd];
 }
 function toFaDigits(s) {
-  return String(s).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; });
+  return String(s).replace(/\\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; });
 }
 function formatDateFa(iso) {
   if (!iso) return '—';
@@ -1114,105 +1229,6 @@ function jalaliSelectHtml(prefix, iso) {
 }
 
 /* Auth */
-
-function openMotherRecovery(){
-  var box=document.getElementById('recovery-box');
-  if(box){
-    box.style.display='block';
-    try{ box.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
-  }
-  try{
-    var hint=document.getElementById('login-hint');
-    if(hint) hint.innerHTML='بازیابی: کد مدرسه و کاربری/رمز <b>مدیر همان مدرسه</b> را بزنید.';
-  }catch(e){}
-}
-function closeMotherRecovery(){
-  var box=document.getElementById('recovery-box');
-  if(box) box.style.display='none';
-}
-async function doMotherRecovery(){
-  var code=String((document.getElementById('rec-school')||{}).value||'').trim();
-  var user=String((document.getElementById('rec-user')||{}).value||'').trim();
-  var pass=String((document.getElementById('rec-pass')||{}).value||'').trim();
-  var nu=String((document.getElementById('rec-new-user')||{}).value||'').trim()||'admin';
-  var np=String((document.getElementById('rec-new-pass')||{}).value||'').trim();
-  if(!code||!user||!pass) return toast('کد مدرسه و کاربری/رمز مدیر لازم است');
-  if(np.length<6) return toast('رمز جدید مادر حداقل ۶ کاراکتر');
-  toast('در حال بررسی از سرور...');
-  try{
-    var data = await apiFetch('/api/schools', { retries: 2, timeoutMs: 25000 });
-    var schools = (data && data.schools) || [];
-    var codeN = code.toUpperCase().split(' ').join('');
-    var found = null;
-    for(var i=0;i<schools.length;i++){
-      var s=schools[i];
-      if(!s) continue;
-      var sc=String(s.code||'').toUpperCase();
-      var sn=String(s.name||'');
-      if(sc===codeN || sc.indexOf(codeN)>=0 || sn.indexOf(code)>=0){ found=s; break; }
-    }
-    if(!found){
-      // fallback local mother schools
-      try{
-        var local = (typeof loadMother === 'function') ? loadMother() : (state && state.schools);
-        var list = (local && local.schools) || (Array.isArray(local)?local:[]) || [];
-        for(var j=0;j<list.length;j++){
-          var s2=list[j];
-          if(!s2) continue;
-          var sc2=String(s2.code||'').toUpperCase();
-          var sn2=String(s2.name||'');
-          if(sc2===codeN || sc2.indexOf(codeN)>=0 || sn2.indexOf(code)>=0){ found=s2; break; }
-        }
-      }catch(e){}
-    }
-    if(!found) return toast('مدرسه روی سرور پیدا نشد');
-    var mu=String(found.managerUsername||'').trim();
-    var mp=String(found.managerPassword||'').trim();
-    function norm(x){
-      var s = String(x || '').trim();
-      var fa = '۰۱۲۳۴۵۶۷۸۹';
-      var ar = '٠١٢٣٤٥٦٧٨٩';
-      var out = '';
-      for (var i = 0; i < s.length; i++) {
-        var ch = s.charAt(i);
-        var fi = fa.indexOf(ch);
-        if (fi >= 0) { out += String(fi); continue; }
-        var ai = ar.indexOf(ch);
-        if (ai >= 0) { out += String(ai); continue; }
-        out += ch;
-      }
-      return out;
-    }
-    if(norm(mu)!==norm(user) || norm(mp)!==norm(pass)){
-      return toast('نام کاربری یا رمز مدیر این مدرسه اشتباه است');
-    }
-    if(typeof state === 'undefined'){ window.state = window.state || {}; }
-    state.motherUser = nu;
-    state.motherPass = np;
-    if(typeof save === 'function') save();
-    else {
-      try{
-        var m = JSON.parse(localStorage.getItem('nikan_mother')||'{}');
-        m.motherUser = nu; m.motherPass = np;
-        localStorage.setItem('nikan_mother', JSON.stringify(m));
-      }catch(e){}
-    }
-    if(schools && schools.length && typeof state !== 'undefined'){
-      try{
-        state.schools = schools.map(function(s){ return Object.assign({}, s, { _synced:true, _pushed:true }); });
-        if(typeof save === 'function') save();
-      }catch(e){}
-    }
-    try{ document.getElementById('login-user').value = nu; }catch(e){}
-    try{ document.getElementById('login-pass').value = ''; }catch(e){}
-    closeMotherRecovery();
-    toast('حساب مادر بازنشانی شد — با نام کاربری و رمز جدید وارد شوید', 5000);
-  }catch(err){
-    console.error(err);
-    toast('خطا در بازیابی — اتصال اینترنت و سرور را بررسی کنید');
-  }
-}
-
 function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
@@ -1225,6 +1241,7 @@ function doLogin() {
     return;
   }
 
+  // اولین بار: اگر هنوز رمزی ذخیره نشده
   if (!state.motherPass) {
     if (pass.length < 6) {
       err.textContent = 'رمز اولیه حداقل ۶ کاراکتر باشد';
@@ -1233,30 +1250,44 @@ function doLogin() {
     }
     state.motherUser = user;
     state.motherPass = pass;
-    // کد بازیابی اولیه خودکار (کاربر می‌تواند در تنظیمات عوض کند)
-    if (!state.motherRecoveryCode) {
-      state.motherRecoveryCode = (Math.random().toString(36).slice(2, 6) + Math.random().toString(36).slice(2, 6) + Math.random().toString(36).slice(2, 4)).toUpperCase();
-    }
     save();
     enterApp();
-    toast('رمز ذخیره شد · کد بازیابی: ' + state.motherRecoveryCode + ' — در تنظیمات هم قابل تغییر است');
+    toast('حساب پنل مادر ساخته شد');
     return;
   }
 
+  // ورود عادی
   if (user === state.motherUser && pass === state.motherPass) {
     enterApp();
     toast('خوش آمدید');
-  } else {
-    err.textContent = 'نام کاربری یا رمز اشتباه است';
-    err.style.display = 'block';
+    return;
   }
+
+  // راهنمای دقیق‌تر
+  var hintUser = state.motherUser || 'admin';
+  if (user !== state.motherUser) {
+    err.innerHTML = 'نام کاربری اشتباه است. نام کاربری ثبت‌شده: <b>' + hintUser + '</b><br>اگر فراموش کردید از «بازیابی» استفاده کنید.';
+  } else {
+    err.innerHTML = 'رمز عبور اشتباه است.<br>از دکمه «بازیابی نام کاربری / رمز عبور» زیر همین فرم استفاده کنید.';
+  }
+  err.style.display = 'block';
+  try { openMotherRecovery(); } catch (e) {}
 }
 
 function enterApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  try { startMotherAutoSync(); motherAutoPull(); } catch (e) {}
   showPage('dashboard');
+  try { startMotherAutoSync(); } catch (e) {}
+  (async function(){
+    var ok=false;
+    try{ ok = await cloudPullSchools(); }catch(e){ ok=false; console.warn(e); }
+    try { renderDashboard(); renderSchools(); } catch (e) {}
+    var n = (state.schools || []).length;
+    if (ok && n > 0) toast('مدارس از سرور بارگذاری شد: ' + n);
+    else if (ok && n === 0) toast('روی سرور مدرسه‌ای ثبت نشده');
+    else toast('ارتباط با سرور برقرار نشد — اینترنت را چک کنید و «تازه‌سازی از سرور» را بزنید');
+  })();
 }
 
 function logout() {
@@ -1406,10 +1437,10 @@ function toggleSchool(id) {
 
 function getSchoolPanelBase(){
   try{
-    var st=localStorage.getItem('school_sync_api')||'';
-    if(st) return st.replace(/\/$/,'');
+    if(location.hostname==='admin.nikan-school.top')return 'https://panel.nikan-school.top';
+    if(location.hostname.indexOf('nikan-school')>=0)return location.origin.replace('admin.','panel.');
   }catch(e){}
-  return DEFAULT_SYNC_API;
+  return 'https://panel.nikan-school.top';
 }
 function enterSchoolAsManager(id){
   const s = (state.schools || []).find(function(x){ return x.id === id; });
@@ -1488,7 +1519,7 @@ function regenerateActivation(id) {
 function copyActivation(id) {
   const s = state.schools.find(x => x.id === id);
   if (!s) return;
-  const t = `مدرسه: ${s.name}\nکد مدرسه: ${s.code}\nکد فعال‌سازی: ${s.activationCode}\nنام کاربری مدیر: ${s.managerUsername || ''}\nرمز عبور مدیر: ${s.managerPassword || ''}`;
+  const t = `مدرسه: ${s.name}\\nکد مدرسه: ${s.code}\\nکد فعال‌سازی: ${s.activationCode}\\nنام کاربری مدیر: ${s.managerUsername || ''}\\nرمز عبور مدیر: ${s.managerPassword || ''}`;
   navigator.clipboard.writeText(t).then(() => toast('کپی شد')).catch(() => toast('کپی دستی کنید'));
 }
 
@@ -1513,6 +1544,7 @@ function openSchoolModal(id) {
   document.getElementById('modal-title').textContent = isNew ? 'مدرسه جدید' : 'ویرایش مدرسه';
 
   let modules = Array.isArray(s?.modules) ? s.modules.slice() : DEFAULT_MODULES.map(m => m.id).filter(id => id !== 'dual_shift');
+  // تیک یادداشت/عکس فقط طبق لایسنس ذخیره‌شده — اجباراً روشن نشوند
   // هم‌خوانی شیفت و تیک دو شیفت
   if (Number(s?.shifts) === 2 && !modules.includes('dual_shift')) modules.push('dual_shift');
   if (Number(s?.shifts) !== 2) modules = modules.filter(id => id !== 'dual_shift');
@@ -1686,10 +1718,10 @@ function saveSchool(id) {
       updatedAtMs: Date.now()
     });
   }
-  // علامت بزن و فوری همان مدرسه را بفرست
+  // مدرسه جدید تا ارسال موفق به سرور، فقط-محلی بماند تا با pull پاک نشود
   const saved = id ? state.schools.find(function (x) { return x.id === id; }) : state.schools[state.schools.length - 1];
   if (saved) {
-    saved._neverSynced = false;
+    if (!id) saved._neverSynced = true;
     saved.updatedAtMs = Date.now();
   }
   save();
@@ -1699,8 +1731,18 @@ function saveSchool(id) {
   toast('در حال ارسال به سرور...');
   if (saved) {
     cloudPushOneSchool(saved).then(function (ok) {
-      if (ok) toast('ذخیره شد و روی همه دستگاه‌ها می‌آید ✓');
-      else toast('محلی ذخیره شد — اتصال سرور برقرار نشد');
+      if (ok) {
+        saved._neverSynced = false;
+        saved._synced = true;
+        saved._pushed = true;
+        save();
+        toast('ذخیره شد و روی همه دستگاه‌ها می‌آید ✓');
+      } else {
+        // اگر ارسال شکست خورد، محلی نگه دار تا pull بعدی پاکش نکند
+        saved._neverSynced = true;
+        save();
+        toast('محلی ذخیره شد — اتصال سرور برقرار نشد؛ دوباره «ارسال همه» را بزنید');
+      }
     });
   }
 }
@@ -1767,25 +1809,15 @@ function changeMotherPassword(){ changeMotherAccount(); }
 function fillMotherAccountForm(){
   const disp = document.getElementById('mother-user-display');
   if (disp) disp.value = state.motherUser || 'admin';
-  const rc = document.getElementById('recovery-code-display');
-  if (rc) {
-    if (state.motherRecoveryCode) {
-      var c = String(state.motherRecoveryCode);
-      rc.value = c.length > 4 ? (c.slice(0, 2) + '••••' + c.slice(-2) + ' (تنظیم شده)') : '•••• (تنظیم شده)';
-    } else {
-      rc.value = 'هنوز تنظیم نشده — حتماً یک کد بگذارید';
-    }
-  }
 }
 
-
-
-
-
-
 function downloadJsonFile(obj, filename) {
-  const json = JSON.stringify(obj, null, 2);
-  saveFileAndroidOrWeb(json, filename || ('backup-' + Date.now() + '.json'), 'application/json;charset=utf-8');
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(function () { try { URL.revokeObjectURL(a.href); } catch (e) {} }, 2000);
 }
 async function fetchSchoolAppData(schoolId) {
   if (!SYNC_API || !schoolId) return null;
@@ -1845,7 +1877,7 @@ async function exportOneSchoolFullBackup(id) {
     },
     note: appData ? 'پشتیبان کامل صفر تا صد' : 'فقط لایسنس — از پنل مدرسه هم پشتیبان کامل بگیرید'
   };
-  const safeName = String(s.code || s.name || id).replace(/[^\w\u0600-\u06FF\-]+/g, '_');
+  const safeName = String(s.code || s.name || id).replace(/[^\\w\\u0600-\\u06FF\\-]+/g, '_');
   downloadJsonFile(payload, 'school-FULL-backup-' + safeName + '-' + todayStr() + '.json');
   toast(appData ? ('پشتیبان کامل · کلاس: ' + payload.summary.classes + ' · دانش‌آموز: ' + payload.summary.students) : 'لایسنس ذخیره شد (داده سرور خالی/قطع بود)');
 }
@@ -1871,23 +1903,196 @@ async function exportAllSchoolsFullBackup() {
   toast('پشتیبان کامل: ' + payload.schoolsCount + ' مدرسه · با داده: ' + payload.withAppData);
 }
 function exportMotherData() {
-  downloadJsonFile(state, 'nikan-mother-licenses-backup-' + todayStr() + '.json');
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'nikan-mother-licenses-backup-' + todayStr() + '.json';
+  a.click();
   toast('دانلود شد');
 }
 
 async function cloudPushAppDataForSchool(schoolId, appData) {
   if (!SYNC_API || !schoolId || !appData || typeof appData !== 'object') return false;
+  async function pushStaffPhotos(list) {
+    var arr = (Array.isArray(list) ? list : []).filter(function (s) { return s && s.id && (s.photo || s.image); });
+    for (var i = 0; i < arr.length; i++) {
+      var st = arr[i];
+      try {
+        await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/appData', {
+          method: 'PUT',
+          body: {
+            staff: [{
+              id: String(st.id),
+              photo: st.photo || st.image || '',
+              name: st.name || '',
+              role: st.role || '',
+              username: st.username || '',
+              pass: st.pass || st.password || ''
+            }],
+            _softOnly: true,
+            _staffOnly: true,
+            _compatNoAuth: true,
+            _motherPanel: true,
+            managerAuthority: true,
+            updatedAtMs: Date.now()
+          },
+          retries: 2,
+          timeoutMs: 60000
+        });
+      } catch (eStaff) { console.warn('restore staff photo', st.id, eStaff); }
+    }
+  }
+  async function pushStudentPhotos(list) {
+    var arr = (Array.isArray(list) ? list : []).filter(function (s) { return s && s.id && (s.photo || s.image); });
+    for (var j = 0; j < arr.length; j += 8) {
+      var chunk = arr.slice(j, j + 8).map(function (s) {
+        return {
+          id: String(s.id),
+          classId: s.classId || '',
+          name: s.name || '',
+          photo: s.photo || s.image || '',
+          phones: s.phones || [],
+          group: s.group || '',
+          note: s.note || ''
+        };
+      });
+      try {
+        await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/appData', {
+          method: 'PUT',
+          body: {
+            students: chunk,
+            _softOnly: true,
+            _studentOnly: true,
+            _compatNoAuth: true,
+            _motherPanel: true,
+            managerAuthority: true,
+            updatedAtMs: Date.now()
+          },
+          retries: 2,
+          timeoutMs: 90000
+        });
+      } catch (eStu) { console.warn('restore student photos chunk', eStu); }
+    }
+  }
   try {
-    const payload = Object.assign({}, appData, { updatedAtMs: Date.now() });
+    // بازیابی بکاپ باید ساختار کامل (کلاس/دانش‌آموز/معلم/برنامه/عکس‌ها) را هم بنویسد
+    const payload = Object.assign({}, appData, {
+      updatedAtMs: Date.now(),
+      _compatNoAuth: true,
+      _motherPanel: true,
+      managerAuthority: true,
+      replaceStructure: true,
+      replaceAssignments: true,
+      structureWriteToken: true,
+      confirmStructureWrite: 'NIKAN-STRUCT-OK',
+      clearStructure: true,
+      _fullRestore: true,
+      _bypassPerfFilter: true,
+      _performanceClearedAt: 0,
+      resetYear: false,
+      clearPerformance: false
+    });
+    if (Array.isArray(appData.students)) payload.students = appData.students;
+    if (Array.isArray(appData.staff)) payload.staff = appData.staff;
+    if (Array.isArray(appData.classes)) payload.classes = appData.classes;
+    if (Array.isArray(appData.assignments)) payload.assignments = appData.assignments;
+    if (Array.isArray(appData.attendance)) payload.attendance = appData.attendance;
+    if (Array.isArray(appData.submissions)) payload.submissions = appData.submissions;
+    if (Array.isArray(appData.exams)) payload.exams = appData.exams;
+    if (Array.isArray(appData.messages)) payload.messages = appData.messages;
+    if (Array.isArray(appData.disciplinePhotos)) payload.disciplinePhotos = appData.disciplinePhotos;
+    if (Array.isArray(appData.colleagues)) payload.colleagues = appData.colleagues;
+    if (appData.managerPhoto != null) payload.managerPhoto = appData.managerPhoto;
     await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/appData', {
       method: 'PUT',
       body: payload,
-      retries: 2
+      retries: 3,
+      timeoutMs: 180000
     });
+    // پاس ۲: حضور/انضباط تکه‌تکه
+    var attAll = Array.isArray(appData.attendance) ? appData.attendance : [];
+    for (var ai = 0; ai < attAll.length; ai += 80) {
+      var apart = attAll.slice(ai, ai + 80);
+      try {
+        await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/appData', {
+          method: 'PUT',
+          body: {
+            attendance: apart,
+            _softOnly: true,
+            _fullRestore: true,
+            _bypassPerfFilter: true,
+            _compatNoAuth: true,
+            _motherPanel: true,
+            managerAuthority: true,
+            updatedAtMs: Date.now()
+          },
+          retries: 2,
+          timeoutMs: 90000
+        });
+      } catch (eAtt) { console.warn('restore att chunk', ai, eAtt); }
+    }
+    // پاس سوم: عکس تیم و دانش‌آموز
+    await pushStaffPhotos(appData.staff);
+    await pushStudentPhotos(appData.students);
+    if (appData.managerPhoto) {
+      try {
+        await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/appData', {
+          method: 'PUT',
+          body: {
+            managerPhoto: appData.managerPhoto,
+            _softOnly: true,
+            _compatNoAuth: true,
+            _motherPanel: true,
+            updatedAtMs: Date.now()
+          },
+          retries: 1,
+          timeoutMs: 45000
+        });
+      } catch (eMgr) {}
+    }
     return true;
   } catch (e) {
     console.warn('cloudPushAppDataForSchool', e);
-    return false;
+    // fallback: ساختار سبک بدون عکس‌های خیلی بزرگ، بعد عکس‌ها جدا
+    try {
+      var light = Object.assign({}, appData);
+      if (Array.isArray(light.staff)) {
+        light.staff = light.staff.map(function (s) {
+          var o = Object.assign({}, s);
+          if (o.photo && String(o.photo).length > 50000) o.photo = '';
+          if (o.image && String(o.image).length > 50000) o.image = '';
+          return o;
+        });
+      }
+      if (Array.isArray(light.students)) {
+        light.students = light.students.map(function (s) {
+          var o = Object.assign({}, s);
+          if (o.photo && String(o.photo).length > 50000) o.photo = '';
+          return o;
+        });
+      }
+      delete light.managerPhoto;
+      light.disciplinePhotos = [];
+      var payload2 = Object.assign({}, light, {
+        updatedAtMs: Date.now(),
+        _compatNoAuth: true,
+        _motherPanel: true,
+        managerAuthority: true,
+        replaceStructure: true,
+        replaceAssignments: true,
+        structureWriteToken: true,
+        confirmStructureWrite: 'NIKAN-STRUCT-OK'
+      });
+      await apiFetch('/api/schools/' + encodeURIComponent(schoolId) + '/appData', {
+        method: 'PUT', body: payload2, retries: 2, timeoutMs: 90000
+      });
+      await pushStaffPhotos(appData.staff);
+      await pushStudentPhotos(appData.students);
+      return true;
+    } catch (e3) {
+      console.warn('cloudPushAppDataForSchool light', e3);
+      return false;
+    }
   }
 }
 
@@ -1968,7 +2173,7 @@ function importMotherData(ev) {
         throw new Error('invalid');
       }
       if (!items.length) throw new Error('empty');
-      const msg = 'تعداد ' + items.length + ' مورد از فایل خوانده شد.\nلایسنس‌ها در پنل مادر ادغام و روی سرور ارسال می‌شوند.\nاگر فایل پشتیبان کامل باشد، داده کلاس/دانش‌آموز هم برمی‌گردد.\nادامه؟';
+      const msg = 'تعداد ' + items.length + ' مورد از فایل خوانده شد.\\nلایسنس‌ها در پنل مادر ادغام و روی سرور ارسال می‌شوند.\\nاگر فایل پشتیبان کامل باشد، داده کلاس/دانش‌آموز هم برمی‌گردد.\\nادامه؟';
       if (!confirm(msg)) return;
       toast('در حال بازیابی روی سرور...');
       const r = await restoreBackupItems(items);
@@ -1985,7 +2190,7 @@ function importMotherData(ev) {
 let _motherPullTimer = null, _motherPullBusy = false;
 function startMotherAutoSync() {
   clearInterval(_motherPullTimer);
-  const base = 90000 + Math.floor(Math.random() * 30000);
+  const base = 300000 + Math.floor(Math.random() * 30000);
   _motherPullTimer = setInterval(function () {
     if (document.hidden) return;
     if (document.getElementById('app').style.display === 'none') return;
@@ -2008,16 +2213,96 @@ document.addEventListener('visibilitychange', function () {
 });
 
 
-function getMotherTheme(){ try{ return localStorage.getItem('mother_theme')||'dark'; }catch(e){ return 'dark'; } }
-function setMotherTheme(t){
-  t=(t==='light')?'light':'dark';
-  try{ localStorage.setItem('mother_theme',t); }catch(e){}
-  document.body.classList.remove('theme-dark','theme-light');
-  document.body.classList.add(t==='light'?'theme-light':'theme-dark');
-  var btn=document.getElementById('theme-toggle-btn');
-  if(btn) btn.textContent=t==='light'?'☀️ روشن':'🌙 تیره';
+function openMotherRecovery(){
+  var box=document.getElementById('recovery-box');
+  if(box){
+    box.style.display='block';
+    try{ box.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
+  }
+  try{
+    var hint=document.getElementById('login-hint');
+    if(hint) hint.innerHTML='بازیابی: کد مدرسه <b>SCH-7060</b> و کاربری/رمز <b>مدیر همان مدرسه</b> را بزنید.';
+  }catch(e){}
 }
-function toggleMotherTheme(){ setMotherTheme(getMotherTheme()==='light'?'dark':'light'); }
+function closeMotherRecovery(){
+  var box=document.getElementById('recovery-box');
+  if(box) box.style.display='none';
+}
+async function doMotherRecovery(){
+  var code=String((document.getElementById('rec-school')||{}).value||'').trim();
+  var user=String((document.getElementById('rec-user')||{}).value||'').trim();
+  var pass=String((document.getElementById('rec-pass')||{}).value||'').trim();
+  var nu=String((document.getElementById('rec-new-user')||{}).value||'').trim()||'admin';
+  var np=String((document.getElementById('rec-new-pass')||{}).value||'').trim();
+  if(!code||!user||!pass) return toast('کد مدرسه و کاربری/رمز مدیر لازم است');
+  if(np.length<6) return toast('رمز جدید مادر حداقل ۶ کاراکتر');
+  toast('در حال بررسی از سرور...');
+  try{
+    const data = await apiFetch('/api/schools', { retries: 2, timeoutMs: 25000 });
+    const schools = (data && data.schools) || [];
+    const codeN = code.toUpperCase().split(' ').join('');
+    let found = null;
+    for(let i=0;i<schools.length;i++){
+      const s=schools[i];
+      if(!s) continue;
+      const sc=String(s.code||'').toUpperCase();
+      const sn=String(s.name||'');
+      if(sc===codeN || sc.indexOf(codeN)>=0 || sn.indexOf(code)>=0){ found=s; break; }
+    }
+    if(!found) return toast('مدرسه روی سرور پیدا نشد');
+    const mu=String(found.managerUsername||'').trim();
+    const mp=String(found.managerPassword||'').trim();
+    function norm(x){
+      var s = String(x || '').trim();
+      var fa = '۰۱۲۳۴۵۶۷۸۹';
+      var ar = '٠١٢٣٤٥٦٧٨٩';
+      var out = '';
+      for (var i = 0; i < s.length; i++) {
+        var ch = s.charAt(i);
+        var fi = fa.indexOf(ch);
+        if (fi >= 0) { out += String(fi); continue; }
+        var ai = ar.indexOf(ch);
+        if (ai >= 0) { out += String(ai); continue; }
+        out += ch;
+      }
+      return out;
+    }
+    if(norm(mu)!==norm(user) || norm(mp)!==norm(pass)){
+      return toast('نام کاربری یا رمز مدیر این مدرسه اشتباه است');
+    }
+    // تأیید شد — بازنشانی حساب مادر
+    state.motherUser = nu;
+    state.motherPass = np;
+    save();
+    // مدارس را هم از سرور بگیر
+    state.schools = schools.map(function(s){ return Object.assign({}, s, { _synced:true, _pushed:true }); });
+    save();
+    try{ document.getElementById('login-user').value = nu; }catch(e){}
+    closeMotherRecovery();
+    toast('حساب مادر بازنشانی شد — با نام کاربری و رمز جدید وارد شوید');
+    try{ renderDashboard(); renderSchools(); }catch(e){}
+  }catch(e){
+    console.warn(e);
+    toast('ارتباط با سرور برقرار نشد — فیلترشکن/اینترنت را چک کنید');
+  }
+}
+
+
+/* تم روشن / تیره */
+function getMotherTheme(){
+  try{ return localStorage.getItem('mother_theme') || 'dark'; }catch(e){ return 'dark'; }
+}
+function setMotherTheme(t){
+  t = (t === 'light') ? 'light' : 'dark';
+  try{ localStorage.setItem('mother_theme', t); }catch(e){}
+  document.body.classList.remove('theme-dark','theme-light');
+  document.body.classList.add(t === 'light' ? 'theme-light' : 'theme-dark');
+  var btn = document.getElementById('theme-toggle-btn');
+  if(btn) btn.textContent = t === 'light' ? '☀️ روشن' : '🌙 تیره';
+}
+function toggleMotherTheme(){
+  setMotherTheme(getMotherTheme() === 'light' ? 'dark' : 'light');
+}
 setMotherTheme(getMotherTheme());
 
 
@@ -2521,14 +2806,16 @@ async function saveBranding(){
 }
 
 /* Init */
+try{ localStorage.setItem('school_sync_api', DEFAULT_SYNC_API); }catch(e){}
 load();
 if (state.motherPass) {
   document.getElementById('login-hint').textContent = 'با حساب پنل مادر وارد شوید.';
 }
-cloudPullSchools().then(() => {
+cloudPullSchools().then(function(ok){
   try { if (typeof renderDashboard === 'function') renderDashboard(); if (typeof renderSchools === 'function') renderSchools(); } catch (e) {}
   startMotherAutoSync();
-});
+  console.log('mother init schools', (state.schools||[]).length, 'ok', ok);
+}).catch(function(e){ console.warn('mother init pull', e); });
 </script>
 </body>
 </html>
