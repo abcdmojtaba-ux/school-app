@@ -5045,6 +5045,94 @@ function attendancePeriodKey(a, periodName){
   }
   return pn||'';
 }
+function periodOrderIndex(pn){
+  pn=String(pn||'').trim();
+  if(!pn)return 999;
+  var m=pn.match(/(\d+)/);
+  if(m)return parseInt(m[1],10)||999;
+  if(/اول/.test(pn)&&!/دوم|سوم|چهار/.test(pn))return 1;
+  if(/دوم/.test(pn))return 2;
+  if(/سوم/.test(pn))return 3;
+  if(/چهار/.test(pn))return 4;
+  if(/پنج/.test(pn))return 5;
+  return 999;
+}
+function studentPresentInEarlierPeriod(studentId, classId, day, currentPeriodName){
+  studentId=String(studentId||'');
+  classId=String(classId||'');
+  day=String(normalizeDateToIso(day)||day||'');
+  var curIdx=periodOrderIndex(currentPeriodName);
+  if(curIdx<=1)return false;
+  var deleted={};
+  (schoolData.deletedSubmissionIds||[]).forEach(function(id){if(id)deleted[String(id)]=true});
+  var subs=schoolData.submissions||[];
+  for(var i=0;i<subs.length;i++){
+    var s=subs[i];
+    if(!s||!s.id||deleted[String(s.id)])continue;
+    if(s.voided||s.cancelled||s.status==='voided')continue;
+    if(String(s.classId||'')!==classId)continue;
+    var sd=String(normalizeDateToIso(s.date)||s.date||'');
+    if(sd!==day)continue;
+    var pIdx=periodOrderIndex(s.periodName);
+    if(!(pIdx<curIdx))continue;
+    var rows=s.rows||[];
+    for(var j=0;j<rows.length;j++){
+      var r=rows[j];
+      if(!r||String(r.studentId||'')!==studentId)continue;
+      if(r.status==='present'||r.status==='late'||!r.status)return true;
+    }
+  }
+  var att=schoolData.attendance||[];
+  for(var k=0;k<att.length;k++){
+    var a=att[k];
+    if(!a||String(a.studentId||'')!==studentId)continue;
+    var ad=String(normalizeDateToIso(a.date)||a.date||'');
+    if(ad!==day)continue;
+    if(a.excused||a.justified)continue;
+    var ap=periodOrderIndex(a.periodName||(typeof attendancePeriodKey==='function'?attendancePeriodKey(a):''));
+    if(!(ap<curIdx))continue;
+    if((a.type||'')==='late')return true;
+  }
+  return false;
+}
+function escapeBlockedByManager(studentId, day, subId){
+  studentId=String(studentId||'');
+  day=String(normalizeDateToIso(day)||day||'');
+  subId=String(subId||'');
+  var keys=schoolData.deletedAttendanceKeys||[];
+  for(var i=0;i<keys.length;i++){
+    var k=String(keys[i]||'');
+    if(k==='escape:'+studentId+':'+day)return true;
+    if(k==='noescape:'+studentId+':'+day)return true;
+    if(subId&&k==='sub:'+subId+':'+studentId+':escape')return true;
+  }
+  return false;
+}
+function demoteEscapeToAbsent(attId){
+  if(!canManage())return toast('فقط مدیر و معاون');
+  var a=(schoolData.attendance||[]).find(function(x){return x&&String(x.id)===String(attId)});
+  if(!a||(a.type||'')!=='escape')return toast('این مورد فرار نیست');
+  var day=normalizeDateToIso(a.date)||String(a.date||'');
+  var sid=String(a.studentId||'');
+  a.type='absent';
+  a.scoreLocked=false;
+  a.fromDiscipline=false;
+  a.scoreDeduct=(schoolData.rules&&schoolData.rules.absent)!=null?parseFloat(schoolData.rules.absent):0.5;
+  if(a.note)a.note=String(a.note).replace(/فرار\s*—\s*/g,'');
+  schoolData.deletedAttendanceKeys=schoolData.deletedAttendanceKeys||[];
+  var nk='noescape:'+sid+':'+day;
+  if(schoolData.deletedAttendanceKeys.indexOf(nk)<0)schoolData.deletedAttendanceKeys.push(nk);
+  if(a.submissionId){
+    var sk='sub:'+a.submissionId+':'+sid+':escape';
+    if(schoolData.deletedAttendanceKeys.indexOf(sk)<0)schoolData.deletedAttendanceKeys.push(sk);
+  }
+  schoolData._cloudUpdatedAtMs=Date.now();
+  schoolData._localDirtyAt=Date.now();
+  saveSchoolData();
+  toast('فرار برداشته شد — فقط غیبت');
+  try{if(typeof pushSoftAttendanceRecords==='function')pushSoftAttendanceRecords([a],{deletedAttendanceKeys:[nk]});}catch(e){}
+}
+
 function applySubmissionAttendance(s){
   if(!s||!s.rows)return;
   if(s.id&&Array.isArray(schoolData.deletedSubmissionIds)&&schoolData.deletedSubmissionIds.indexOf(s.id)>=0)return;
@@ -5054,7 +5142,23 @@ function applySubmissionAttendance(s){
   var pn=String(s.periodName||'').trim();
   s.rows.forEach(function(r){
     if(r.status==='present')return;
+    var sid=String(r.studentId||'');
     var type=r.status==='late'?'late':(r.status==='escape'?'escape':'absent');
+    var day=normalizeDateToIso(s.date)||s.date||'';
+    var pn=String(s.periodName||'').trim();
+    var subId=String(s.id||'');
+    if(type==='absent'&&r.escape!==false&&r.noEscape!==true){
+      try{
+        if(typeof escapeBlockedByManager==='function'&&typeof studentPresentInEarlierPeriod==='function'){
+          if(!escapeBlockedByManager(sid, day, subId) && studentPresentInEarlierPeriod(sid, s.classId, day, pn)){
+            type='escape';
+          }
+        }
+      }catch(e){}
+    }
+    if(type==='escape'&&(r.escape===false||r.noEscape===true||(typeof escapeBlockedByManager==='function'&&escapeBlockedByManager(sid, day, subId)))){
+      type='absent';
+    }
     if(schoolData.attendance.some(function(a){return a&&a.submissionId===s.id&&a.studentId===r.studentId}))return;
     if(type==='late'){
       var dupLate=schoolData.attendance.some(function(a){
@@ -5148,20 +5252,11 @@ function dedupeAttendanceRecords(){
   return removed;
 }
 function ensureAllSubmissionsInAttendance(){
-  try{
-    var now=Date.now();
-    if(window._lastEnsureSubAtt&&(now-window._lastEnsureSubAtt)<30000)return;
-    window._lastEnsureSubAtt=now;
-  }catch(e){}
   var deleted={};
   (schoolData.deletedSubmissionIds||[]).forEach(function(id){if(id)deleted[id]=true});
-  var today=typeof todayStr==='function'?todayStr():'';
   (schoolData.submissions||[]).forEach(function(s){
     if(s&&s.id&&deleted[s.id])return;
     if(s&&(s.status==='voided'||s.voided||s.cancelled))return;
-    var d=typeof normalizeDateToIso==='function'?(normalizeDateToIso(s.date)||s.date):s.date;
-    var ts=Number(s.createdAtMs||s.createdAt||0)||0;
-    if(s.status!=='pending'&&today&&d!==today&&!(ts&&(Date.now()-ts)<7*24*3600*1000))return;
     applySubmissionAttendance(s);
   });
   try{dedupeAttendanceRecords()}catch(e){}
@@ -9219,24 +9314,11 @@ function calcScore(sid,from,to){
       // در یک روز: بزرگ‌ترین کسر (دستی قفل‌شده معمولاً بزرگ‌تر است)
       if(absentDeductByDay[day]==null||d>absentDeductByDay[day])absentDeductByDay[day]=d;
     }else{
-      var isPos=!!(a.isPositive||a.positive||a.scoreBonus);
-      if(!isPos){
-        var dt=(schoolData.disciplineTypes||[]).find(function(x){return x&&String(x.id)===String(a.type||'')});
-        if(dt&&(dt.isPositive||dt.positive))isPos=true;
-        if(!isPos&&/مثبت|تشویق|پاداش|آفرین/i.test(String((dt&&dt.name)||a.typeName||a.note||'')))isPos=true;
-      }
       var d2=itemDeduct(a);
-      if(isPos){
-        var add=Math.abs(d2||0);
-        if(add<=0){var r=parseFloat(a.scoreDeduct);if(!isNaN(r)&&r!==0)add=Math.abs(r);else add=1;}
-        score+=add;
-      }else if(d2>0){
-        score-=d2;
-      }
+      if(d2>0)score-=d2;
     }
   });
   Object.keys(absentDeductByDay).forEach(function(day){score-=absentDeductByDay[day]});
-  if(score>25)score=25;
   return Math.max(0,Math.round(score*100)/100);
 }
 /** همه غیبت‌های یک دانش‌آموز در یک روز را یکجا بردار (بی‌اثر کردن روز) */
@@ -10595,7 +10677,7 @@ function justifyAtt(id){
   if(!canManage())return toast('فقط مدیر و معاون');
   var a=(schoolData.attendance||[]).find(function(x){return x.id===id});
   if(!a)return;
-  if(a.type!=='absent'&&a.type!=='late')return toast('فقط غیبت و تأخیر');
+  if(a.type!=='absent'&&a.type!=='late'&&a.type!=='escape')return toast('فقط غیبت، تأخیر و فرار');
   a.excused=true;a.justified=true;a.scoreDeduct=0;a.scoreLocked=true;
   if((a.note||'').indexOf('موجه')<0)a.note=(a.note?a.note+' · ':'')+'موجه';
   schoolData._cloudUpdatedAtMs=Date.now();
@@ -10945,7 +11027,7 @@ function getSmsCfg(){
     apiUrl:String(c.apiUrl||'').trim()
   };
 }
-async async function saveSmsPanelCfg(){
+async function saveSmsPanelCfg(){
   if(isTeacher())return toast('دسترسی ندارید');
   const mode=document.getElementById('sms-mode').value;
   const provider=document.getElementById('sms-provider').value;
@@ -10956,29 +11038,14 @@ async async function saveSmsPanelCfg(){
   if((mode==='panel'||mode==='both')&&!username){
     return toast('برای پنل پیامک، نام کاربری الزامی است');
   }
-  schoolData.smsConfig={mode,provider,username,password,sender,apiUrl,updatedAtMs:Date.now(),_allShifts:true};
+  schoolData.smsConfig={mode,provider,username,password,sender,apiUrl,updatedAtMs:Date.now()};
   schoolData._cloudUpdatedAtMs=Date.now();
-  schoolData._localDirtyAt=Date.now();
   saveSchoolData();
-  toast('در حال ارسال تنظیمات پیامک به سرور (هر دو شیفت)...');
+  toast('در حال ارسال تنظیمات پیامک به سرور...');
   try{
-    if(session&&session.schoolId){
-      await apiFetch('/api/schools/'+encodeURIComponent(session.schoolId)+'/appData',{
-        method:'PUT',
-        body:{
-          _softOnly:true,_settingsOnly:true,_compatNoAuth:true,managerAuthority:true,
-          updatedAtMs:Date.now(),
-          smsConfig:schoolData.smsConfig,
-          smsTemplates:schoolData.smsTemplates||[],
-          rules:schoolData.rules||null
-        },
-        retries:2,timeoutMs:25000
-      });
-    }else{
-      await cloudPushAppData(true);
-    }
+    await cloudPushAppData(true);
     const label=mode==='sim'?'فقط سیم‌کارت':(mode==='panel'?'فقط پنل':'سیم‌کارت + پنل');
-    toast('ذخیره شد: '+label+' — برای صبح و عصر یکسان است');
+    toast('ذخیره شد: '+label+' — روی بقیه دستگاه‌ها با همگام‌سازی می‌آید');
     try{fillSmsPanelForm()}catch(e){}
   }catch(e){
     toast('محلی ذخیره شد؛ «ارسال به سرور» را بزنید');
