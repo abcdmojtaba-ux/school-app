@@ -109,6 +109,8 @@ class MainActivity : Activity() {
         setContentView(webView)
         askRuntimePermissions()
 
+        // عملکرد WebView — ضد هنگ
+        try { webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null) } catch (_: Exception) {}
         val st = webView.settings
         st.javaScriptEnabled = true
         st.domStorageEnabled = true
@@ -117,6 +119,18 @@ class MainActivity : Activity() {
         st.allowContentAccess = true
         st.loadWithOverviewMode = true
         st.useWideViewPort = true
+        st.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+        st.mediaPlaybackRequiresUserGesture = true
+        // سرعت رندر روی اندروید
+        try { st.setRenderPriority(android.webkit.WebSettings.RenderPriority.HIGH) } catch (_: Exception) {}
+        try { st.loadsImagesAutomatically = true } catch (_: Exception) {}
+        try { st.blockNetworkImage = false } catch (_: Exception) {}
+        // حافظه کمتر برای DOM خیلی بزرگ
+        try {
+            if (Build.VERSION.SDK_INT >= 19) {
+                WebView.setWebContentsDebuggingEnabled(false)
+            }
+        } catch (_: Exception) {}
         if (Build.VERSION.SDK_INT >= 16) {
             @Suppress("DEPRECATION")
             st.allowFileAccessFromFileURLs = true
@@ -126,21 +140,14 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 21) {
             st.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         }
+        // Offscreen pre-raster کمی کمک می‌کند
+        try {
+            if (Build.VERSION.SDK_INT >= 23) {
+                webView.setOffscreenPreRaster(true)
+            }
+        } catch (_: Exception) {}
 
         webView.addJavascriptInterface(NikanBridge(), "NikanAndroid")
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val url = request?.url?.toString() ?: return false
-                if (url.startsWith("http") || url.startsWith("file") || url.startsWith("data:")) return false
-                return try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    true
-                } catch (e: Exception) {
-                    true
-                }
-            }
-        }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
@@ -244,18 +251,68 @@ class MainActivity : Activity() {
             }
         }
 
-        // لود از فایل داخل اپ (آفلاین) — دیگر وابسته به دامنه وب نیست
-        // اگر دامنه قطع باشد اپ سفید نمی‌ماند
-        try {
-            // کش عادی — هر بار کل صفحه را دوباره دانلود نکن
-            webView.settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
-        } catch (_: Exception) {}
-        val assetUrl = if (BuildConfig.FLAVOR == "mother") {
+        // لود از سایت سرور (همیشه آخرین نسخه) — اگر قطع بود fallback به asset
+        val isMother = try { BuildConfig.FLAVOR == "mother" } catch (_: Exception) { false }
+        val serverUrl = if (isMother) {
+            "https://panel.nikan-school.top/mother"
+        } else {
+            "https://panel.nikan-school.top/"
+        }
+        val assetUrl = if (isMother) {
             "file:///android_asset/mother-2.html"
         } else {
             "file:///android_asset/school-app-33.html"
         }
-        webView.loadUrl(assetUrl)
+        try {
+            // همیشه از شبکه بگیر تا با سرور یکی باشد
+            webView.settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+        } catch (_: Exception) {}
+
+        // اگر سرور بالا نبود، یک‌بار به فایل داخلی برگرد
+        webView.webViewClient = object : WebViewClient() {
+            private var fellBack = false
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                if (url.startsWith("http") || url.startsWith("file") || url.startsWith("data:")) return false
+                return try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    true
+                } catch (e: Exception) {
+                    true
+                }
+            }
+            override fun onReceivedError(
+                view: WebView?,
+                errorCode: Int,
+                description: String?,
+                failingUrl: String?
+            ) {
+                if (!fellBack && failingUrl != null && failingUrl.startsWith("http")) {
+                    fellBack = true
+                    try {
+                        webView.settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+                    } catch (_: Exception) {}
+                    view?.loadUrl(assetUrl)
+                }
+            }
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: android.webkit.WebResourceError
+            ) {
+                if (Build.VERSION.SDK_INT >= 23) {
+                    if (request.isForMainFrame && !fellBack) {
+                        fellBack = true
+                        try {
+                            webView.settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+                        } catch (_: Exception) {}
+                        view.loadUrl(assetUrl)
+                    }
+                }
+            }
+        }
+
+        webView.loadUrl(serverUrl)
     }
 
     private fun askRuntimePermissions() {
@@ -323,7 +380,23 @@ class MainActivity : Activity() {
         cb.onReceiveValue(null)
     }
 
-    @Deprecated("Deprecated in Java")
+    override fun onPause() {
+        try {
+            webView.onPause()
+            webView.pauseTimers()
+        } catch (_: Exception) {}
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        try {
+            webView.onResume()
+            webView.resumeTimers()
+        } catch (_: Exception) {}
+    }
+
+        @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (this::webView.isInitialized && webView.canGoBack()) webView.goBack()
         else {
