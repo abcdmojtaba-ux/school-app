@@ -11,15 +11,17 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.provider.MediaStore
 import android.util.Base64
+import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
@@ -29,6 +31,7 @@ import java.io.FileOutputStream
 
 /**
  * سامانه نیکان — WebView
+ * لود از سرور زنده + fallback به asset
  * ذخیره پشتیبان: NikanAndroid.saveFile → Downloads
  */
 class MainActivity : Activity() {
@@ -38,11 +41,19 @@ class MainActivity : Activity() {
     private val FILE_REQ = 1001
     private val PERM_REQ = 1002
 
+    // آدرس سایت (سرور بالا)
+    private val SERVER_URL = "https://panel.nikan-school.top/"
+    private val ASSET_URL = "file:///android_asset/school-app-33.html"
+
     inner class NikanBridge {
         @JavascriptInterface
         fun saveFile(dataUrlOrText: String?, fileName: String?, mime: String?): Boolean {
             if (dataUrlOrText.isNullOrEmpty()) return false
-            val name = (fileName?.ifBlank { null }) ?: ("nikan-" + System.currentTimeMillis() + ".json")
+            val name = if (fileName.isNullOrBlank()) {
+                "nikan-" + System.currentTimeMillis() + ".json"
+            } else {
+                fileName
+            }
             return try {
                 val bytes: ByteArray
                 val pureMime: String
@@ -81,19 +92,31 @@ class MainActivity : Activity() {
                     values.clear()
                     values.put(MediaStore.Downloads.IS_PENDING, 0)
                     resolver.update(uri, values, null, null)
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "ذخیره شد در Downloads: $name",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    true
                 } else {
                     @Suppress("DEPRECATION")
-                    val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS
+                    )
                     if (!dir.exists()) dir.mkdirs()
-                    val outFile = File(dir, name)
-                    FileOutputStream(outFile).use { it.write(bytes) }
-                    @Suppress("DEPRECATION")
-                    sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(outFile)))
+                    val file = File(dir, name)
+                    FileOutputStream(file).use { it.write(bytes) }
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "ذخیره شد: ${file.absolutePath}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    true
                 }
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, "ذخیره شد در Downloads:\n$name", Toast.LENGTH_LONG).show()
-                }
-                true
             } catch (e: Exception) {
                 e.printStackTrace()
                 false
@@ -109,8 +132,11 @@ class MainActivity : Activity() {
         setContentView(webView)
         askRuntimePermissions()
 
-        // عملکرد WebView — ضد هنگ
-        try { webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null) } catch (_: Exception) {}
+        try {
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        } catch (_: Exception) {
+        }
+
         val st = webView.settings
         st.javaScriptEnabled = true
         st.domStorageEnabled = true
@@ -119,18 +145,12 @@ class MainActivity : Activity() {
         st.allowContentAccess = true
         st.loadWithOverviewMode = true
         st.useWideViewPort = true
-        st.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+        st.cacheMode = WebSettings.LOAD_DEFAULT
         st.mediaPlaybackRequiresUserGesture = true
-        // سرعت رندر روی اندروید
-        try { st.setRenderPriority(android.webkit.WebSettings.RenderPriority.HIGH) } catch (_: Exception) {}
-        try { st.loadsImagesAutomatically = true } catch (_: Exception) {}
-        try { st.blockNetworkImage = false } catch (_: Exception) {}
-        // حافظه کمتر برای DOM خیلی بزرگ
         try {
-            if (Build.VERSION.SDK_INT >= 19) {
-                WebView.setWebContentsDebuggingEnabled(false)
-            }
-        } catch (_: Exception) {}
+            st.loadsImagesAutomatically = true
+        } catch (_: Exception) {
+        }
         if (Build.VERSION.SDK_INT >= 16) {
             @Suppress("DEPRECATION")
             st.allowFileAccessFromFileURLs = true
@@ -138,16 +158,58 @@ class MainActivity : Activity() {
             st.allowUniversalAccessFromFileURLs = true
         }
         if (Build.VERSION.SDK_INT >= 21) {
-            st.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            st.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         }
-        // Offscreen pre-raster کمی کمک می‌کند
-        try {
-            if (Build.VERSION.SDK_INT >= 23) {
-                webView.setOffscreenPreRaster(true)
-            }
-        } catch (_: Exception) {}
 
         webView.addJavascriptInterface(NikanBridge(), "NikanAndroid")
+
+        webView.webViewClient = object : WebViewClient() {
+            private var fellBack = false
+
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): Boolean {
+                val url = request?.url?.toString() ?: return false
+                if (url.startsWith("http") || url.startsWith("https") ||
+                    url.startsWith("file") || url.startsWith("data:")
+                ) {
+                    return false
+                }
+                return try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    true
+                } catch (e: Exception) {
+                    true
+                }
+            }
+
+            @Suppress("DEPRECATION")
+            override fun onReceivedError(
+                view: WebView?,
+                errorCode: Int,
+                description: String?,
+                failingUrl: String?
+            ) {
+                if (!fellBack && failingUrl != null && failingUrl.startsWith("http")) {
+                    fellBack = true
+                    view?.loadUrl(ASSET_URL)
+                }
+            }
+
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceError
+            ) {
+                if (Build.VERSION.SDK_INT >= 23) {
+                    if (request.isForMainFrame && !fellBack) {
+                        fellBack = true
+                        view.loadUrl(ASSET_URL)
+                    }
+                }
+            }
+        }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
@@ -155,7 +217,10 @@ class MainActivity : Activity() {
                 cb: ValueCallback<Array<Uri>>?,
                 params: FileChooserParams?
             ): Boolean {
-                try { fileCallback?.onReceiveValue(null) } catch (_: Exception) {}
+                try {
+                    fileCallback?.onReceiveValue(null)
+                } catch (_: Exception) {
+                }
                 fileCallback = cb
 
                 val accepts = params?.acceptTypes
@@ -168,11 +233,16 @@ class MainActivity : Activity() {
                 val multiple = params?.mode == FileChooserParams.MODE_OPEN_MULTIPLE
 
                 val intent: Intent = when {
-                    wantsCamera -> Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                    imageOnly -> Intent(Intent.ACTION_GET_CONTENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "image/*"
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+                    wantsCamera || imageOnly -> {
+                        val gallery = Intent(Intent.ACTION_GET_CONTENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "image/*"
+                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+                        }
+                        val camera = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                        Intent.createChooser(gallery, "انتخاب عکس").apply {
+                            putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(camera))
+                        }
                     }
                     else -> {
                         val openDoc = if (Build.VERSION.SDK_INT >= 19) {
@@ -195,17 +265,15 @@ class MainActivity : Activity() {
                         if (mimes.isNotEmpty() && mimes.size == accepts.size) {
                             openDoc.putExtra(Intent.EXTRA_MIME_TYPES, mimes.toTypedArray())
                         }
-                        openDoc
+                        Intent.createChooser(
+                            openDoc,
+                            if (imageOnly) "انتخاب عکس" else "انتخاب فایل"
+                        )
                     }
                 }
 
                 return try {
-                    val finalIntent = if (wantsCamera) intent
-                    else Intent.createChooser(
-                        intent,
-                        if (imageOnly) "انتخاب عکس" else "انتخاب فایل (PDF / Word / عکس / ...)"
-                    )
-                    startActivityForResult(finalIntent, FILE_REQ)
+                    startActivityForResult(intent, FILE_REQ)
                     true
                 } catch (e: Exception) {
                     try {
@@ -213,7 +281,10 @@ class MainActivity : Activity() {
                             addCategory(Intent.CATEGORY_OPENABLE)
                             type = "*/*"
                         }
-                        startActivityForResult(Intent.createChooser(fallback, "انتخاب فایل"), FILE_REQ)
+                        startActivityForResult(
+                            Intent.createChooser(fallback, "انتخاب فایل"),
+                            FILE_REQ
+                        )
                         true
                     } catch (e2: Exception) {
                         fileCallback = null
@@ -222,7 +293,12 @@ class MainActivity : Activity() {
                 }
             }
 
-            override fun onJsAlert(view: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
+            override fun onJsAlert(
+                view: WebView?,
+                url: String?,
+                msg: String?,
+                r: JsResult
+            ): Boolean {
                 AlertDialog.Builder(this@MainActivity).setMessage(msg)
                     .setPositiveButton("باشه") { _, _ -> r.confirm() }
                     .setOnCancelListener { r.cancel() }
@@ -230,7 +306,12 @@ class MainActivity : Activity() {
                 return true
             }
 
-            override fun onJsConfirm(view: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
+            override fun onJsConfirm(
+                view: WebView?,
+                url: String?,
+                msg: String?,
+                r: JsResult
+            ): Boolean {
                 AlertDialog.Builder(this@MainActivity).setMessage(msg)
                     .setPositiveButton("باشه") { _, _ -> r.confirm() }
                     .setNegativeButton("لغو") { _, _ -> r.cancel() }
@@ -239,7 +320,11 @@ class MainActivity : Activity() {
             }
 
             override fun onJsPrompt(
-                view: WebView?, url: String?, msg: String?, def: String?, r: JsPromptResult
+                view: WebView?,
+                url: String?,
+                msg: String?,
+                def: String?,
+                r: JsPromptResult
             ): Boolean {
                 val input = EditText(this@MainActivity)
                 input.setText(def ?: "")
@@ -251,91 +336,38 @@ class MainActivity : Activity() {
             }
         }
 
-        // لود از سایت سرور (همیشه آخرین نسخه) — اگر قطع بود fallback به asset
-        val isMother = try { BuildConfig.FLAVOR == "mother" } catch (_: Exception) { false }
-        val serverUrl = if (isMother) {
-            "https://panel.nikan-school.top/mother"
-        } else {
-            "https://panel.nikan-school.top/"
-        }
-        val assetUrl = if (isMother) {
-            "file:///android_asset/mother-2.html"
-        } else {
-            "file:///android_asset/school-app-33.html"
-        }
+        // از سایت سرور لود کن؛ اگر قطع بود onReceivedError به asset می‌رود
         try {
-            // همیشه از شبکه بگیر تا با سرور یکی باشد
-            webView.settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
-        } catch (_: Exception) {}
-
-        // اگر سرور بالا نبود، یک‌بار به فایل داخلی برگرد
-        webView.webViewClient = object : WebViewClient() {
-            private var fellBack = false
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val url = request?.url?.toString() ?: return false
-                if (url.startsWith("http") || url.startsWith("file") || url.startsWith("data:")) return false
-                return try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    true
-                } catch (e: Exception) {
-                    true
-                }
-            }
-            override fun onReceivedError(
-                view: WebView?,
-                errorCode: Int,
-                description: String?,
-                failingUrl: String?
-            ) {
-                if (!fellBack && failingUrl != null && failingUrl.startsWith("http")) {
-                    fellBack = true
-                    try {
-                        webView.settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
-                    } catch (_: Exception) {}
-                    view?.loadUrl(assetUrl)
-                }
-            }
-            override fun onReceivedError(
-                view: WebView,
-                request: WebResourceRequest,
-                error: android.webkit.WebResourceError
-            ) {
-                if (Build.VERSION.SDK_INT >= 23) {
-                    if (request.isForMainFrame && !fellBack) {
-                        fellBack = true
-                        try {
-                            webView.settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
-                        } catch (_: Exception) {}
-                        view.loadUrl(assetUrl)
-                    }
-                }
-            }
+            webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        } catch (_: Exception) {
         }
-
-        webView.loadUrl(serverUrl)
+        webView.loadUrl(SERVER_URL)
     }
 
     private fun askRuntimePermissions() {
-        if (Build.VERSION.SDK_INT < 23) return
         val need = ArrayList<String>()
-        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            need.add(Manifest.permission.CAMERA)
-        }
         if (Build.VERSION.SDK_INT >= 33) {
-            if (checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+            if (checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
                 need.add(Manifest.permission.READ_MEDIA_IMAGES)
             }
         } else {
-            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
                 need.add(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
             if (Build.VERSION.SDK_INT < 29 &&
-                checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+                checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
             ) {
                 need.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
         }
-        if (need.isNotEmpty()) requestPermissions(need.toTypedArray(), PERM_REQ)
+        if (need.isNotEmpty()) {
+            requestPermissions(need.toTypedArray(), PERM_REQ)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -362,7 +394,8 @@ class MainActivity : Activity() {
                             single, Intent.FLAG_GRANT_READ_URI_PERMISSION
                         )
                     }
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
                 cb.onReceiveValue(arrayOf(single))
                 return
             }
@@ -370,7 +403,9 @@ class MainActivity : Activity() {
             val bmp = data?.extras?.get("data") as? Bitmap
             if (bmp != null) {
                 val file = File(cacheDir, "cam_" + System.currentTimeMillis() + ".jpg")
-                FileOutputStream(file).use { out -> bmp.compress(Bitmap.CompressFormat.JPEG, 90, out) }
+                FileOutputStream(file).use { out ->
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                }
                 cb.onReceiveValue(arrayOf(Uri.fromFile(file)))
                 return
             }
@@ -382,24 +417,31 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         try {
-            webView.onPause()
-            webView.pauseTimers()
-        } catch (_: Exception) {}
+            if (this::webView.isInitialized) {
+                webView.onPause()
+                webView.pauseTimers()
+            }
+        } catch (_: Exception) {
+        }
         super.onPause()
     }
 
     override fun onResume() {
         super.onResume()
         try {
-            webView.onResume()
-            webView.resumeTimers()
-        } catch (_: Exception) {}
+            if (this::webView.isInitialized) {
+                webView.onResume()
+                webView.resumeTimers()
+            }
+        } catch (_: Exception) {
+        }
     }
 
-        @Deprecated("Deprecated in Java")
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (this::webView.isInitialized && webView.canGoBack()) webView.goBack()
-        else {
+        if (this::webView.isInitialized && webView.canGoBack()) {
+            webView.goBack()
+        } else {
             @Suppress("DEPRECATION")
             super.onBackPressed()
         }
