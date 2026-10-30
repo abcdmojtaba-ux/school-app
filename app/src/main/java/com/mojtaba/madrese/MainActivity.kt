@@ -41,9 +41,21 @@ class MainActivity : Activity() {
     private val FILE_REQ = 1001
     private val PERM_REQ = 1002
 
-    // آدرس سایت (سرور بالا)
-    private val SERVER_URL = "https://panel.nikan-school.top/"
-    private val ASSET_URL = "file:///android_asset/school-app-33.html"
+    // آدرس سایت (سرور بالا) — flavor مادر و مدرسه جدا
+    private val isMotherApp: Boolean
+        get() = packageName.contains("mother")
+
+    private val SERVER_URL: String
+        get() = if (isMotherApp)
+            "https://panel.nikan-school.top/mother"
+        else
+            "https://panel.nikan-school.top/"
+
+    private val ASSET_URL: String
+        get() = if (isMotherApp)
+            "file:///android_asset/mother-2.html"
+        else
+            "file:///android_asset/school-app-33.html"
 
     inner class NikanBridge {
         @JavascriptInterface
@@ -339,6 +351,8 @@ class MainActivity : Activity() {
         // از سایت سرور لود کن؛ اگر قطع بود onReceivedError به asset می‌رود
         try {
             webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            // کش قدیمی WebView را خالی کن تا مادر/مدرسه نسخهٔ سرور را ببینند
+            webView.clearCache(true)
         } catch (_: Exception) {
         }
         webView.loadUrl(SERVER_URL)
